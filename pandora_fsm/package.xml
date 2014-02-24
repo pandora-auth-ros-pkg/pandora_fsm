@@ -1,0 +1,34 @@
+<package>
+  <name>pandora_fsm</name>
+  <version>0.0.0</version>
+  
+  <description>pandora_fsm</description>
+  
+  <maintainer email="zalidis@gmail.com">Chris Zalidis</maintainer> 
+
+  <license>BSD</license>
+
+  <url type="website">http://ros.org/wiki/smach_tutorial</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>Chris Zalidis</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+   
+   <run_depend>rospy</run_depend> 
+   <run_depend>smach</run_depend> 
+   <run_depend>smach_ros</run_depend> 
+   <run_depend>pandora_navigation_communications</run_depend> 
+   <run_depend>data_fusion_communications</run_depend> 
+   <run_depend>target_selector_communications</run_depend> 
+   <run_depend>state_manager_communications</run_depend> 
+   <run_depend>gui_communications</run_depend> 
+   <run_depend>actionlib</run_depend> 
+   <run_depend>std_msgs</run_depend> 
+
+   <test_depend>rostest</test_depend>
+
+  <export>
+
+  </export>
+</package>

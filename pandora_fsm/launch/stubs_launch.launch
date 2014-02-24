@@ -1,0 +1,17 @@
+<launch>
+    <!-- Turtlesim Node-->
+    <node pkg="pandora_fsm" type="navigation_stub.py" name="navigation_stub"/>
+    
+    <node pkg="pandora_fsm" type="initial_turner_stub.py" name="initial_turner"/>
+    
+    <node pkg="pandora_fsm" type="target_selector_stub.py" name="target_selector_stub"/>
+    
+    <node pkg="pandora_fsm" type="victim_manager_stub.py" name="victim_manager_stub"/>
+   
+    <node pkg="pandora_fsm" type="move_arm_stub.py" name="move_arm_stub" />
+    
+    <node pkg="pandora_fsm" type="validate_current_hole_stub.py" name="validate_current_hole_stub" />
+    
+
+         
+  </launch>

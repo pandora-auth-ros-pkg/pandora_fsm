@@ -1,0 +1,16 @@
+<launch>
+    <!-- Turtlesim Node-->
+    <node pkg="pandora_fsm" type="navigation_stub.py" name="navigation_stub"/>
+    
+    <node pkg="pandora_fsm" type="initial_turner_stub.py" name="initial_turner"/>
+    
+    <node pkg="pandora_fsm" type="target_selector_stub.py" name="target_selector_stub"/>
+    
+    <node pkg="pandora_fsm" type="victim_manager_stub.py" name="victim_manager_stub"/>
+   
+    <node pkg="pandora_fsm" type="fsm_dummy.py" name="fsm_dummy" output="screen"/>
+    
+    <node pkg="smach_viewer" type="smach_viewer.py" name="smach_viewer" />
+
+         
+  </launch>
