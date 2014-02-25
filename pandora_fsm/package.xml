@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <package>
   <name>pandora_fsm</name>
   <version>0.0.0</version>
@@ -8,8 +9,8 @@
 
   <license>BSD</license>
 
-  <url type="website">http://ros.org/wiki/smach_tutorial</url>
-  <!-- <url type="bugtracker"></url> -->
+  <url type="bugtracker">https://github.com/pandora-auth-ros-pkg/pandora_control_and_sensors/issues</url>
+  <url type="repository">https://github.com/pandora-auth-ros-pkg/pandora_control_and_sensors</url>
 
   <author>Chris Zalidis</author>
 
@@ -22,7 +23,7 @@
    <run_depend>data_fusion_communications</run_depend> 
    <run_depend>target_selector_communications</run_depend> 
    <run_depend>state_manager_communications</run_depend> 
-   <run_depend>gui_communications</run_depend> 
+   <run_depend>fsm_communications</run_depend> 
    <run_depend>actionlib</run_depend> 
    <run_depend>std_msgs</run_depend> 
 

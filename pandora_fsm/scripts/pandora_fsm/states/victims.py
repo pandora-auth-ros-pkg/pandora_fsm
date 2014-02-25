@@ -14,7 +14,7 @@ from smach_ros import SimpleActionState
 from pandora_fsm.states.my_monitor_state import MyMonitorState
 from pandora_fsm.states.my_simple_action_state import MySimpleActionState
 from data_fusion_communications.msg import *
-from gui_communications.msg import ValidateVictimAction, ValidateVictimGoal, ValidateVictimResult 
+from fsm_communications.msg import ValidateVictimAction, ValidateVictimGoal, ValidateVictimResult 
 from std_msgs.msg import Empty
 
 	

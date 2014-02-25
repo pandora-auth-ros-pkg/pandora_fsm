@@ -1,0 +1,12 @@
+#goal
+float32 victimFoundx
+float32 victimFoundy
+float32 probability
+string[] sensorIDsFound
+---
+#result
+bool victimValid 
+---
+#feedback
+
+
