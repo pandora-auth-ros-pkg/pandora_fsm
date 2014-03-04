@@ -9,8 +9,8 @@
 
   <license>BSD</license>
 
-  <url type="bugtracker">https://github.com/pandora-auth-ros-pkg/pandora_control_and_sensors/issues</url>
-  <url type="repository">https://github.com/pandora-auth-ros-pkg/pandora_control_and_sensors</url>
+  <url type="bugtracker">https://github.com/pandora-auth-ros-pkg/pandora_fsm/issues</url>
+  <url type="repository">https://github.com/pandora-auth-ros-pkg/pandora_fsm</url>
 
   <author>Chris Zalidis</author>
 
