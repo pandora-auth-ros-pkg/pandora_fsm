@@ -47,7 +47,9 @@ from pandora_fsm.states.victims import *
 	
 def validateVictim():
 	
-	sm = StateMachine(outcomes=['valid','not_valid','preempted'], input_keys=['victim_info'])
+	sm = StateMachine(outcomes=['valid','not_valid','preempted'],
+                    input_keys=['victim_info','numberOfVictims'],
+                    output_keys=['numberOfVictims'])
 		
 	with sm:
 		
@@ -60,6 +62,9 @@ def validateVictim():
 			'preempted':'preempted'
 			#'aborted':'VALIDATION_FROM_GUI'
 			#~ 'succeeded':'VALIDATION_FROM_GUI'
+			},
+			remapping={
+				'numberOfVictims':'numberOfVictims'
 			}
 		)
 		

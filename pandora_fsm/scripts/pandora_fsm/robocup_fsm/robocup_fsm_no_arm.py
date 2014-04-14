@@ -49,6 +49,7 @@ from smach import State, StateMachine
 
 from pandora_fsm.states.navigation import *
 from pandora_fsm.states.state_changer import *
+from pandora_fsm.states.arena_identification import *
 from pandora_fsm.containers.exploration import *
 from pandora_fsm.containers.identification import *
 from pandora_fsm.containers.data_fusion_hold import *
@@ -64,19 +65,23 @@ def main():
 		
 	with sm:
 		
+		sm.userdata.numberOfVictims = 0
+		
 		StateMachine.add(
 			'MONITOR_START',
 			MonitorModeState(robotModeMsg.MODE_START_AUTONOMOUS),
 			transitions={
 			'invalid':'MONITOR_START',
-			'valid':'ALL',
+			'valid':'ALL_YELLOW',
 			'preempted':'preempted'
 			}
 		)
 		
-		sm_everything = StateMachine(outcomes=['preempted'])
+		sm_yellow = StateMachine(outcomes=['preempted'],
+															input_keys=['numberOfVictims'],
+															output_keys=['numberOfVictims'])
 		
-		with sm_everything:
+		with sm_yellow:
 		
 			StateMachine.add(
 				'WAIT_FOR_SLAM',
@@ -88,12 +93,13 @@ def main():
 			)
 			
 			StateMachine.add(
-			    'INITIAL_TURN',
-			    InitialTurnState(), 
-			    transitions={
-				'succeeded':'ROBOT_MODE_EXPLORATION',
-				'aborted':'ROBOT_MODE_EXPLORATION',
-				'preempted':'preempted'}
+				'INITIAL_TURN',
+				InitialTurnState(), 
+				transitions={
+					'succeeded':'ROBOT_MODE_EXPLORATION',
+					'aborted':'ROBOT_MODE_EXPLORATION',
+					'preempted':'preempted'
+				}
 			)
 			
 			StateMachine.add(
@@ -117,7 +123,8 @@ def main():
 			
 			#~ sm.userdata.victim_info = None
 			
-			sm_victim = StateMachine(outcomes=['verified','not_verified','preempted','aborted'],output_keys=['victim_info'])
+			sm_victim = StateMachine(outcomes=['verified','not_verified','preempted','aborted'],
+																output_keys=['victim_info'])
 			
 			with sm_victim:
 				
@@ -175,7 +182,7 @@ def main():
 				
 			with cc:
 				
-				Concurrence.add('VICTIM_IDENTIFICATION', sm_victim,remapping={'victim_info':'victim_info'})
+				Concurrence.add('VICTIM_IDENTIFICATION', sm_victim, remapping={'victim_info':'victim_info'})
 				
 				Concurrence.add('VICTIM_UPDATE', MonitorVictimUpdateState())
 			
@@ -201,47 +208,134 @@ def main():
 				'not_valid':'MONITOR_VICTIM_AND_DO_WORK',
 				'preempted':'preempted'
 				},
-				remapping={'victim_info':'victim_info'}
+				remapping={'victim_info':'victim_info',
+                    'numberOfVictims':'numberOfVictims'}
+			)
+		
+		sm_orange = StateMachine(outcomes=['preempted'])
+		
+		sm_arena = StateMachine(outcomes=['yellow','orange','preempted'],
+														input_keys=['numberOfVictims','arena_color'],
+														output_keys=['numberOfVictims'])
+		
+		with sm_arena:
+			
+			StateMachine.add(
+				'ARENA_IDENTIFICATION',
+				MonitorArenaTypeState(),
+				transitions={
+					'yellow':'yellow',
+					'orange':'CHECK_VICTIMS_FOUND',
+					'yellow_black':'ARENA_IDENTIFICATION',
+					'red':'ARENA_IDENTIFICATION',
+					'invalid':'preempted',
+					'preempted':'preempted'
+				},
+				remapping={'arena_color':'arena_color'}
 			)
 			
-		
-		cc = Concurrence(
-				outcomes=[
-					'preempted',
-					'shutdown'], 
-				default_outcome = 'preempted',
-				outcome_map = {
-					'preempted':{'AUTONOMOUS':'preempted', 'MONITOR_SHUTDOWN':'preempted'},
-					'shutdown':{'MONITOR_SHUTDOWN':'valid','AUTONOMOUS':'preempted'}},
-				child_termination_cb=_termination_cb_all)
-				
-		with cc:
-				
-				Concurrence.add('AUTONOMOUS', sm_everything)
-				
-				Concurrence.add('MONITOR_SHUTDOWN', MonitorModeState(robotModeMsg.MODE_TELEOPERATED_LOCOMOTION))
-				
-		
-		StateMachine.add(
-				'ALL',
-				cc,
+			StateMachine.add(
+				'CHECK_VICTIMS_FOUND',
+				CheckVictimsFoundState(),
 				transitions={
-				'shutdown':'MONITOR_START',
-				'preempted':'preempted'
+					'victims_found':'orange',
+					'no_victims_found':'FIND_FIRST_VICTIM',
+					'preempted':'preempted'
+				},
+				remapping={'numberOfVictims':'numberOfVictims'}
+			)
+			
+			StateMachine.add(
+				'FIND_FIRST_VICTIM',
+				FindFirstVictimState(),
+				transitions={
+					'succeeded':'orange',
+					'preempted':'preempted'
 				}
 			)
-
-
+		
+		arena_color = 1
+		
+		con_yellow = Concurrence(
+			outcomes=[
+				'orange',
+				'preempted',
+				'shutdown'],
+			default_outcome = 'preempted',
+			input_keys=['numberOfVictims','arena_color'],
+			output_keys=['numberOfVictims'],
+			outcome_map = {
+				'orange':{'ARENA_IDENTIFICATION':'orange', 'MONITOR_SHUTDOWN':'preempted', 'YELLOW':'preempted'},
+				'preempted':{'YELLOW':'preempted', 'MONITOR_SHUTDOWN':'preempted', 'ARENA_IDENTIFICATION':'preempted'},
+				'shutdown':{'MONITOR_SHUTDOWN':'valid','YELLOW':'preempted', 'ARENA_IDENTIFICATION':'preempted'}},
+			child_termination_cb=_termination_cb_all)
+		
+		with con_yellow:
+			
+			Concurrence.add('YELLOW', sm_yellow, remapping={'numberOfVictims':'numberOfVictims'})
+			
+			Concurrence.add('MONITOR_SHUTDOWN', MonitorModeState(robotModeMsg.MODE_TELEOPERATED_LOCOMOTION))
+			
+			Concurrence.add('ARENA_IDENTIFICATION', sm_arena, remapping={'arena_color':'arena_color'})
+		
+		StateMachine.add(
+			'ALL_YELLOW',
+			con_yellow,
+			transitions={
+			'orange':'ALL_ORANGE',
+			'shutdown':'MONITOR_START',
+			'preempted':'preempted'
+			},
+			remapping={'numberOfVictims':'numberOfVictims',
+									'arena_color':'arena_color'}
+		)
+		
+		arena_color = 2
+		
+		con_yellow = Concurrence(
+			outcomes=[
+				'yellow',
+				'preempted',
+				'shutdown'],
+			default_outcome = 'preempted',
+			input_keys=['numberOfVictims','arena_color'],
+			output_keys=['numberOfVictims'],
+			outcome_map = {
+				'yellow':{'ARENA_IDENTIFICATION':'yellow', 'MONITOR_SHUTDOWN':'preempted', 'ORANGE':'preempted'},
+				'preempted':{'ORANGE':'preempted', 'MONITOR_SHUTDOWN':'preempted', 'ARENA_IDENTIFICATION':'preempted'},
+				'shutdown':{'MONITOR_SHUTDOWN':'valid','ORANGE':'preempted', 'ARENA_IDENTIFICATION':'preempted'}},
+			child_termination_cb=_termination_cb_all)
+		
+		with con_yellow:
+			
+			Concurrence.add('ORANGE', sm_orange, remapping={'numberOfVictims':'numberOfVictims'})
+			
+			Concurrence.add('MONITOR_SHUTDOWN', MonitorModeState(robotModeMsg.MODE_TELEOPERATED_LOCOMOTION))
+			
+			Concurrence.add('ARENA_IDENTIFICATION', sm_arena, remapping={'arena_color':'arena_color'})
+		
+		StateMachine.add(
+			'ALL_ORANGE',
+			con_yellow,
+			transitions={
+			'yellow':'ALL_YELLOW',
+			'shutdown':'MONITOR_START',
+			'preempted':'preempted'
+			},
+			remapping={'numberOfVictims':'numberOfVictims',
+									'arena_color':'arena_color'}
+		)
+	
 	sis = smach_ros.IntrospectionServer('fsm_introspection', sm, '/PANDORA_FSM')
 	
 	sis.start()
-    
+	
 	smach_ros.set_preempt_handler(sm)
-
+	
 	# Execute SMACH tree in a separate thread so that we can ctrl-c the script
 	smach_thread = threading.Thread(target = sm.execute)
 	smach_thread.start()
-		
+	
 	rospy.spin()
 	sis.stop()
 

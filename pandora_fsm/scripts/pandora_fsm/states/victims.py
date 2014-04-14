@@ -141,7 +141,8 @@ class ValidateVictimState(MySimpleActionState):
 									goal_cb=self.goal_callback,
 									outcomes=['valid','not_valid','preempted'],
 									result_cb=self.result_callback,
-									input_keys=['victim_info']
+									input_keys=['victim_info','numberOfVictims'],
+									output_keys=['numberOfVictims']
 									)
 
 	def goal_callback(self, userdata, goal):
@@ -157,6 +158,7 @@ class ValidateVictimState(MySimpleActionState):
 	def result_callback(self, userdata, status, result):
 		if status == GoalStatus.SUCCEEDED:
 			if result.victimValid:
+				userdata.numberOfVictims += 1
 				return 'valid'
 			else:
 				return 'not_valid'
