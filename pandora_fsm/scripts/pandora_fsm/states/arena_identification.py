@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import roslib; roslib.load_manifest('pandora_fsm')
 import rospy
 import smach
@@ -7,7 +8,10 @@ from smach import State, StateMachine
 
 from pandora_fsm.states.my_monitor_state import MyMonitorState
 from pandora_fsm.states.my_simple_action_state import MySimpleActionState
-from fsm_communications.msg import ValidateVictimAction #delete this when actions are imported
+from fsm_communications.msg import *
+
+from actionlib import *
+from actionlib.msg import *
 #import ArenaTypeMsg
 #import FindFirstVictimAction
 

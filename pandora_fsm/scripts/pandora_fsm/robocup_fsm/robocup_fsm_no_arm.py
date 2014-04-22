@@ -209,50 +209,12 @@ def main():
 				'preempted':'preempted'
 				},
 				remapping={'victim_info':'victim_info',
-                    'numberOfVictims':'numberOfVictims'}
+										'numberOfVictims':'numberOfVictims'}
 			)
 		
 		sm_orange = StateMachine(outcomes=['preempted'])
 		
-		sm_arena = StateMachine(outcomes=['yellow','orange','preempted'],
-														input_keys=['numberOfVictims','arena_color'],
-														output_keys=['numberOfVictims'])
-		
-		with sm_arena:
-			
-			StateMachine.add(
-				'ARENA_IDENTIFICATION',
-				MonitorArenaTypeState(),
-				transitions={
-					'yellow':'yellow',
-					'orange':'CHECK_VICTIMS_FOUND',
-					'yellow_black':'ARENA_IDENTIFICATION',
-					'red':'ARENA_IDENTIFICATION',
-					'invalid':'preempted',
-					'preempted':'preempted'
-				},
-				remapping={'arena_color':'arena_color'}
-			)
-			
-			StateMachine.add(
-				'CHECK_VICTIMS_FOUND',
-				CheckVictimsFoundState(),
-				transitions={
-					'victims_found':'orange',
-					'no_victims_found':'FIND_FIRST_VICTIM',
-					'preempted':'preempted'
-				},
-				remapping={'numberOfVictims':'numberOfVictims'}
-			)
-			
-			StateMachine.add(
-				'FIND_FIRST_VICTIM',
-				FindFirstVictimState(),
-				transitions={
-					'succeeded':'orange',
-					'preempted':'preempted'
-				}
-			)
+		sm_yellow_black = StateMachine(outcomes=['preempted'])
 		
 		arena_color = 1
 		
