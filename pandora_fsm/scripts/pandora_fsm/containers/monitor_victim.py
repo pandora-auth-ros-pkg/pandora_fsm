@@ -7,7 +7,7 @@ import smach_ros
 import pandora_fsm
 
 from smach import StateMachine, Concurrence
-from pandora_fsm.agent.initiation_servers import MonitorVictimStart
+from pandora_fsm.agent.agent_servers import MonitorVictimStart
 from pandora_fsm.states.state_changer import ChangeRobotModeState
 from pandora_fsm.states.victims import MonitorVictimUpdateState
 from pandora_fsm.containers.identification import *

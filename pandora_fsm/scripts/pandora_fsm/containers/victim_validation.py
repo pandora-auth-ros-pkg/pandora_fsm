@@ -43,7 +43,7 @@ import pandora_fsm
 
 from smach import State, StateMachine
 
-from pandora_fsm.agent.initiation_servers import ValidateVictimStart
+from pandora_fsm.agent.agent_servers import ValidateVictimStart
 from pandora_fsm.states.victims import *
 	
 def validateVictim():

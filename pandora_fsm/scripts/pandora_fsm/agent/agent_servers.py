@@ -10,7 +10,8 @@ from smach import State
 from pandora_fsm.states.state_changer import ChangeRobotModeState
 
 from fsm_communications.msg import RobotStartAction, ExplorationStartAction
-from fsm_communications.msg import MonitorVictimStartAction, ValidateVictimStartAction
+from fsm_communications.msg import MonitorVictimStartAction
+from fsm_communications.msg import ValidateVictimStartAction, AbortFSMAction
 from state_manager_communications.msg import robotModeMsg
 
 from actionlib import *
@@ -92,6 +93,26 @@ class ValidateVictimStart(State):
     while not rospy.is_shutdown():
       if self.executed_ == True:
         return 'succeeded'
+      self.r.sleep()
+  
+  def execute_cb(self, msg):
+    self.executed_ = True
+    self.as_.set_succeeded()
+    subscriber.unregister()
+
+class AbortFSM(State):
+  
+  def __init__(self):
+    State.__init__(self, outcomes=['aborted', 'preempted'])
+    self.as_ = SimpleActionServer('abort_fsm', AbortFSMAction,
+                                  execute_cb=self.execute_cb)
+    self.executed_ = False
+  
+  def execute(self, userdata):
+    self.r = rospy.Rate(10)
+    while not rospy.is_shutdown():
+      if self.executed_ == True:
+        return 'aborted'
       self.r.sleep()
   
   def execute_cb(self, msg):

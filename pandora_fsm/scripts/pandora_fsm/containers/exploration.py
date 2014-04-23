@@ -42,7 +42,7 @@ import pandora_fsm
 
 from smach import State, StateMachine, Concurrence
 
-from pandora_fsm.agent.initiation_servers import ExplorationStart
+from pandora_fsm.agent.agent_servers import ExplorationStart
 from pandora_fsm.states.navigation import *
 from pandora_fsm.states.victims import *
 	

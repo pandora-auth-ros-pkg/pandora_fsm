@@ -9,7 +9,7 @@ import pandora_fsm
 from smach import StateMachine
 from pandora_fsm.states.state_changer import MonitorModeState, Timer
 from pandora_fsm.states.navigation import InitialTurnState
-from pandora_fsm.agent.initiation_servers import RobotStart
+from pandora_fsm.agent.agent_servers import RobotStart
 
 from state_manager_communications.msg import robotModeMsg
 

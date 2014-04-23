@@ -15,6 +15,7 @@ add_action_files(
   ExplorationStart.action
   MonitorVictimStart.action
   ValidateVictimStart.action
+  AbortFSM.action
 )
 
 generate_messages(

@@ -8,6 +8,7 @@ import pandora_fsm
 import threading
 
 from smach import StateMachine, Concurrence
+from pandora_fsm.agent.agent_servers import AbortFSM
 from pandora_fsm.containers.robot_initialization import *
 from pandora_fsm.containers.exploration import *
 from pandora_fsm.containers.monitor_victim import *
@@ -27,6 +28,7 @@ def main():
     sm_everything = Concurrence(
       outcomes=[
         'succeeded',
+        'aborted',
         'preempted'
       ],
       default_outcome='preempted',
@@ -37,10 +39,12 @@ def main():
         'succeeded':{'VICTIM_MONITORING':'aborted'},
         'succeeded':{'VICTIM_VALIDATION':'valid'},
         'succeeded':{'VICTIM_VALIDATION':'not_valid'},
+        'aborted':{'ABORT_FSM':'aborted'},
         'preempted':{'ROBOT_START':'preempted',
                       'EXPLORATION':'preempted',
                       'VICTIM_MONITORING':'preempted',
-                      'VICTIM_VALIDATION':'preempted'}
+                      'VICTIM_VALIDATION':'preempted',
+                      'ABORT_FSM':'preempted'}
       },
       child_termination_cb=termination_cb
     )
@@ -54,12 +58,14 @@ def main():
                       remapping={'victim_info':'victim_info'})
       Concurrence.add('VICTIM_VALIDATION', validateVictim(),
                       remapping={'victim_info':'victim_info'})
+      Concurrence.add('ABORT_FSM', AbortFSM())
     
     StateMachine.add(
       'PANDORA_FSM',
       sm_everything,
       transitions={
         'succeeded':'PANDORA_FSM',
+        'aborted':'PANDORA_FSM',
         'preempted':'preempted'
       }
     )
