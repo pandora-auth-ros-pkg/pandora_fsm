@@ -23,7 +23,9 @@ def robotStart():
       'ROBOT_START',
       RobotStart(),
       transitions={
-        'succeeded':'MONITOR_START'
+        'succeeded':'MONITOR_START',
+        'invalid':'ROBOT_START',
+        'preempted':'preempted'
       }
     )
     

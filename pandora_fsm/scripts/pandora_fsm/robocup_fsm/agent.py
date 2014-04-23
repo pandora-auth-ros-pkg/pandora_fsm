@@ -11,6 +11,7 @@ def main():
   rospy.init_node('agent')
   
   agent = AgentCommunications()
+  agent.execute()
   #~ sis = smach_ros.IntrospectionServer('fsm_agent', sm_arena, '/PANDORA_FSM')
   #~ 
   #~ sis.start()

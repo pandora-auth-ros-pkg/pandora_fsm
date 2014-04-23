@@ -6,116 +6,63 @@ import smach
 import smach_ros
 import pandora_fsm
 
-from smach import State
 from pandora_fsm.states.state_changer import ChangeRobotModeState
+from pandora_fsm.states.my_monitor_state import MyMonitorState
 
-from fsm_communications.msg import RobotStartAction, ExplorationStartAction
-from fsm_communications.msg import MonitorVictimStartAction
-from fsm_communications.msg import ValidateVictimStartAction, AbortFSMAction
 from state_manager_communications.msg import robotModeMsg
+from std_msgs.msg import Empty
 
 from actionlib import *
 from actionlib.msg import *
 
-class RobotStart(State):
-  
-  def __init__(self):
-    State.__init__(self, outcomes=['succeeded','preempted'])
-    self.as_ = SimpleActionServer('robot_start', RobotStartAction,
-                                  execute_cb=self.execute_cb)
-    self.executed_ = False
-  
-  def execute(self, userdata):
-    self.r = rospy.Rate(10)
-    while not rospy.is_shutdown():
-      if self.executed_ == True:
-        return 'succeeded'
-      self.r.sleep()
-  
-  def execute_cb(self, msg):
-    self.executed_ = True
-    self.as_.set_succeeded()
-    subscriber.unregister()
+robot_start_topic = '/robot_start'
+exploration_start_topic = '/exploration_start'
+monitor_victim_start_topic = '/monitor_victim_start'
+validate_victim_start_topic = '/validate_victim_start'
+abort_fsm_topic = '/abort_fsm'
 
-class ExplorationStart(State):
+class RobotStart(MyMonitorState):
   
   def __init__(self):
-    State.__init__(self, outcomes=['succeeded','preempted'])
-    self.as_ = SimpleActionServer('exploration_start', ExplorationStartAction,
-                                  execute_cb=self.execute_cb)
-    self.executed_ = False
+    MyMonitorState.__init__(self, robot_start_topic, Empty, self.monitor_cb,
+                            extra_outcomes=['succeeded'])
   
-  def execute(self, userdata):
-    self.r = rospy.Rate(10)
-    while not rospy.is_shutdown():
-      if self.executed_ == True:
-        return 'succeeded'
-      self.r.sleep()
+  def monitor_cb(self, userdata, msg):
+    return 'succeeded'
+
+class ExplorationStart(MyMonitorState):
   
-  def execute_cb(self, msg):
-    self.executed_ = True
+  def __init__(self):
+    MyMonitorState.__init__(self, exploration_start_topic, Empty,
+                            self.monitor_cb, extra_outcomes=['succeeded'])
+  
+  def monitor_cb(self, userdata, msg):
     ChangeRobotModeState(robotModeMsg.MODE_EXPLORATION)
-    self.as_.set_succeeded()
-    subscriber.unregister()
+    return 'succeeded'
 
-class MonitorVictimStart(State):
+class MonitorVictimStart(MyMonitorState):
   
   def __init__(self):
-    State.__init__(self, outcomes=['succeeded','preempted'])
-    self.as_ = SimpleActionServer('monitor_victim_start',
-                                  MonitorVictimStartAction,
-                                  execute_cb=self.execute_cb)
-    self.executed_ = False
+    MyMonitorState.__init__(self, monitor_victim_start_topic, Empty,
+                            self.monitor_cb, extra_outcomes=['succeeded'])
   
-  def execute(self, userdata):
-    self.r = rospy.Rate(10)
-    while not rospy.is_shutdown():
-      if self.executed_ == True:
-        return 'succeeded'
-      self.r.sleep()
-  
-  def execute_cb(self, msg):
-    self.executed_ = True
-    self.as_.set_succeeded()
-    subscriber.unregister()
+  def monitor_cb(self, userdata, msg):
+    return 'succeeded'
 
-class ValidateVictimStart(State):
+class ValidateVictimStart(MyMonitorState):
   
   def __init__(self):
-    State.__init__(self, outcomes=['succeeded','preempted'])
-    self.as_ = SimpleActionServer('validate_victim_start',
-                                  ValidateVictimStartAction,
-                                  execute_cb=self.execute_cb)
-    self.executed_ = False
+    MyMonitorState.__init__(self, validate_victim_start_topic, Empty,
+                            self.monitor_cb, extra_outcomes=['succeeded'])
   
-  def execute(self, userdata):
-    self.r = rospy.Rate(10)
-    while not rospy.is_shutdown():
-      if self.executed_ == True:
-        return 'succeeded'
-      self.r.sleep()
-  
-  def execute_cb(self, msg):
-    self.executed_ = True
-    self.as_.set_succeeded()
-    subscriber.unregister()
+  def monitor_cb(self, userdata, msg):
+    return 'succeeded'
 
-class AbortFSM(State):
+class AbortFSM(MyMonitorState):
   
   def __init__(self):
-    State.__init__(self, outcomes=['aborted', 'preempted'])
-    self.as_ = SimpleActionServer('abort_fsm', AbortFSMAction,
-                                  execute_cb=self.execute_cb)
-    self.executed_ = False
+    MyMonitorState.__init__(self, abort_fsm_topic, Empty, self.monitor_cb,
+                            extra_outcomes=['aborted'])
   
-  def execute(self, userdata):
-    self.r = rospy.Rate(10)
-    while not rospy.is_shutdown():
-      if self.executed_ == True:
-        return 'aborted'
-      self.r.sleep()
-  
-  def execute_cb(self, msg):
-    self.executed_ = True
-    self.as_.set_succeeded()
-    subscriber.unregister()
+  def monitor_cb(self, userdata, msg):
+    return 'aborted'

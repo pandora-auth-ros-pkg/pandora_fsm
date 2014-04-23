@@ -87,7 +87,9 @@ def explorationWithVictims():
 			'EXPLORATION_START',
 			ExplorationStart(),
 			transitions={
-				'succeeded':'EXPLORE_WITH_VICTIMS'
+				'succeeded':'EXPLORE_WITH_VICTIMS',
+        'invalid':'EXPLORATION_START',
+				'preempted':'preempted'
 			}
 		)
 		

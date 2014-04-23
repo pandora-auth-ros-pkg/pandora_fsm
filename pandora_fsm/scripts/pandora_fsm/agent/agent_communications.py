@@ -5,12 +5,10 @@ import rospy
 import pandora_fsm
 
 from fsm_communications.msg import *
-#~ from fsm_communications.msg import RobotStartGoal
-#~ from fsm_communications.msg import ExplorationStartGoal
 from std_msgs.msg import Empty
 
-from actionlib import *
-from actionlib.msg import *
+#~ from actionlib import *
+#~ from actionlib.msg import *
 
 arena_type_topic = '/arena_type'
 hazmat_topic = '/hazmat'
@@ -21,6 +19,12 @@ co_topic = '/co'
 audio_vo_topic = '/audio_vo'
 audio_ov_topic = '/audio_ov'
 qr_topic = '/qr'
+
+robot_start_topic = '/robot_start'
+exploration_start_topic = '/exploration_start'
+monitor_victim_start_topic = '/monitor_victim_start'
+validate_victim_start_topic = '/validate_victim_start'
+abort_fsm_topic = '/abort_fsm'
 
 class AgentCommunications():
   
@@ -44,12 +48,10 @@ class AgentCommunications():
     self.audio_ov_ = 0
     self.qrs_ = 0
   
-  #~ def execute(self):
-    #~ ac = SimpleActionClient('robot_start', Empty)
-    #~ goal = RobotStartGoal()
-    #~ ac.send_goal(goal)
-    #~ ac.wait_for_result()
-    #~ ac.get_result()
+  def execute(self):
+    pub = rospy.Publisher(robot_start_topic, Empty)
+    rospy.Rate(10).sleep()
+    pub.publish()
   
   def arena_type_cb(self, msg):
     if self.current_arena_ == msg.arenaType:

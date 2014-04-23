@@ -57,7 +57,9 @@ def validateVictim():
 			'VALIDATE_VICTIM_START',
 			ValidateVictimStart(),
 			transitions={
-				'succeeded':'VALIDATION_FROM_GUI'
+				'succeeded':'VALIDATION_FROM_GUI',
+        'invalid':'VALIDATE_VICTIM_START',
+				'preempted':'preempted'
 			}
 		)
 		
