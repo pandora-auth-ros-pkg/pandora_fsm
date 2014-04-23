@@ -75,7 +75,8 @@ def dataFusionHold():
 			
 			Concurrence.add('TIMER', DataFusionHold())
 		
-		StateMachine.add('WAIT_FOR_DF',
+		StateMachine.add(
+			'WAIT_FOR_DF',
 			cc,
 			transitions={
 			'time_out':'DELETE_CURRENT_HOLE',
@@ -84,7 +85,8 @@ def dataFusionHold():
 			remapping={'victim_info':'victim_info'}
 		)
 		
-		StateMachine.add('DELETE_CURRENT_HOLE',
+		StateMachine.add(
+			'DELETE_CURRENT_HOLE',
 			ValidateHoleState(False),
 			transitions={
 			'succeeded':'not_verified',

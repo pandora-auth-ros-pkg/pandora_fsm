@@ -5,13 +5,16 @@ find_package(catkin REQUIRED COMPONENTS message_generation actionlib_msgs std_ms
 add_message_files(
   FILES
   ArenaTypeMsg.msg
-  
 )
 
 add_action_files(
   FILES
   ValidateVictim.action
   AgentCommunication.action
+  RobotStart.action
+  ExplorationStart.action
+  MonitorVictimStart.action
+  ValidateVictimStart.action
 )
 
 generate_messages(

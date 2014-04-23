@@ -212,10 +212,6 @@ def main():
 										'numberOfVictims':'numberOfVictims'}
 			)
 		
-		sm_orange = StateMachine(outcomes=['preempted'])
-		
-		sm_yellow_black = StateMachine(outcomes=['preempted'])
-		
 		arena_color = 1
 		
 		con_yellow = Concurrence(
@@ -245,42 +241,6 @@ def main():
 			con_yellow,
 			transitions={
 			'orange':'ALL_ORANGE',
-			'shutdown':'MONITOR_START',
-			'preempted':'preempted'
-			},
-			remapping={'numberOfVictims':'numberOfVictims',
-									'arena_color':'arena_color'}
-		)
-		
-		arena_color = 2
-		
-		con_yellow = Concurrence(
-			outcomes=[
-				'yellow',
-				'preempted',
-				'shutdown'],
-			default_outcome = 'preempted',
-			input_keys=['numberOfVictims','arena_color'],
-			output_keys=['numberOfVictims'],
-			outcome_map = {
-				'yellow':{'ARENA_IDENTIFICATION':'yellow', 'MONITOR_SHUTDOWN':'preempted', 'ORANGE':'preempted'},
-				'preempted':{'ORANGE':'preempted', 'MONITOR_SHUTDOWN':'preempted', 'ARENA_IDENTIFICATION':'preempted'},
-				'shutdown':{'MONITOR_SHUTDOWN':'valid','ORANGE':'preempted', 'ARENA_IDENTIFICATION':'preempted'}},
-			child_termination_cb=_termination_cb_all)
-		
-		with con_yellow:
-			
-			Concurrence.add('ORANGE', sm_orange, remapping={'numberOfVictims':'numberOfVictims'})
-			
-			Concurrence.add('MONITOR_SHUTDOWN', MonitorModeState(robotModeMsg.MODE_TELEOPERATED_LOCOMOTION))
-			
-			Concurrence.add('ARENA_IDENTIFICATION', sm_arena, remapping={'arena_color':'arena_color'})
-		
-		StateMachine.add(
-			'ALL_ORANGE',
-			con_yellow,
-			transitions={
-			'yellow':'ALL_YELLOW',
 			'shutdown':'MONITOR_START',
 			'preempted':'preempted'
 			},

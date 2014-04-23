@@ -43,15 +43,23 @@ import pandora_fsm
 
 from smach import State, StateMachine
 
+from pandora_fsm.agent.initiation_servers import ValidateVictimStart
 from pandora_fsm.states.victims import *
 	
 def validateVictim():
 	
 	sm = StateMachine(outcomes=['valid','not_valid','preempted'],
-                    input_keys=['victim_info','numberOfVictims'],
-                    output_keys=['numberOfVictims'])
+															input_keys=['victim_info'])
 		
 	with sm:
+		
+		StateMachine.add(
+			'VALIDATE_VICTIM_START',
+			ValidateVictimStart(),
+			transitions={
+				'succeeded':'VALIDATION_FROM_GUI'
+			}
+		)
 		
 		StateMachine.add(
 			'VALIDATION_FROM_GUI',
@@ -60,11 +68,6 @@ def validateVictim():
 			'valid':'VICTIM_TRUE',
 			'not_valid':'VICTIM_FALSE',
 			'preempted':'preempted'
-			#'aborted':'VALIDATION_FROM_GUI'
-			#~ 'succeeded':'VALIDATION_FROM_GUI'
-			},
-			remapping={
-				'numberOfVictims':'numberOfVictims'
 			}
 		)
 		

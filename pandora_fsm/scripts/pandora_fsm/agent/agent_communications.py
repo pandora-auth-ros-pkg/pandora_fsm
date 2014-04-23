@@ -1,14 +1,12 @@
 #!/usr/bin/env python
+
 import roslib; roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
+import pandora_fsm
 
-from smach import State, StateMachine
-
-from pandora_fsm.states.my_monitor_state import MyMonitorState
-from pandora_fsm.states.my_simple_action_state import MySimpleActionState
 from fsm_communications.msg import *
+#~ from fsm_communications.msg import RobotStartGoal
+#~ from fsm_communications.msg import ExplorationStartGoal
 from std_msgs.msg import Empty
 
 from actionlib import *
@@ -36,55 +34,62 @@ class AgentCommunications():
     rospy.Subscriber(audio_vo_topic, Empty, self.audio_vo_cb)
     rospy.Subscriber(audio_ov_topic, Empty, self.audio_ov_cb)
     rospy.Subscriber(qr_topic, Empty, self.qr_cb)
-    self.current_arena = 1
-    self.hazmats = 0
-    self.eye_charts = 0
-    self.motions = 0
-    self.thermals = 0
-    self.co = 0
-    self.audio_vo = 0
-    self.audio_ov = 0
-    self.qrs = 0
+    self.current_arena_ = 1
+    self.hazmats_ = 0
+    self.eye_charts_ = 0
+    self.motions_ = 0
+    self.thermals_ = 0
+    self.co_ = 0
+    self.audio_vo_ = 0
+    self.audio_ov_ = 0
+    self.qrs_ = 0
+  
+  #~ def execute(self):
+    #~ ac = SimpleActionClient('robot_start', Empty)
+    #~ goal = RobotStartGoal()
+    #~ ac.send_goal(goal)
+    #~ ac.wait_for_result()
+    #~ ac.get_result()
   
   def arena_type_cb(self, msg):
-    if current_arena == msg.arenaType:
+    if self.current_arena_ == msg.arenaType:
       return None
     else:
       return 2
   
   def hazmat_cb(self, msg):
-    self.hazmats += 1
+    self.hazmats_ += 1
     points = calculate_score()
   
   def eye_chart_cb(self, msg):
-    self.eye_charts += 1
+    self.eye_charts_ += 1
     points = calculate_score()
   
   def motion_cb(self, msg):
-    self.motions += 1
+    self.motions_ += 1
     points = calculate_score()
   
   def thermal_cb(self, msg):
-    self.thermals += 1
+    self.thermals_ += 1
     points = calculate_score()
   
   def co_cb(self, msg):
-    self.co += 1
+    self.co_ += 1
     points = calculate_score()
   
   def audio_vo_cb(self, msg):
-    self.audio_vo += 1
+    self.audio_vo_ += 1
     points = calculate_score()
   
   def audio_ov_cb(self, msg):
-    self.audio_ov += 1
+    self.audio_ov_ += 1
     points = calculate_score()
   
   def qr_cb(self, msg):
-    self.qrs += 1
+    self.qrs_ += 1
     points = calculate_score()
   
   def calculate_score(self):
-    points = (self.mazmats + self.eye_charts + self.motions + self.thermals +
-              self.co + self.audio_vo + self.audio_ov) * 5 + self.qrs
+    points = (self.mazmats_ + self.eye_charts_ + self.motions_ + self.thermals_ +
+              self.co_ + self.audio_vo_ + self.audio_ov_) * 5 + self.qrs_
     return points

@@ -42,6 +42,7 @@ import pandora_fsm
 
 from smach import State, StateMachine, Concurrence
 
+from pandora_fsm.agent.initiation_servers import ExplorationStart
 from pandora_fsm.states.navigation import *
 from pandora_fsm.states.victims import *
 	
@@ -77,29 +78,43 @@ def explorationWithVictims():
 	
 	def _termination_cb(outcome_map):
 		return True
-		
-		
-	cc = Concurrence(
-		outcomes=[
-			'thermal_alert',
-			'camera_alert',
-			'preempted' ], 
-		default_outcome = 'preempted',
-		outcome_map = {
-			'thermal_alert':{'VICTIM_MONITOR':'thermal'}, 
-			'camera_alert':{'VICTIM_MONITOR':'camera'},
-			'preempted':{'EXPLORE':'preempted','VICTIM_MONITOR':'preempted'} },
-		child_termination_cb=_termination_cb)
-		
-		
-	with cc:
-		
-		Concurrence.add('VICTIM_MONITOR', MonitorVictimState())
-		
-		Concurrence.add('EXPLORE', simpleExplorationContainer())
-		
-		
-		
-		
-	return cc
 	
+	sm = StateMachine(outcomes=['succeeded', 'preempted'])
+	
+	with sm:
+		
+		StateMachine.add(
+			'EXPLORATION_START',
+			ExplorationStart(),
+			transitions={
+				'succeeded':'EXPLORE_WITH_VICTIMS'
+			}
+		)
+		
+		cc = Concurrence(
+			outcomes=[
+				'thermal_alert',
+				'camera_alert',
+				'preempted' ], 
+			default_outcome = 'preempted',
+			outcome_map = {
+				'thermal_alert':{'VICTIM_MONITOR':'thermal'}, 
+				'camera_alert':{'VICTIM_MONITOR':'camera'},
+				'preempted':{'EXPLORE':'preempted','VICTIM_MONITOR':'preempted'} },
+			child_termination_cb=_termination_cb)
+		
+		with cc:
+			Concurrence.add('VICTIM_MONITOR', MonitorVictimState())
+			Concurrence.add('EXPLORE', simpleExplorationContainer())
+		
+		StateMachine.add(
+			'EXPLORE_WITH_VICTIMS',
+			cc,
+			transitions={
+				'thermal_alert':'succeeded',
+				'camera_alert':'succeeded',
+				'preempted':'preempted'
+			}
+		)
+		
+	return sm
