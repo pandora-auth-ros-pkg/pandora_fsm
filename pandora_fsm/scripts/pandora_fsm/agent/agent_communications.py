@@ -139,7 +139,7 @@ class AgentCommunications():
     rospy.loginfo('robot_started_cb')
     self.robot_started_as_.set_succeeded()
     rospy.Rate(1).sleep()
-    self.start_exploration(robotModeMsg.MODE_EXPLORATION)
+    self.start_exploration(robotModeMsg.MODE_EXPLORATION, False)
   
   def exploration_ended_cb(self, goal):
     rospy.loginfo('exploration_ended_cb')
@@ -193,8 +193,12 @@ class AgentCommunications():
     self.state_changer_ac_.send_goal(mode_goal)
     self.state_changer_ac_.wait_for_result()
   
-  def start_exploration(self, exploration_mode):
+  def start_exploration(self, exploration_mode, restart):
     rospy.loginfo('start_exploration = %i' % exploration_mode)
+    
+    if restart:
+      self.restart_fsm()
+    
     self.current_exploration_mode_ = exploration_mode
     self.change_robot_state(exploration_mode)
     rospy.Rate(1).sleep()
@@ -202,23 +206,36 @@ class AgentCommunications():
   
   def validate_current_situation(self, arena_type):
     if arena_type == ArenaTypeMsg.TYPE_YELLOW:
-      if rospy.get_rostime().secs > 600 and self.valid_victims_ == 0:
-        if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
-          self.restart_fsm()
-          self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
-      elif rospy.get_rostime().secs > 600 and self.valid_victims_ == 3:
+      if rospy.get_rostime().secs <= 600:
+        if self.valid_victims_ == 3:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
+      elif rospy.get_rostime().secs > 600 and rospy.get_rostime().secs <= 900:
+        if self.valid_victims_ == 0:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
+        elif self.current_score_ <= 30:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
+        elif self.current_score_ > 30:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
+      elif rospy.get_rostime().secs > 900:
+        if self.valid_victims_ <= 1 and self.current_score_ <= 25:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
+        elif self.valid_victims_ <= 1 and self.current_score_ > 25:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
+        elif self.current_score_ <= 40:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
+        elif self.current_score_ > 40:
+          if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
+            self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
+      if self.valid_victims_ == 4:
         if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-          self.restart_fsm()
-          self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION)
-      elif rospy.get_rostime().secs > 600 and self.valid_victims_ > 0 and \
-                                              self.valid_victims_ < 4:
-        if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
-          self.restart_fsm()
-          self.start_exploration(robotModeMsg.MODE_EXPLORATION)
-      elif self.valid_victims_ == 4:
-        if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-          self.restart_fsm()
-          self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION)
+          self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
       if self.valid_victims_ == 0:
         rospy.Rate(1).sleep()
