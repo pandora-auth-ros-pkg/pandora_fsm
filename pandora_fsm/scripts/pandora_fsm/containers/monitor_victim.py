@@ -32,7 +32,7 @@ def monitorVictim():
       'MONITOR_VICTIM_START',
       MonitorVictimStart(),
       transitions={
-        'succeeded':'VICTIM_APPROACH',
+        'succeeded':'MONITOR_VICTIM_AND_DO_WORK',
         'invalid':'MONITOR_VICTIM_START',
         'preempted':'preempted'
       }
