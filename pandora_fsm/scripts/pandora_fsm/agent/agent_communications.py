@@ -75,9 +75,9 @@ class AgentCommunications():
                           execute_cb = self.force_fsm_restart_cb)
     
     self.current_arena_ = 1
-    self.currect_score_ = 0
+    self.current_score_ = 0
     self.valid_victims_ = 0
-    self.exploration_ = True
+    self.exploration_ = False
     self.current_exploration_mode_ = 0
     #~ self.hazmats_ = 0
     #~ self.eye_charts_ = 0
@@ -139,6 +139,7 @@ class AgentCommunications():
     rospy.loginfo('robot_started_cb')
     self.robot_started_as_.set_succeeded()
     rospy.Rate(1).sleep()
+    self.exploration_ = True
     self.start_exploration(robotModeMsg.MODE_EXPLORATION, False)
   
   def exploration_ended_cb(self, goal):
@@ -170,10 +171,6 @@ class AgentCommunications():
     self.robot_start_pub_.publish()
     rospy.Rate(0.5).sleep()
   
-  def restart_fsm(self):
-    self.exploration_ = True
-    self.abort_fsm_pub_.publish()
-  
   def force_fsm_restart_cb(self, goal):
     rospy.loginfo('force_fsm_restart_cb')
     
@@ -197,7 +194,7 @@ class AgentCommunications():
     rospy.loginfo('start_exploration = %i' % exploration_mode)
     
     if restart:
-      self.restart_fsm()
+      self.abort_fsm_pub_.publish()
     
     self.current_exploration_mode_ = exploration_mode
     self.change_robot_state(exploration_mode)
