@@ -21,29 +21,25 @@ def main():
   def termination_cb(outcome_map):
     return True
   
+  def out_cb(outcome_map):
+    if outcome_map['VICTIM_MONITORING'] == 'aborted':
+      return 'monitoring_aborted'
+    
+    if outcome_map['ABORT_FSM'] == 'aborted':
+      return 'aborted'
+    
+    return 'preempted'
+  
   rospy.init_node('fsm')
   
   sm_everything = Concurrence(
     outcomes=[
-      'succeeded',
+      'monitoring_aborted',
       'aborted',
       'preempted'
     ],
     default_outcome='preempted',
-    outcome_map={
-      'succeeded':{'ROBOT_START':'succeeded'},
-      'succeeded':{'EXPLORATION':'succeeded'},
-      'succeeded':{'VICTIM_MONITORING':'succeeded'},
-      'succeeded':{'VICTIM_MONITORING':'aborted'},
-      'succeeded':{'VICTIM_VALIDATION':'valid'},
-      'succeeded':{'VICTIM_VALIDATION':'not_valid'},
-      'aborted':{'ABORT_FSM':'aborted'},
-      'preempted':{'ROBOT_START':'preempted',
-                    'EXPLORATION':'preempted',
-                    'VICTIM_MONITORING':'preempted',
-                    'VICTIM_VALIDATION':'preempted',
-                    'ABORT_FSM':'preempted'}
-    },
+    outcome_cb=out_cb,
     child_termination_cb=termination_cb
   )
   
@@ -66,8 +62,19 @@ def main():
       'PANDORA_FSM',
       sm_everything,
       transitions={
-        'succeeded':'PANDORA_FSM',
+        'monitoring_aborted':'RESTART_FSM',
         'aborted':'PANDORA_FSM',
+        'preempted':'preempted'
+      }
+    )
+    
+    StateMachine.add(
+      'RESTART_FSM',
+      MySimpleActionState('force_fsm_restart', ForceFSMRestartAction,
+                          goal=ForceFSMRestartGoal(),
+                          outcomes=['succeeded','preempted']),
+      transitions={
+        'succeeded':'PANDORA_FSM',
         'preempted':'preempted'
       }
     )
@@ -79,7 +86,7 @@ def main():
   smach_thread.start()
   
   rospy.spin()
-  #~ sis.stop()
+  sis.stop()
 
 if __name__ == '__main__':
 	main()

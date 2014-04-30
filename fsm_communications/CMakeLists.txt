@@ -11,15 +11,16 @@ add_action_files(
   FILES
   ValidateVictim.action
   AgentCommunication.action
-  RobotStart.action
-  ExplorationStart.action
-  MonitorVictimStart.action
-  ValidateVictimStart.action
+  RobotStarted.action
+  ExplorationEnded.action
+  MonitorVictimEnded.action
+  ValidateVictimEnded.action
   AbortFSM.action
+  ForceFSMRestart.action
 )
 
 generate_messages(
-  DEPENDENCIES actionlib_msgs
+  DEPENDENCIES std_msgs actionlib_msgs
 )
 catkin_package(
   CATKIN_DEPENDS message_runtime actionlib_msgs std_msgs

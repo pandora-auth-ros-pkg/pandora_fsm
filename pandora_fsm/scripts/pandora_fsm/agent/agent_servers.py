@@ -15,11 +15,11 @@ from std_msgs.msg import Empty
 from actionlib import *
 from actionlib.msg import *
 
-robot_start_topic = '/robot_start'
-exploration_start_topic = '/exploration_start'
-monitor_victim_start_topic = '/monitor_victim_start'
-validate_victim_start_topic = '/validate_victim_start'
-abort_fsm_topic = '/abort_fsm'
+robot_start_topic = '/fsm/robot_start'
+exploration_start_topic = '/fsm/exploration_start'
+monitor_victim_start_topic = '/fsm/monitor_victim_start'
+validate_victim_start_topic = '/fsm/validate_victim_start'
+abort_fsm_topic = '/fsm/abort_fsm'
 
 class RobotStart(MyMonitorState):
   

@@ -42,6 +42,7 @@ import pandora_fsm
 
 from smach import State, StateMachine, Concurrence
 
+from fsm_communications.msg import ExplorationEndedAction, ExplorationEndedGoal
 from pandora_fsm.agent.agent_servers import ExplorationStart
 from pandora_fsm.states.navigation import *
 from pandora_fsm.states.victims import *
@@ -87,8 +88,8 @@ def explorationWithVictims():
 			'EXPLORATION_START',
 			ExplorationStart(),
 			transitions={
-				'succeeded':'EXPLORE_WITH_VICTIMS',
-        'invalid':'EXPLORATION_START',
+				'succeeded':'EXPLORATION_WITH_VICTIMS',
+				'invalid':'EXPLORATION_START',
 				'preempted':'preempted'
 			}
 		)
@@ -110,11 +111,22 @@ def explorationWithVictims():
 			Concurrence.add('EXPLORE', simpleExplorationContainer())
 		
 		StateMachine.add(
-			'EXPLORE_WITH_VICTIMS',
+			'EXPLORATION_WITH_VICTIMS',
 			cc,
 			transitions={
-				'thermal_alert':'succeeded',
-				'camera_alert':'succeeded',
+				'thermal_alert':'EXPLORATION_ENDED',
+				'camera_alert':'EXPLORATION_ENDED',
+				'preempted':'preempted'
+			}
+		)
+		
+		StateMachine.add(
+			'EXPLORATION_ENDED',
+			MySimpleActionState('exploration_ended', ExplorationEndedAction,
+													goal=ExplorationEndedGoal(),
+													outcomes=['succeeded','preempted']),
+			transitions = {
+				'succeeded':'EXPLORATION_START',
 				'preempted':'preempted'
 			}
 		)

@@ -43,6 +43,8 @@ import pandora_fsm
 
 from smach import State, StateMachine
 
+from fsm_communications.msg import ValidateVictimEndedAction, \
+																		ValidateVictimEndedGoal
 from pandora_fsm.agent.agent_servers import ValidateVictimStart
 from pandora_fsm.states.victims import *
 	
@@ -50,7 +52,7 @@ def validateVictim():
 	
 	sm = StateMachine(outcomes=['valid','not_valid','preempted'],
 															input_keys=['victim_info'])
-		
+	
 	with sm:
 		
 		StateMachine.add(
@@ -58,7 +60,7 @@ def validateVictim():
 			ValidateVictimStart(),
 			transitions={
 				'succeeded':'VALIDATION_FROM_GUI',
-        'invalid':'VALIDATE_VICTIM_START',
+				'invalid':'VALIDATE_VICTIM_START',
 				'preempted':'preempted'
 			}
 		)
@@ -77,7 +79,7 @@ def validateVictim():
 			'VICTIM_TRUE',
 			ValidateHoleState(True),
 			transitions={
-			'succeeded':'valid',
+			'succeeded':'VALIDATE_VICTIM_ENDED',
 			'preempted':'preempted'
 			}
 		)
@@ -86,8 +88,19 @@ def validateVictim():
 			'VICTIM_FALSE',
 			ValidateHoleState(False),
 			transitions={
-			'succeeded':'not_valid',
+			'succeeded':'VALIDATE_VICTIM_ENDED',
 			'preempted':'preempted'
+			}
+		)
+		
+		StateMachine.add(
+			'VALIDATE_VICTIM_ENDED',
+			MySimpleActionState('validate_victim_ended', ValidateVictimEndedAction,
+													goal=ValidateVictimEndedGoal(),
+													outcomes=['succeeded','preempted']),
+			transitions = {
+				'succeeded':'VALIDATE_VICTIM_START',
+				'preempted':'preempted'
 			}
 		)
 		

@@ -14,6 +14,8 @@ from pandora_fsm.containers.identification import *
 from pandora_fsm.containers.data_fusion_hold import *
 
 from state_manager_communications.msg import robotModeMsg
+from fsm_communications.msg import MonitorVictimEndedAction, \
+                                    MonitorVictimEndedGoal
 
 def monitorVictim():
   
@@ -30,12 +32,12 @@ def monitorVictim():
       'MONITOR_VICTIM_START',
       MonitorVictimStart(),
       transitions={
-        'succeeded':'MONITOR_VICTIM_AND_DO_WORK',
+        'succeeded':'VICTIM_APPROACH',
         'invalid':'MONITOR_VICTIM_START',
         'preempted':'preempted'
       }
     )
-      
+    
     sm_victim = StateMachine(outcomes=['verified','not_verified',
                                         'preempted','aborted'],
                               input_keys=['victim_info'],
@@ -106,13 +108,24 @@ def monitorVictim():
       'MONITOR_VICTIM_AND_DO_WORK',
       cc,
       transitions={
-        'verified':'succeeded',
+        'verified':'MONITOR_VICTIM_ENDED',
         'not_verified':'MONITOR_VICTIM_AND_DO_WORK',
         'update_victim':'MONITOR_VICTIM_AND_DO_WORK',
         'preempted':'preempted',
         'aborted':'aborted'
       },
       remapping={'victim_info':'victim_info'}
+    )
+    
+    StateMachine.add(
+      'MONITOR_VICTIM_ENDED',
+      MySimpleActionState('monitor_victim_ended', MonitorVictimEndedAction,
+                          goal=MonitorVictimEndedGoal(),
+                          outcomes=['succeeded','preempted']),
+      transitions={
+        'succeeded':'MONITOR_VICTIM_START',
+        'preempted':'preempted'
+      }
     )
   
   return sm
