@@ -14,8 +14,9 @@ from actionlib.msg import *
 
 state_changer_action_topic = '/robot/state/change'
 arena_type_topic = '/fsm/arena_type'
-robocup_score_topic = '/published_topic_names/robocup_score'
-valid_victims_topic = '/published_topic_names/valid_victims_counter'
+robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
+valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
+valid_victims_topic = '/data_fusion/alert_handler/qr_notification'
 #~ hazmat_topic = '/hazmat'
 #~ eye_chart_topic = '/eye_chart'
 #~ motion_topic = '/motion'
