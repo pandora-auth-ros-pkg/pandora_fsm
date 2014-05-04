@@ -83,6 +83,8 @@ class AgentCommunications():
     
     self.robot_resets_ = 0
     self.robot_restarts_ = 0
+    
+    self.initial_time_ = rospy.get_rostime().secs
   
   def main(self):
     self.reset_robot_ = False
@@ -193,11 +195,12 @@ class AgentCommunications():
   
   def validate_current_situation(self, arena_type):
     if arena_type == ArenaTypeMsg.TYPE_YELLOW:
-      if rospy.get_rostime().secs <= 600:
+      if rospy.get_rostime().secs - self.initial_time_ <= 600:
         if self.valid_victims_ == 3:
           if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
             self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
-      elif rospy.get_rostime().secs > 600 and rospy.get_rostime().secs <= 900:
+      elif rospy.get_rostime().secs - self.initial_time_ > 600 and \
+            rospy.get_rostime().secs - self.initial_time_ <= 900:
         if self.valid_victims_ == 0:
           if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
             self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
@@ -207,7 +210,7 @@ class AgentCommunications():
         elif self.current_score_ > 30:
           if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
             self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
-      elif rospy.get_rostime().secs > 900:
+      elif rospy.get_rostime().secs - self.initial_time_ > 900:
         if self.valid_victims_ <= 1 and self.current_score_ <= 25:
           if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
             self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
