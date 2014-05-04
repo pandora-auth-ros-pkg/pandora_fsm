@@ -18,14 +18,6 @@ arena_type_topic = '/fsm/arena_type'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
 qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
-#~ hazmat_topic = '/hazmat'
-#~ eye_chart_topic = '/eye_chart'
-#~ motion_topic = '/motion'
-#~ thermal_topic = '/thermal'
-#~ co_topic = '/co'
-#~ audio_vo_topic = '/audio_vo'
-#~ audio_ov_topic = '/audio_ov'
-#~ qr_topic = '/qr'
 
 robot_start_topic = '/fsm/robot_start'
 exploration_start_topic = '/fsm/exploration_start'
@@ -46,14 +38,6 @@ class AgentCommunications():
     rospy.Subscriber(teleoperation_topic, robotModeMsg, self.teleoperation_cb)
     rospy.Subscriber(teleoperation_ended_topic, robotModeMsg,
                       self.teleoperation_ended_cb)
-    #~ rospy.Subscriber(hazmat_topic, Empty, self.hazmat_cb)
-    #~ rospy.Subscriber(eye_chart_topic, Empty, self.eye_chart_cb)
-    #~ rospy.Subscriber(motion_topic, Empty, self.motion_cb)
-    #~ rospy.Subscriber(thermal_topic, Empty, self.thermal_cb)
-    #~ rospy.Subscriber(co_topic, Empty, self.co_cb)
-    #~ rospy.Subscriber(audio_vo_topic, Empty, self.audio_vo_cb)
-    #~ rospy.Subscriber(audio_ov_topic, Empty, self.audio_ov_cb)
-    #~ rospy.Subscriber(qr_topic, Empty, self.qr_cb)
     self.robot_start_pub_ = rospy.Publisher(robot_start_topic, Empty)
     self.exploration_start_pub_ = rospy.Publisher(exploration_start_topic, Empty)
     self.monitor_victim_start_pub_ = rospy.Publisher(monitor_victim_start_topic,
@@ -90,13 +74,6 @@ class AgentCommunications():
     self.teleoperation_ = False
     self.current_exploration_mode_ = 0
     self.qrs_ = 0
-    #~ self.hazmats_ = 0
-    #~ self.eye_charts_ = 0
-    #~ self.motions_ = 0
-    #~ self.thermals_ = 0
-    #~ self.co_ = 0
-    #~ self.audio_vo_ = 0
-    #~ self.audio_ov_ = 0
   
   def main(self):
     self.start_robot()
@@ -124,39 +101,6 @@ class AgentCommunications():
   
   def teleoperation_ended_cb(self, msg):
     self.teleoperation_ = False
-  
-  #~ def hazmat_cb(self, msg):
-    #~ self.hazmats_ += 1
-    #~ points = self.calculate_score()
-    #~ rospy.loginfo(self.hazmats_)
-  #~ 
-  #~ def eye_chart_cb(self, msg):
-    #~ self.eye_charts_ += 1
-    #~ points = calculate_score()
-  #~ 
-  #~ def motion_cb(self, msg):
-    #~ self.motions_ += 1
-    #~ points = calculate_score()
-  #~ 
-  #~ def thermal_cb(self, msg):
-    #~ self.thermals_ += 1
-    #~ points = calculate_score()
-  #~ 
-  #~ def co_cb(self, msg):
-    #~ self.co_ += 1
-    #~ points = calculate_score()
-  #~ 
-  #~ def audio_vo_cb(self, msg):
-    #~ self.audio_vo_ += 1
-    #~ points = calculate_score()
-  #~ 
-  #~ def audio_ov_cb(self, msg):
-    #~ self.audio_ov_ += 1
-    #~ points = calculate_score()
-  #~ 
-  #~ def qr_cb(self, msg):
-    #~ self.qrs_ += 1
-    #~ points = calculate_score()
   
   def score_cb(self, msg):
     self.current_score_ = msg.data
@@ -259,13 +203,3 @@ class AgentCommunications():
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
       if self.valid_victims_ == 0:
         rospy.Rate(1).sleep()
-  
-  #~ def calculate_score(self):
-    #~ points = (self.hazmats_ + self.eye_charts_ + self.motions_ + self.thermals_ +
-              #~ self.co_ + self.audio_vo_ + self.audio_ov_) * 5 + self.qrs_
-    #~ return points
-  
-  #~ def initialize_robot(self):
-    #~ pub = rospy.Publisher(robot_start_topic, Empty)
-    #~ rospy.Rate(10).sleep()
-    #~ pub.publish()
