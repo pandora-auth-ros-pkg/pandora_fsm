@@ -1,8 +1,0 @@
-#goal definition
-uint8 communicationMessage
-uint8 TYPE_VICTIM_FOUND=1
----
-#result definition
-uint8 test
----
-#feedback

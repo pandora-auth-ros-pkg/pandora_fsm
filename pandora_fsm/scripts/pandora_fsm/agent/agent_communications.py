@@ -15,7 +15,9 @@ from actionlib import *
 from actionlib.msg import *
 
 state_changer_action_topic = '/robot/state/change'
-arena_type_topic = '/fsm/arena_type'
+robot_turn_back_topic = '/robot_turn_back'
+return_to_orange_topic = '/return_to_orange'
+arena_type_topic = '/arena_type'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
 qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
@@ -54,6 +56,10 @@ class AgentCommunications():
     
     self.state_changer_ac_ = SimpleActionClient(state_changer_action_topic,
                                                 RobotModeAction)
+    self.robot_turn_back_ac_ = SimpleActionClient(robot_turn_back_topic,
+                                                  RobotTurnBackAction)
+    self.return_to_orange_ac_ = SimpleActionClient(return_to_orange_topic,
+                                                    ReturnToOrangeAction)
     
     self.robot_started_as_ = SimpleActionServer('robot_started',
                                                 RobotStartedAction,
@@ -74,13 +80,14 @@ class AgentCommunications():
       SimpleActionServer('exploration_restart', ExplorationRestartAction,
                           execute_cb = self.exploration_restart_cb)
     
-    self.current_arena_ = 1
+    self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
     self.current_score_ = 0
     self.valid_victims_ = 0
+    self.qrs_ = 0
+    self.current_exploration_mode_ = 0
     self.exploration_ = False
     self.teleoperation_ = False
-    self.current_exploration_mode_ = 0
-    self.qrs_ = 0
+    self.turn_back_ = False
     
     self.robot_resets_ = 0
     self.robot_restarts_ = 0
@@ -102,6 +109,9 @@ class AgentCommunications():
     if self.current_arena_ == msg.TYPE_YELLOW and \
             msg.arenaType == msg.TYPE_ORANGE:
       self.evaluate_current_situation(self, msg.arenaType)
+    if self.current_arena_ == msg.TYPE_ORANGE and \
+            msg.arenaType == msg.TYPE_YELLOW_BLACK:
+      self.evaluate_current_situation(self, msg.arenaType)
   
   def qr_notification_cb(self, msg):
     self.qrs_ += 1
@@ -118,10 +128,11 @@ class AgentCommunications():
   def robot_reset_cb(self, msg):
     self.current_score_ = 0
     self.valid_victims_ = 0
+    self.qrs_ = 0
+    self.current_exploration_mode_ = 0
     self.exploration_ = False
     self.teleoperation_ = False
-    self.current_exploration_mode_ = 0
-    self.qrs_ = 0
+    self.turn_back_ = False
     
     self.robot_resets_ += 1
     self.reset_robot_ = True
@@ -176,11 +187,17 @@ class AgentCommunications():
     
     self.validate_victim_ended_as_.set_succeeded()
     rospy.Rate(1).sleep()
-    self.monitor_victim_start_pub_.publish()
+    
+    if not self.turn_back_:
+      self.monitor_victim_start_pub_.publish()
+    else:
+      goal = ReturnToOrangeGoal()
+      self.return_to_orange_ac_.send_goal(goal)
+      self.return_to_orange_ac_.wait_for_result()
+      self.turn_back_ = False
   
   def exploration_restart_cb(self, goal):
     rospy.loginfo('exploration_restart_cb')
-    
     self.exploration_ = True
   
   def start_exploration(self, exploration_mode, restart):
@@ -214,4 +231,13 @@ class AgentCommunications():
           self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
       if self.valid_victims_ == 0:
-        rospy.Rate(1).sleep()
+        goal = RobotTurnBackGoal()
+        self.robot_turn_back_ac_.send_goal(goal)
+        self.robot_turn_back_ac_.wait_for_result()
+        self.turn_back_ = True
+      else:
+        self.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
+        self.teleoperation_ = True
+        self.abort_fsm_pub_.publish()
+    elif arena_type == ArenaTypeMsg.TYPE_YELLOW_BLACK:
+      rospy.Rate(1).sleep()

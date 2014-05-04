@@ -10,13 +10,14 @@ add_message_files(
 add_action_files(
   FILES
   ValidateVictim.action
-  AgentCommunication.action
   RobotStarted.action
   ExplorationEnded.action
   MonitorVictimEnded.action
   ValidateVictimEnded.action
   AbortFSM.action
   ExplorationRestart.action
+  RobotTurnBack.action
+  ReturnToOrange.action
 )
 
 generate_messages(
