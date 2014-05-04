@@ -9,6 +9,7 @@ from state_manager_communications.msg import RobotModeAction, RobotModeGoal, \
 from std_msgs.msg import Int32, Empty
 from fsm_communications.msg import *
 from data_fusion_communications.msg import QrNotificationMsg
+from math import exp
 
 from actionlib import *
 from actionlib.msg import *
@@ -94,13 +95,13 @@ class AgentCommunications():
       rospy.Rate(2).sleep()
       if not self.teleoperation_:
         if self.exploration_:
-          self.validate_current_situation(self.current_arena_)
+          self.evaluate_current_situation(self.current_arena_)
           rospy.loginfo('agent loop')
   
   def arena_type_cb(self, msg):
     if self.current_arena_ == msg.TYPE_YELLOW and \
             msg.arenaType == msg.TYPE_ORANGE:
-      self.validate_current_situation(self, msg.arenaType)
+      self.evaluate_current_situation(self, msg.arenaType)
   
   def qr_notification_cb(self, msg):
     self.qrs_ += 1
@@ -193,37 +194,22 @@ class AgentCommunications():
     rospy.Rate(1).sleep()
     self.exploration_start_pub_.publish()
   
-  def validate_current_situation(self, arena_type):
+  def cost_function(self, time):
+    cost = self.valid_victims_ * exp(3.5 - time / 900)
+    cost += self.qrs_ * exp(2.7 - time / 420)
+    return cost
+  
+  def evaluate_current_situation(self, arena_type):
     if arena_type == ArenaTypeMsg.TYPE_YELLOW:
-      if rospy.get_rostime().secs - self.initial_time_ <= 600:
-        if self.valid_victims_ == 3:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
-      elif rospy.get_rostime().secs - self.initial_time_ > 600 and \
-            rospy.get_rostime().secs - self.initial_time_ <= 900:
-        if self.valid_victims_ == 0:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
-        elif self.current_score_ <= 30:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
-        elif self.current_score_ > 30:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
-      elif rospy.get_rostime().secs - self.initial_time_ > 900:
-        if self.valid_victims_ <= 1 and self.current_score_ <= 25:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
-        elif self.valid_victims_ <= 1 and self.current_score_ > 25:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
-        elif self.current_score_ <= 40:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
-        elif self.current_score_ > 40:
-          if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-            self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
-      if self.valid_victims_ == 4:
+      current_cost = \
+        self.cost_function(float(rospy.get_rostime().secs - self.initial_time_))
+      if current_cost < 25:
+        if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
+          self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
+      elif current_cost < 35:
+        if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
+          self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
+      else:
         if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
           self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
