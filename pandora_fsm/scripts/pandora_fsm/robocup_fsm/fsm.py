@@ -54,23 +54,23 @@ def main():
                     remapping={'victim_info':'victim_info'})
     Concurrence.add('ABORT_FSM', AbortFSM())
   
-  sm = StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
+  sm = StateMachine(outcomes=['preempted'])
   
   with sm:
     StateMachine.add(
       'PANDORA_FSM',
       sm_everything,
       transitions={
-        'monitoring_aborted':'RESTART_FSM',
+        'monitoring_aborted':'RESTART_EXPLORATION',
         'aborted':'PANDORA_FSM',
         'preempted':'preempted'
       }
     )
     
     StateMachine.add(
-      'RESTART_FSM',
-      MySimpleActionState('force_fsm_restart', ForceFSMRestartAction,
-                          goal=ForceFSMRestartGoal(),
+      'RESTART_EXPLORATION',
+      MySimpleActionState('exploration_restart', ExplorationRestartAction,
+                          goal=ExplorationRestartGoal(),
                           outcomes=['succeeded','preempted']),
       transitions={
         'succeeded':'PANDORA_FSM',
@@ -81,6 +81,7 @@ def main():
   sis = smach_ros.IntrospectionServer('fsm_introspection', sm, '/PANDORA_FSM')
   sis.start()
   
+  smach_ros.set_preempt_handler(sm)
   smach_thread = threading.Thread(target = sm.execute)
   smach_thread.start()
   

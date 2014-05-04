@@ -18,14 +18,16 @@ arena_type_topic = '/fsm/arena_type'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
 qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
+teleoperation_topic = '/robot/state/clients'
+teleoperation_ended_topic = '/teleoperation_ended'
+robot_reset_topic = '/robot_reset'
+robot_restart_topic = '/robot_restart'
 
 robot_start_topic = '/fsm/robot_start'
 exploration_start_topic = '/fsm/exploration_start'
 monitor_victim_start_topic = '/fsm/monitor_victim_start'
 validate_victim_start_topic = '/fsm/validate_victim_start'
 abort_fsm_topic = '/fsm/abort_fsm'
-teleoperation_topic = '/robot/state/clients'
-teleoperation_ended_topic = '/teleoperation_ended'
 
 class AgentCommunications():
   
@@ -36,8 +38,11 @@ class AgentCommunications():
     rospy.Subscriber(qr_notification_topic, QrNotificationMsg,
                       self.qr_notification_cb)
     rospy.Subscriber(teleoperation_topic, robotModeMsg, self.teleoperation_cb)
-    rospy.Subscriber(teleoperation_ended_topic, robotModeMsg,
+    rospy.Subscriber(teleoperation_ended_topic, Empty,
                       self.teleoperation_ended_cb)
+    rospy.Subscriber(robot_reset_topic, Empty, self.robot_reset_cb)
+    rospy.Subscriber(robot_restart_topic, Empty, self.robot_restart_cb)
+    
     self.robot_start_pub_ = rospy.Publisher(robot_start_topic, Empty)
     self.exploration_start_pub_ = rospy.Publisher(exploration_start_topic, Empty)
     self.monitor_victim_start_pub_ = rospy.Publisher(monitor_victim_start_topic,
@@ -48,6 +53,7 @@ class AgentCommunications():
     
     self.state_changer_ac_ = SimpleActionClient(state_changer_action_topic,
                                                 RobotModeAction)
+    
     self.robot_started_as_ = SimpleActionServer('robot_started',
                                                 RobotStartedAction,
                                                 execute_cb =
@@ -63,9 +69,9 @@ class AgentCommunications():
       SimpleActionServer('validate_victim_ended', ValidateVictimEndedAction,
                           execute_cb = self.validate_victim_ended_cb)
     
-    self.force_fsm_restart_as_ = \
-      SimpleActionServer('force_fsm_restart', ForceFSMRestartAction,
-                          execute_cb = self.force_fsm_restart_cb)
+    self.exploration_restart_as_ = \
+      SimpleActionServer('exploration_restart', ExplorationRestartAction,
+                          execute_cb = self.exploration_restart_cb)
     
     self.current_arena_ = 1
     self.current_score_ = 0
@@ -74,11 +80,15 @@ class AgentCommunications():
     self.teleoperation_ = False
     self.current_exploration_mode_ = 0
     self.qrs_ = 0
+    
+    self.robot_resets_ = 0
+    self.robot_restarts_ = 0
   
   def main(self):
+    self.reset_robot_ = False
     self.start_robot()
     
-    while not rospy.is_shutdown():
+    while not self.reset_robot_ and not rospy.is_shutdown():
       rospy.Rate(2).sleep()
       if not self.teleoperation_:
         if self.exploration_:
@@ -102,6 +112,20 @@ class AgentCommunications():
   def teleoperation_ended_cb(self, msg):
     self.teleoperation_ = False
   
+  def robot_reset_cb(self, msg):
+    self.current_score_ = 0
+    self.valid_victims_ = 0
+    self.exploration_ = False
+    self.teleoperation_ = False
+    self.current_exploration_mode_ = 0
+    self.qrs_ = 0
+    
+    self.robot_resets_ += 1
+    self.reset_robot_ = True
+  
+  def robot_restart_cb(self, msg):
+    self.robot_restarts_ += 1
+  
   def score_cb(self, msg):
     self.current_score_ = msg.data
   
@@ -114,17 +138,6 @@ class AgentCommunications():
     
     self.state_changer_ac_.send_goal(mode_goal)
     self.state_changer_ac_.wait_for_result()
-  
-  def start_exploration(self, exploration_mode, restart):
-    rospy.loginfo('start_exploration = %i' % exploration_mode)
-    
-    if restart:
-      self.abort_fsm_pub_.publish()
-    
-    self.current_exploration_mode_ = exploration_mode
-    self.change_robot_state(exploration_mode)
-    rospy.Rate(1).sleep()
-    self.exploration_start_pub_.publish()
   
   def start_robot(self):
     rospy.Rate(10).sleep()
@@ -162,11 +175,21 @@ class AgentCommunications():
     rospy.Rate(1).sleep()
     self.monitor_victim_start_pub_.publish()
   
-  def force_fsm_restart_cb(self, goal):
-    rospy.loginfo('force_fsm_restart_cb')
+  def exploration_restart_cb(self, goal):
+    rospy.loginfo('exploration_restart_cb')
     
-    self.monitor_victim_ended_as_.set_succeeded()
     self.exploration_ = True
+  
+  def start_exploration(self, exploration_mode, restart):
+    rospy.loginfo('start_exploration = %i' % exploration_mode)
+    
+    if restart:
+      self.abort_fsm_pub_.publish()
+    
+    self.current_exploration_mode_ = exploration_mode
+    self.change_robot_state(exploration_mode)
+    rospy.Rate(1).sleep()
+    self.exploration_start_pub_.publish()
   
   def validate_current_situation(self, arena_type):
     if arena_type == ArenaTypeMsg.TYPE_YELLOW:

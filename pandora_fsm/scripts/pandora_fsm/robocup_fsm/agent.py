@@ -12,8 +12,9 @@ def main():
   
   agent = AgentCommunications()
   
-  #~ agent.initialize_robot()
-  agent.main()
+  while not rospy.is_shutdown():
+    agent.main()
+  
   rospy.loginfo('agent terminated')
 
 if __name__ == '__main__':
