@@ -8,6 +8,7 @@ from state_manager_communications.msg import RobotModeAction, RobotModeGoal, \
                                               robotModeMsg
 from std_msgs.msg import Int32, Empty
 from fsm_communications.msg import *
+from data_fusion_communications.msg import QrNotificationMsg
 
 from actionlib import *
 from actionlib.msg import *
@@ -16,7 +17,7 @@ state_changer_action_topic = '/robot/state/change'
 arena_type_topic = '/fsm/arena_type'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
-valid_victims_topic = '/data_fusion/alert_handler/qr_notification'
+qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
 #~ hazmat_topic = '/hazmat'
 #~ eye_chart_topic = '/eye_chart'
 #~ motion_topic = '/motion'
@@ -31,13 +32,20 @@ exploration_start_topic = '/fsm/exploration_start'
 monitor_victim_start_topic = '/fsm/monitor_victim_start'
 validate_victim_start_topic = '/fsm/validate_victim_start'
 abort_fsm_topic = '/fsm/abort_fsm'
+teleoperation_topic = '/robot/state/clients'
+teleoperation_ended_topic = '/teleoperation_ended'
 
 class AgentCommunications():
   
   def __init__(self):
     rospy.Subscriber(arena_type_topic, ArenaTypeMsg, self.arena_type_cb)
-    rospy.Subscriber(robocup_score_topic, Int32, self.arena_type_cb)
+    rospy.Subscriber(robocup_score_topic, Int32, self.score_cb)
     rospy.Subscriber(valid_victims_topic, Int32, self.valid_victims_cb)
+    rospy.Subscriber(qr_notification_topic, QrNotificationMsg,
+                      self.qr_notification_cb)
+    rospy.Subscriber(teleoperation_topic, robotModeMsg, self.teleoperation_cb)
+    rospy.Subscriber(teleoperation_ended_topic, robotModeMsg,
+                      self.teleoperation_ended_cb)
     #~ rospy.Subscriber(hazmat_topic, Empty, self.hazmat_cb)
     #~ rospy.Subscriber(eye_chart_topic, Empty, self.eye_chart_cb)
     #~ rospy.Subscriber(motion_topic, Empty, self.motion_cb)
@@ -79,7 +87,9 @@ class AgentCommunications():
     self.current_score_ = 0
     self.valid_victims_ = 0
     self.exploration_ = False
+    self.teleoperation_ = False
     self.current_exploration_mode_ = 0
+    self.qrs_ = 0
     #~ self.hazmats_ = 0
     #~ self.eye_charts_ = 0
     #~ self.motions_ = 0
@@ -87,21 +97,33 @@ class AgentCommunications():
     #~ self.co_ = 0
     #~ self.audio_vo_ = 0
     #~ self.audio_ov_ = 0
-    #~ self.qrs_ = 0
   
   def main(self):
     self.start_robot()
     
     while not rospy.is_shutdown():
-      rospy.Rate(1).sleep()
-      if self.exploration_:
-        self.validate_current_situation(self.current_arena_)
-        rospy.loginfo('agent loop')
+      rospy.Rate(2).sleep()
+      if not self.teleoperation_:
+        if self.exploration_:
+          self.validate_current_situation(self.current_arena_)
+          rospy.loginfo('agent loop')
   
   def arena_type_cb(self, msg):
     if self.current_arena_ == msg.TYPE_YELLOW and \
             msg.arenaType == msg.TYPE_ORANGE:
       self.validate_current_situation(self, msg.arenaType)
+  
+  def qr_notification_cb(self, msg):
+    self.qrs_ += 1
+  
+  def teleoperation_cb(self, msg):
+    if msg.type == msg.TYPE_TRANSITION and \
+        msg.mode == robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+      self.teleoperation_ = True
+      self.abort_fsm_pub_.publish()
+  
+  def teleoperation_ended_cb(self, msg):
+    self.teleoperation_ = False
   
   #~ def hazmat_cb(self, msg):
     #~ self.hazmats_ += 1
@@ -136,6 +158,35 @@ class AgentCommunications():
     #~ self.qrs_ += 1
     #~ points = calculate_score()
   
+  def score_cb(self, msg):
+    self.current_score_ = msg.data
+  
+  def valid_victims_cb(self, msg):
+    self.valid_victims_ = msg.data
+  
+  def change_robot_state(self, new_state):
+    mode_msg = robotModeMsg(nodeName = 'agent', mode = new_state)
+    mode_goal = RobotModeGoal(modeMsg = mode_msg)
+    
+    self.state_changer_ac_.send_goal(mode_goal)
+    self.state_changer_ac_.wait_for_result()
+  
+  def start_exploration(self, exploration_mode, restart):
+    rospy.loginfo('start_exploration = %i' % exploration_mode)
+    
+    if restart:
+      self.abort_fsm_pub_.publish()
+    
+    self.current_exploration_mode_ = exploration_mode
+    self.change_robot_state(exploration_mode)
+    rospy.Rate(1).sleep()
+    self.exploration_start_pub_.publish()
+  
+  def start_robot(self):
+    rospy.Rate(10).sleep()
+    self.robot_start_pub_.publish()
+    rospy.Rate(0.5).sleep()
+  
   def robot_started_cb(self, goal):
     rospy.loginfo('robot_started_cb')
     self.robot_started_as_.set_succeeded()
@@ -167,40 +218,11 @@ class AgentCommunications():
     rospy.Rate(1).sleep()
     self.monitor_victim_start_pub_.publish()
   
-  def start_robot(self):
-    rospy.Rate(10).sleep()
-    self.robot_start_pub_.publish()
-    rospy.Rate(0.5).sleep()
-  
   def force_fsm_restart_cb(self, goal):
     rospy.loginfo('force_fsm_restart_cb')
     
     self.monitor_victim_ended_as_.set_succeeded()
     self.exploration_ = True
-  
-  def score_cb(self, msg):
-    self.current_score_ = msg.data
-  
-  def valid_victims_cb(self, msg):
-    self.valid_victims_ = msg.data
-  
-  def change_robot_state(self, new_state):
-    mode_msg = robotModeMsg(nodeName = 'fsm', mode = new_state)
-    mode_goal = RobotModeGoal(modeMsg = mode_msg)
-    
-    self.state_changer_ac_.send_goal(mode_goal)
-    self.state_changer_ac_.wait_for_result()
-  
-  def start_exploration(self, exploration_mode, restart):
-    rospy.loginfo('start_exploration = %i' % exploration_mode)
-    
-    if restart:
-      self.abort_fsm_pub_.publish()
-    
-    self.current_exploration_mode_ = exploration_mode
-    self.change_robot_state(exploration_mode)
-    rospy.Rate(1).sleep()
-    self.exploration_start_pub_.publish()
   
   def validate_current_situation(self, arena_type):
     if arena_type == ArenaTypeMsg.TYPE_YELLOW:

@@ -54,7 +54,6 @@ def main():
                     remapping={'victim_info':'victim_info'})
     Concurrence.add('ABORT_FSM', AbortFSM())
   
-  
   sm = StateMachine(outcomes=['succeeded', 'aborted', 'preempted'])
   
   with sm:
