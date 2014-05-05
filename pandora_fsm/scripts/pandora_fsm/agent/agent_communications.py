@@ -9,7 +9,7 @@ from state_manager_communications.msg import RobotModeAction, RobotModeGoal, \
 from std_msgs.msg import Int32, Empty
 from fsm_communications.msg import *
 from data_fusion_communications.msg import QrNotificationMsg
-from math import exp
+from math import exp, log
 
 from actionlib import *
 from actionlib.msg import *
@@ -212,8 +212,10 @@ class AgentCommunications():
     self.exploration_start_pub_.publish()
   
   def cost_function(self, time):
-    cost = self.valid_victims_ * exp(3.5 - time / 900)
-    cost += self.qrs_ * exp(2.7 - time / 420)
+    cost = self.valid_victims_ * exp(3.3 - time /1020)
+    cost += self.qrs_ * exp(2 - time / 420)
+    cost += self.robot_resets_ * exp(1.4 + time / 1140)
+    cost += self.robot_restarts_ * (1.5 + 0.1 * time)
     return cost
   
   def evaluate_current_situation(self, arena_type):
