@@ -19,7 +19,8 @@ class ValidateVictimActionStub:
     if self.validate_victim_stub_as_.is_preempt_requested():
       self.validate_victim_stub_as_.set_preempted()
     
-    result = ValidateVictimResult()
+    result = ValidateVictimResult(victimValid = True)
+    #~ result = ValidateVictimResult(victimValid = False)
     self.validate_victim_stub_as_.set_succeeded(result)
 
 if __name__ == '__main__':
