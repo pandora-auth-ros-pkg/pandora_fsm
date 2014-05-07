@@ -25,4 +25,5 @@ class VictimVerificationStub:
 
 if __name__ == '__main__':
   rospy.init_node('victim_verification_stub')
-  VictimVerificationStub()
+  stub = VictimVerificationStub()
+  stub.execute()

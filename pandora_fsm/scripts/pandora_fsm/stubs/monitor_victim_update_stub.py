@@ -19,4 +19,5 @@ class MonitorVictimUpdateStub:
 
 if __name__ == '__main__':
   rospy.init_node('monitor_victim_update_stub')
-  MonitorVictimUpdateStub()
+  stub = MonitorVictimUpdateStub()
+  stub.execute()

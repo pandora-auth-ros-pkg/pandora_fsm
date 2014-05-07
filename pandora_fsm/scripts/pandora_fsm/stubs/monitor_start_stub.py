@@ -22,4 +22,5 @@ class MonitorStartStub:
 
 if __name__ == '__main__':
   rospy.init_node('monitor_start_stub')
-  MonitorStartStub()
+  stub = MonitorStartStub()
+  stub.execute()
