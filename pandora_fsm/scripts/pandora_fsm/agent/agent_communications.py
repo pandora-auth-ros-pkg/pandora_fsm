@@ -15,8 +15,8 @@ from actionlib import *
 from actionlib.msg import *
 
 state_changer_action_topic = '/robot/state/change'
-robot_turn_back_topic = '/robot_turn_back'
-return_to_orange_topic = '/return_to_orange'
+robot_turn_back_topic = 'robot_turn_back'
+return_to_orange_topic = 'return_to_orange'
 arena_type_topic = '/arena_type'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
@@ -54,13 +54,6 @@ class AgentCommunications():
       rospy.Publisher(validate_victim_start_topic, Empty)
     self.abort_fsm_pub_ = rospy.Publisher(abort_fsm_topic, Empty)
     
-    self.state_changer_ac_ = SimpleActionClient(state_changer_action_topic,
-                                                RobotModeAction)
-    self.robot_turn_back_ac_ = SimpleActionClient(robot_turn_back_topic,
-                                                  RobotTurnBackAction)
-    self.return_to_orange_ac_ = SimpleActionClient(return_to_orange_topic,
-                                                    ReturnToOrangeAction)
-    
     self.robot_started_as_ = SimpleActionServer('robot_started',
                                                 RobotStartedAction,
                                                 execute_cb =
@@ -79,6 +72,16 @@ class AgentCommunications():
     self.exploration_restart_as_ = \
       SimpleActionServer('exploration_restart', ExplorationRestartAction,
                           execute_cb = self.exploration_restart_cb)
+    
+    self.state_changer_ac_ = SimpleActionClient(state_changer_action_topic,
+                                                RobotModeAction)
+    self.state_changer_ac_.wait_for_server()
+    self.robot_turn_back_ac_ = SimpleActionClient(robot_turn_back_topic,
+                                                  RobotTurnBackAction)
+    self.self.robot_turn_back_ac_.wait_for_server()
+    self.return_to_orange_ac_ = SimpleActionClient(return_to_orange_topic,
+                                                    ReturnToOrangeAction)
+    self.return_to_orange_ac_.wait_for_server()
     
     self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
     self.current_score_ = 0
@@ -154,16 +157,16 @@ class AgentCommunications():
     self.state_changer_ac_.wait_for_result()
   
   def start_robot(self):
-    rospy.Rate(10).sleep()
+    rospy.Rate(5).sleep()
     self.robot_start_pub_.publish()
-    rospy.Rate(0.5).sleep()
   
   def robot_started_cb(self, goal):
     rospy.loginfo('robot_started_cb')
-    self.robot_started_as_.set_succeeded()
-    rospy.Rate(1).sleep()
     self.exploration_ = True
+    rospy.Rate(5).sleep()
     self.start_exploration(robotModeMsg.MODE_EXPLORATION, False)
+    rospy.Rate(5).sleep()
+    self.robot_started_as_.set_succeeded()
   
   def exploration_ended_cb(self, goal):
     rospy.loginfo('exploration_ended_cb')
@@ -171,22 +174,23 @@ class AgentCommunications():
     
     self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
     
-    self.exploration_ended_as_.set_succeeded()
-    rospy.Rate(1).sleep()
+    rospy.Rate(5).sleep()
     self.monitor_victim_start_pub_.publish()
+    rospy.Rate(5).sleep()
+    self.exploration_ended_as_.set_succeeded()
   
   def monitor_victim_ended_cb(self, goal):
     rospy.loginfo('monitor_victim_ended_cb')
-    self.monitor_victim_ended_as_.set_succeeded()
-    rospy.Rate(1).sleep()
+    rospy.Rate(5).sleep()
     self.validate_victim_start_pub_.publish()
+    rospy.Rate(5).sleep()
+    self.monitor_victim_ended_as_.set_succeeded()
   
   def validate_victim_ended_cb(self, goal):
     rospy.loginfo('validate_victim_ended_cb')
     self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
     
-    self.validate_victim_ended_as_.set_succeeded()
-    rospy.Rate(1).sleep()
+    rospy.Rate(5).sleep()
     
     if not self.turn_back_:
       self.monitor_victim_start_pub_.publish()
@@ -195,10 +199,15 @@ class AgentCommunications():
       self.return_to_orange_ac_.send_goal(goal)
       self.return_to_orange_ac_.wait_for_result()
       self.turn_back_ = False
+    
+    rospy.Rate(5).sleep()
+    self.validate_victim_ended_as_.set_succeeded()
   
   def exploration_restart_cb(self, goal):
     rospy.loginfo('exploration_restart_cb')
     self.exploration_ = True
+    rospy.Rate(5).sleep()
+    self.exploration_restart_as_.set_succeeded()
   
   def start_exploration(self, exploration_mode, restart):
     rospy.loginfo('start_exploration = %i' % exploration_mode)
@@ -208,14 +217,14 @@ class AgentCommunications():
     
     self.current_exploration_mode_ = exploration_mode
     self.change_robot_state(exploration_mode)
-    rospy.Rate(1).sleep()
+    rospy.Rate(5).sleep()
     self.exploration_start_pub_.publish()
   
   def cost_function(self, time):
     cost = self.valid_victims_ * exp(3.3 - time /1020)
     cost += self.qrs_ * exp(2 - time / 420)
     cost += self.robot_resets_ * exp(1.4 + time / 1140)
-    cost += self.robot_restarts_ * (1.5 + 0.1 * time)
+    cost += self.robot_restarts_ * (1.5 + time / 600)
     return cost
   
   def evaluate_current_situation(self, arena_type):
