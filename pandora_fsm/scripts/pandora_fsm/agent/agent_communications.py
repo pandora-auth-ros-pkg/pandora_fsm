@@ -57,31 +57,40 @@ class AgentCommunications():
     self.robot_started_as_ = SimpleActionServer('robot_started',
                                                 RobotStartedAction,
                                                 execute_cb =
-                                                  self.robot_started_cb)
+                                                  self.robot_started_cb,
+                                                auto_start = False)
+    self.robot_started_as_.start()
     self.exploration_ended_as_ = SimpleActionServer('exploration_ended',
                                                     ExplorationEndedAction,
                                                     execute_cb =
-                                                      self.exploration_ended_cb)
+                                                      self.exploration_ended_cb,
+                                                    auto_start = False)
+    self.exploration_ended_as_.start()
     self.monitor_victim_ended_as_ = \
       SimpleActionServer('monitor_victim_ended', MonitorVictimEndedAction,
-                          execute_cb = self.monitor_victim_ended_cb)
+                          execute_cb = self.monitor_victim_ended_cb,
+                          auto_start = False)
+    self.monitor_victim_ended_as_.start()
     self.validate_victim_ended_as_ = \
       SimpleActionServer('validate_victim_ended', ValidateVictimEndedAction,
-                          execute_cb = self.validate_victim_ended_cb)
-    
+                          execute_cb = self.validate_victim_ended_cb,
+                          auto_start = False)
+    self.validate_victim_ended_as_.start()
     self.exploration_restart_as_ = \
       SimpleActionServer('exploration_restart', ExplorationRestartAction,
-                          execute_cb = self.exploration_restart_cb)
+                          execute_cb = self.exploration_restart_cb,
+                          auto_start = False)
+    self.exploration_restart_as_.start()
     
     self.state_changer_ac_ = SimpleActionClient(state_changer_action_topic,
                                                 RobotModeAction)
-    self.state_changer_ac_.wait_for_server()
+    #~ self.state_changer_ac_.wait_for_server()
     self.robot_turn_back_ac_ = SimpleActionClient(robot_turn_back_topic,
                                                   RobotTurnBackAction)
-    self.self.robot_turn_back_ac_.wait_for_server()
+    #~ self.self.robot_turn_back_ac_.wait_for_server()
     self.return_to_orange_ac_ = SimpleActionClient(return_to_orange_topic,
                                                     ReturnToOrangeAction)
-    self.return_to_orange_ac_.wait_for_server()
+    #~ self.return_to_orange_ac_.wait_for_server()
     
     self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
     self.current_score_ = 0
