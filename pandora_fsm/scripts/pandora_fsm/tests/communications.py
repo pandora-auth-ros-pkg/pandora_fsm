@@ -38,11 +38,10 @@ class Communications():
   
   def __init__(self, unit):
     
+    self.test_passed_ = False
+    
     if unit:
       self.start_subs_acs()
-      self.test_passed_ = False
-    else:
-      self.test_passed_ = True
     
     self.qr_notification_pub_ = rospy.Publisher(qr_notification_topic,
                                                 QrNotificationMsg)

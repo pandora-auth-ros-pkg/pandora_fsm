@@ -16,6 +16,14 @@ class SelectTargetActionStub:
   
   def execute_cb(self, goal):
     
+    if goal.targetType == goal.TYPE_VICTIM:
+      if self.counter != 0:
+        self.counter -= 1
+      else:
+        self.select_target_stub_as_.set_aborted()
+    else:
+      self.counter = 2
+    
     for i in range(20):
       rospy.Rate(10).sleep()
     

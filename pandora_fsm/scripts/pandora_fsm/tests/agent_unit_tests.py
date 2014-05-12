@@ -228,6 +228,7 @@ class TestAgent(unittest.TestCase):
     goal = ValidateVictimEndedGoal()
     global_vars.com.validate_victim_ended_ac_.send_goal(goal)
     global_vars.com.validate_victim_ended_ac_.wait_for_result()
+    rospy.Rate(2).sleep()
     self.assertFalse(global_vars.test_agent.turn_back_)
     self.assertTrue(global_vars.com.test_passed_)
 
