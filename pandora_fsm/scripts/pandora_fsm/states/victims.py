@@ -109,7 +109,10 @@ class VictimVerificationState(MyMonitorState):
 		self.monitor_cb, extra_outcomes=['got_verification'], in_keys=['victim_info'], out_keys=['victim_info'])
 	
 	def monitor_cb(self, userdata, msg):
-		userdata[0].victim_info = msg
+		userdata[0].victim_info.x = msg.x
+		userdata[0].victim_info.y = msg.y
+		userdata[0].victim_info.probability = msg.probability
+		userdata[0].victim_info.sensors = msg.sensors
 		return 'got_verification'
 		
 class DataFusionHold(State):

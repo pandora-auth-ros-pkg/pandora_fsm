@@ -72,7 +72,8 @@ def validateVictim():
 			'valid':'VICTIM_TRUE',
 			'not_valid':'VICTIM_FALSE',
 			'preempted':'preempted'
-			}
+			},
+			remapping={'victim_info':'victim_info'}
 		)
 		
 		StateMachine.add(

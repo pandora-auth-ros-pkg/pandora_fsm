@@ -15,6 +15,7 @@ from pandora_fsm.containers.monitor_victim import *
 from pandora_fsm.containers.victim_validation import *
 
 from fsm_communications.msg import *
+from data_fusion_communications.msg import VictimToFsmMsg
 
 def main():
   
@@ -39,11 +40,11 @@ def main():
       'preempted'
     ],
     default_outcome='preempted',
+    input_keys=['victim_info'],
+    output_keys=['victim_info'],
     outcome_cb=out_cb,
     child_termination_cb=termination_cb
   )
-  
-  sm_everything.userdata.victim_info = None
   
   with sm_everything:
     Concurrence.add('ROBOT_START', robotStart())
@@ -56,7 +57,9 @@ def main():
   
   sm = StateMachine(outcomes=['preempted'])
   
+  sm.userdata.victim_info = VictimToFsmMsg()
   with sm:
+    
     StateMachine.add(
       'PANDORA_FSM',
       sm_everything,
@@ -64,7 +67,8 @@ def main():
         'monitoring_aborted':'RESTART_EXPLORATION',
         'aborted':'PANDORA_FSM',
         'preempted':'preempted'
-      }
+      },
+      remapping={'victim_info':'victim_info'}
     )
     
     StateMachine.add(
