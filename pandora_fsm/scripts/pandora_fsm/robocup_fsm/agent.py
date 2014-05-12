@@ -12,8 +12,7 @@ def main():
   
   agent = AgentCommunications()
   
-  while not rospy.is_shutdown():
-    agent.main()
+  agent.main()
   
   rospy.loginfo('agent terminated')
 

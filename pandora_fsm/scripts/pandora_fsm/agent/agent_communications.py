@@ -107,15 +107,16 @@ class AgentCommunications():
     self.initial_time_ = rospy.get_rostime().secs
   
   def main(self):
-    self.reset_robot_ = False
-    self.start_robot()
-    
-    while not self.reset_robot_ and not rospy.is_shutdown():
-      rospy.Rate(2).sleep()
-      if not self.teleoperation_:
-        if self.exploration_:
-          self.evaluate_current_situation(self.current_arena_)
-          rospy.loginfo('agent loop')
+    while not rospy.is_shutdown():
+      self.reset_robot_ = False
+      self.start_robot()
+      
+      while not self.reset_robot_ and not rospy.is_shutdown():
+        rospy.Rate(2).sleep()
+        if not self.teleoperation_:
+          if self.exploration_:
+            self.evaluate_current_situation(self.current_arena_)
+            rospy.loginfo('agent loop')
   
   def arena_type_cb(self, msg):
     if self.current_arena_ == msg.TYPE_YELLOW and \
@@ -180,6 +181,7 @@ class AgentCommunications():
   def exploration_ended_cb(self, goal):
     rospy.loginfo('exploration_ended_cb')
     self.exploration_ = False
+    self.current_exploration_mode_ = 0
     
     self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
     
@@ -199,6 +201,7 @@ class AgentCommunications():
     rospy.loginfo('validate_victim_ended_cb')
     self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
     
+    self.validate_victim_ended_as_.set_succeeded()
     rospy.Rate(5).sleep()
     
     if not self.turn_back_:
@@ -208,9 +211,6 @@ class AgentCommunications():
       self.return_to_orange_ac_.send_goal(goal)
       self.return_to_orange_ac_.wait_for_result()
       self.turn_back_ = False
-    
-    rospy.Rate(5).sleep()
-    self.validate_victim_ended_as_.set_succeeded()
   
   def exploration_restart_cb(self, goal):
     rospy.loginfo('exploration_restart_cb')
