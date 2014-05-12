@@ -12,7 +12,7 @@ class MonitorStartStub:
     self.monitor_start_stub_pub_ = rospy.Publisher(state_monitor_topic, robotModeMsg)
   
   def execute(self):
-    rospy.Rate(10).sleep()
+    rospy.Rate(2).sleep()
     
     msg = robotModeMsg()
     msg.type = msg.TYPE_TRANSITION
@@ -20,7 +20,10 @@ class MonitorStartStub:
     
     self.monitor_start_stub_pub_.publish(msg)
 
-if __name__ == '__main__':
-  rospy.init_node('monitor_start_stub')
+def main():
   stub = MonitorStartStub()
   stub.execute()
+
+if __name__ == '__main__':
+  rospy.init_node('monitor_start_stub')
+  main()

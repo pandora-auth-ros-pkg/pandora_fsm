@@ -15,13 +15,19 @@ class InitialTurnActionStub:
     self.initial_turn_stub_as_.start()
   
   def execute_cb(self, goal):
-    rospy.sleep(10)
     
-    if self.initial_turn_stub_as_.is_preempt_requested():
-      self.initial_turn_stub_as_.set_preempted()
+    for i in range(100):
+      rospy.Rate(10).sleep()
+      
+      if self.initial_turn_stub_as_.is_preempt_requested():
+        self.initial_turn_stub_as_.set_preempted()
+    
     self.initial_turn_stub_as_.set_succeeded()
+
+def main():
+  InitialTurnActionStub()
+  rospy.spin()
 
 if __name__ == '__main__':
   rospy.init_node('initial_turn_stub')
-  InitialTurnActionStub()
-  rospy.spin()
+  main()

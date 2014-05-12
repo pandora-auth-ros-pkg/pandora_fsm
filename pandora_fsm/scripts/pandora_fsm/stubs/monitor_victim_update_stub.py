@@ -13,11 +13,14 @@ class MonitorVictimUpdateStub:
                                                             Empty)
   
   def execute(self):
-    rospy.Rate(10).sleep()
+    rospy.Rate(2).sleep()
     
     self.monitor_victim_update_stub_pub_.publish()
 
-if __name__ == '__main__':
-  rospy.init_node('monitor_victim_update_stub')
+def main():
   stub = MonitorVictimUpdateStub()
   stub.execute()
+
+if __name__ == '__main__':
+  rospy.init_node('monitor_victim_update_stub')
+  main()

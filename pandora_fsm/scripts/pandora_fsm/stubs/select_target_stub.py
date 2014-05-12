@@ -15,15 +15,20 @@ class SelectTargetActionStub:
     self.select_target_stub_as_.start()
   
   def execute_cb(self, goal):
-    rospy.sleep(2)
     
-    if self.select_target_stub_as_.is_preempt_requested():
-      self.select_target_stub_as_.set_preempted()
+    for i in range(20):
+      rospy.Rate(10).sleep()
+    
+      if self.select_target_stub_as_.is_preempt_requested():
+        self.select_target_stub_as_.set_preempted()
     
     result = SelectTargetResult()
     self.select_target_stub_as_.set_succeeded(result)
 
-if __name__ == '__main__':
-  rospy.init_node('select_target_stub')
+def main():
   SelectTargetActionStub()
   rospy.spin()
+
+if __name__ == '__main__':
+  rospy.init_node('select_target_stub')
+  main()

@@ -14,14 +14,19 @@ class MoveBaseActionStub:
     self.move_base_stub_as_.start()
   
   def execute_cb(self, goal):
-    rospy.sleep(10)
     
-    if self.move_base_stub_as_.is_preempt_requested():
-      self.move_base_stub_as_.set_preempted()
+    for i in range(100):
+      rospy.Rate(10).sleep()
+    
+      if self.move_base_stub_as_.is_preempt_requested():
+        self.move_base_stub_as_.set_preempted()
     
     self.move_base_stub_as_.set_succeeded()
 
-if __name__ == '__main__':
-  rospy.init_node('move_base_stub')
+def main():
   MoveBaseActionStub()
   rospy.spin()
+
+if __name__ == '__main__':
+  rospy.init_node('move_base_stub')
+  main()

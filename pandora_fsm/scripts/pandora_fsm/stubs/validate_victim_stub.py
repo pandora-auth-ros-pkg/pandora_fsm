@@ -14,16 +14,21 @@ class ValidateVictimActionStub:
     self.validate_victim_stub_as_.start()
   
   def execute_cb(self, goal):
-    rospy.sleep(5)
     
-    if self.validate_victim_stub_as_.is_preempt_requested():
-      self.validate_victim_stub_as_.set_preempted()
+    for i in range(50):
+      rospy.Rate(10).sleep()
+    
+      if self.validate_victim_stub_as_.is_preempt_requested():
+        self.validate_victim_stub_as_.set_preempted()
     
     result = ValidateVictimResult(victimValid = True)
     #~ result = ValidateVictimResult(victimValid = False)
     self.validate_victim_stub_as_.set_succeeded(result)
 
-if __name__ == '__main__':
-  rospy.init_node('validate_victim_stub')
+def main():
   ValidateVictimActionStub()
   rospy.spin()
+
+if __name__ == '__main__':
+  rospy.init_node('validate_victim_stub')
+  main()

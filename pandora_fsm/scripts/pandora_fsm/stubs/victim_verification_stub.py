@@ -13,7 +13,7 @@ class VictimVerificationStub:
       rospy.Publisher(victim_verification_topic, VictimToFsmMsg)
   
   def execute(self):
-    rospy.Rate(10).sleep()
+    rospy.Rate(2).sleep()
     
     msg = VictimToFsmMsg()
     msg.x = 4
@@ -23,7 +23,10 @@ class VictimVerificationStub:
     
     self.victim_verification_stub_pub_.publish(msg)
 
-if __name__ == '__main__':
-  rospy.init_node('victim_verification_stub')
+def main():
   stub = VictimVerificationStub()
   stub.execute()
+
+if __name__ == '__main__':
+  rospy.init_node('victim_verification_stub')
+  main()

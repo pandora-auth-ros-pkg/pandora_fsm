@@ -13,12 +13,15 @@ class MonitorVictimStub:
                                                     VictimFoundMsg)
   
   def execute(self):
-    rospy.Rate(10).sleep()
+    rospy.Rate(2).sleep()
     
     msg = VictimFoundMsg(victimNotificationType = VictimFoundMsg.TYPE_CAMERA)
     self.monitor_victim_stub_pub_.publish(msg)
 
-if __name__ == '__main__':
-  rospy.init_node('monitor_victim_stub')
+def main():
   stub = MonitorVictimStub()
   stub.execute()
+
+if __name__ == '__main__':
+  rospy.init_node('monitor_victim_stub')
+  main()
