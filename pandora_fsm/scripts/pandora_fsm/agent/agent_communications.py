@@ -171,9 +171,9 @@ class AgentCommunications():
   
   def robot_started_cb(self, goal):
     rospy.loginfo('robot_started_cb')
-    self.exploration_ = True
     rospy.Rate(5).sleep()
-    self.start_exploration(robotModeMsg.MODE_EXPLORATION, False)
+    self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, False)
+    self.exploration_ = True
     rospy.Rate(5).sleep()
     self.robot_started_as_.set_succeeded()
   
