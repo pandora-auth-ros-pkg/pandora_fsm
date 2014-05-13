@@ -27,6 +27,7 @@ validate_victim_ended_topic = 'validate_victim_ended'
 exploration_restart_topic = 'exploration_restart'
 robot_turn_back_topic = 'robot_turn_back'
 return_to_orange_topic = 'return_to_orange'
+arena_type_topic = '/arena_type'
 
 robot_start_topic = '/fsm/robot_start'
 exploration_start_topic = '/fsm/exploration_start'
@@ -52,6 +53,7 @@ class Communications():
     self.robot_restart_pub_ = rospy.Publisher(robot_restart_topic, Empty)
     self.robocup_score_pub_ = rospy.Publisher(robocup_score_topic, Int32)
     self.valid_victims_pub_ = rospy.Publisher(valid_victims_topic, Int32)
+    self.arena_type_pub_ = rospy.Publisher(arena_type_topic, ArenaTypeMsg)
     
     self.state_changer_as_ = SimpleActionServer(state_changer_action_topic,
                                                 RobotModeAction,

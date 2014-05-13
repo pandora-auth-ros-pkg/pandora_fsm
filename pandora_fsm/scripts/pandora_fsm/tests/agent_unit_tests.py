@@ -150,7 +150,7 @@ class TestAgent(unittest.TestCase):
   def test_robot_reset(self):
     rospy.loginfo('test_robot_reset')
     global_vars.com.robot_reset_pub_.publish()
-    rospy.Rate(2).sleep()
+    rospy.sleep(2.)
     self.assertEqual(global_vars.test_agent.robot_resets_, 1)
   
   def test_robot_restart(self):
