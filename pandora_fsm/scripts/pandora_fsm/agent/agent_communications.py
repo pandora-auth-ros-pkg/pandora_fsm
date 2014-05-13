@@ -121,10 +121,10 @@ class AgentCommunications():
   def arena_type_cb(self, msg):
     if self.current_arena_ == msg.TYPE_YELLOW and \
             msg.arenaType == msg.TYPE_ORANGE:
-      self.evaluate_current_situation(self, msg.arenaType)
+      self.evaluate_current_situation(msg.arenaType)
     if self.current_arena_ == msg.TYPE_ORANGE and \
             msg.arenaType == msg.TYPE_YELLOW_BLACK:
-      self.evaluate_current_situation(self, msg.arenaType)
+      self.evaluate_current_situation(msg.arenaType)
   
   def qr_notification_cb(self, msg):
     self.qrs_ += 1
@@ -139,6 +139,11 @@ class AgentCommunications():
     self.teleoperation_ = False
   
   def robot_reset_cb(self, msg):
+    self.reset_robot_ = True
+    
+    self.abort_fsm_pub_.publish()
+    rospy.sleep(1.)
+    
     self.current_score_ = 0
     self.valid_victims_ = 0
     self.qrs_ = 0
@@ -148,7 +153,6 @@ class AgentCommunications():
     self.turn_back_ = False
     
     self.robot_resets_ += 1
-    self.reset_robot_ = True
   
   def robot_restart_cb(self, msg):
     self.robot_restarts_ += 1
@@ -199,17 +203,18 @@ class AgentCommunications():
   
   def validate_victim_ended_cb(self, goal):
     rospy.loginfo('validate_victim_ended_cb')
-    self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
     
     self.validate_victim_ended_as_.set_succeeded()
     rospy.Rate(5).sleep()
     
     if not self.turn_back_:
+      self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
       self.monitor_victim_start_pub_.publish()
     else:
       goal = ReturnToOrangeGoal()
       self.return_to_orange_ac_.send_goal(goal)
       self.return_to_orange_ac_.wait_for_result()
+      self.exploration_ = True
       self.turn_back_ = False
   
   def exploration_restart_cb(self, goal):
@@ -224,9 +229,9 @@ class AgentCommunications():
     if restart:
       self.abort_fsm_pub_.publish()
     
+    rospy.Rate(2).sleep()
     self.current_exploration_mode_ = exploration_mode
     self.change_robot_state(exploration_mode)
-    rospy.Rate(5).sleep()
     self.exploration_start_pub_.publish()
   
   def cost_function(self, time):
