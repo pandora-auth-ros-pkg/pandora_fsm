@@ -172,7 +172,7 @@ class TestAgent(unittest.TestCase):
   
   def test_start_exploration(self):
     rospy.loginfo('test_start_exploration')
-    global_vars.test_agent.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, False)
+    global_vars.test_agent.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
     rospy.Rate(2).sleep()
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                       robotModeMsg.MODE_DEEP_EXPLORATION)
@@ -195,7 +195,7 @@ class TestAgent(unittest.TestCase):
     msg.nodeName = 'global_vars.test_agent'
     msg.mode = msg.MODE_TELEOPERATED_LOCOMOTION
     msg.type = msg.TYPE_TRANSITION
-    global_vars.com.teleoperation_pub_.publish(msg)
+    global_vars.com.monitor_start_pub_.publish(msg)
     rospy.Rate(2).sleep()
     self.assertTrue(global_vars.test_agent.teleoperation_)
     self.assertTrue(global_vars.com.test_passed_)

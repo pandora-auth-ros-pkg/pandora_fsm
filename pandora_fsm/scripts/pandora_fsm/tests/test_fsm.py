@@ -19,32 +19,51 @@ from actionlib.msg import *
 from state_manager_communications.msg import robotModeMsg
 from pandora_fsm.agent.agent_servers import *
 from pandora_fsm.agent.agent_communications import *
-from data_fusion_communications.msg import QrNotificationMsg
+from data_fusion_communications.msg import QrNotificationMsg, VictimFoundMsg, \
+                                            VictimToFsmMsg
 from std_msgs.msg import Int32
 
 class TestFSM(unittest.TestCase):
   
   def test_robot_start_state(self):
     rospy.sleep(3.)
-    pandora_fsm.stubs.monitor_start_stub.main()
+    
+    msg = robotModeMsg()
+    msg.type = msg.TYPE_TRANSITION
+    msg.mode = msg.MODE_START_AUTONOMOUS
+    global_vars.com.monitor_start_pub_.publish(msg)
+    
     rospy.sleep(25.)
     self.assertTrue(global_vars.test_agent.exploration_)
   
   def test_exploration_state(self):
     rospy.sleep(20.)
-    pandora_fsm.stubs.monitor_victim_stub.main()
+    
+    global_vars.com.add_victims(2)
+    msg = VictimFoundMsg(victimNotificationType = VictimFoundMsg.TYPE_CAMERA)
+    global_vars.com.monitor_victim_pub_.publish(msg)
+    
     rospy.sleep(4.)
     self.assertFalse(global_vars.test_agent.exploration_)
   
   def test_victim_monitoring_state(self):
-    pandora_fsm.stubs.monitor_victim_update_stub.main()
-    rospy.sleep(27.)
-    pandora_fsm.stubs.victim_verification_stub.main()
+    rospy.sleep(2.)
+    global_vars.com.monitor_victim_update_pub_.publish()
+    rospy.sleep(15.)
+    
+    msg = VictimToFsmMsg()
+    msg.x = 4
+    msg.y = 5
+    msg.probability = 0.5
+    msg.sensors = ['1', '5']
+    global_vars.com.victim_verification_pub_.publish(msg)
+    
+    rospy.sleep(1.)
     self.assertTrue(global_vars.com.test_passed_)
     global_vars.com.test_passed_ = False
   
   def test_victim_validation_state(self):
-    rospy.sleep(34.)
+    rospy.sleep(14.)
     self.assertTrue(global_vars.com.test_passed_)
     global_vars.com.test_passed_ = False
   
@@ -64,10 +83,15 @@ class TestFSM(unittest.TestCase):
                       robotModeMsg.MODE_EXPLORATION)
   
   def test_reset(self):
-    rospy.sleep(10.)
+    rospy.sleep(15.)
     global_vars.com.robot_reset_pub_.publish()
+    
     rospy.sleep(4.)
-    pandora_fsm.stubs.monitor_start_stub.main()
+    msg = robotModeMsg()
+    msg.type = msg.TYPE_TRANSITION
+    msg.mode = msg.MODE_START_AUTONOMOUS
+    global_vars.com.monitor_start_pub_.publish(msg)
+    
     rospy.sleep(25.)
     self.assertTrue(global_vars.test_agent.exploration_)
     self.assertEqual(global_vars.test_agent.robot_resets_, 1)
@@ -78,13 +102,20 @@ class TestFSM(unittest.TestCase):
     rospy.Rate(2).sleep()
     self.assertTrue(global_vars.test_agent.turn_back_)
     rospy.sleep(8.)
-    pandora_fsm.stubs.monitor_victim_stub.main()
+    global_vars.com.add_victims(1)
+    msg = VictimFoundMsg(victimNotificationType = VictimFoundMsg.TYPE_CAMERA)
+    global_vars.com.monitor_victim_pub_.publish(msg)
     rospy.sleep(20.)
-    pandora_fsm.stubs.victim_verification_stub.main()
-    rospy.sleep(5.)
+    msg = VictimToFsmMsg()
+    msg.x = 4
+    msg.y = 5
+    msg.probability = 0.5
+    msg.sensors = ['1', '5']
+    global_vars.com.victim_verification_pub_.publish(msg)
+    rospy.Rate(2).sleep()
     msg = Int32(data = 1)
     global_vars.com.valid_victims_pub_.publish(msg)
-    rospy.Rate(2).sleep()
+    rospy.sleep(15.)
     msg = ArenaTypeMsg(arenaType = ArenaTypeMsg.TYPE_ORANGE)
     global_vars.com.arena_type_pub_.publish(msg)
     rospy.sleep(5.)
