@@ -119,6 +119,7 @@ class AgentCommunications():
             rospy.loginfo('agent loop')
   
   def arena_type_cb(self, msg):
+    rospy.loginfo('arena_type_cb')
     if self.current_arena_ == msg.TYPE_YELLOW and \
             msg.arenaType == msg.TYPE_ORANGE:
       self.evaluate_current_situation(msg.arenaType)
@@ -127,18 +128,22 @@ class AgentCommunications():
       self.evaluate_current_situation(msg.arenaType)
   
   def qr_notification_cb(self, msg):
+    rospy.loginfo('qr_notification_cb')
     self.qrs_ += 1
   
   def teleoperation_cb(self, msg):
+    rospy.loginfo('teleoperation_cb')
     if msg.type == msg.TYPE_TRANSITION and \
         msg.mode == robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
       self.teleoperation_ = True
       self.abort_fsm_pub_.publish()
   
   def teleoperation_ended_cb(self, msg):
+    rospy.loginfo('teleoperation_ended_cb')
     self.teleoperation_ = False
   
   def robot_reset_cb(self, msg):
+    rospy.loginfo('robot_reset_cb')
     self.reset_robot_ = True
     
     self.abort_fsm_pub_.publish()
@@ -155,15 +160,19 @@ class AgentCommunications():
     self.robot_resets_ += 1
   
   def robot_restart_cb(self, msg):
+    rospy.loginfo('robot_restart_cb')
     self.robot_restarts_ += 1
   
   def score_cb(self, msg):
+    rospy.loginfo('score_cb')
     self.current_score_ = msg.data
   
   def valid_victims_cb(self, msg):
+    rospy.loginfo('valid_victims_cb')
     self.valid_victims_ = msg.data
   
   def change_robot_state(self, new_state):
+    rospy.loginfo('change_robot_state')
     mode_msg = robotModeMsg(nodeName = 'agent', mode = new_state)
     mode_goal = RobotModeGoal(modeMsg = mode_msg)
     
@@ -171,13 +180,14 @@ class AgentCommunications():
     self.state_changer_ac_.wait_for_result()
   
   def start_robot(self):
+    rospy.loginfo('start_robot')
     rospy.Rate(5).sleep()
     self.robot_start_pub_.publish()
   
   def robot_started_cb(self, goal):
     rospy.loginfo('robot_started_cb')
     rospy.Rate(5).sleep()
-    self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, False)
+    self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
     self.exploration_ = True
     rospy.Rate(5).sleep()
     self.robot_started_as_.set_succeeded()
@@ -207,15 +217,15 @@ class AgentCommunications():
     self.validate_victim_ended_as_.set_succeeded()
     rospy.Rate(5).sleep()
     
-    if not self.turn_back_:
-      self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
-      self.monitor_victim_start_pub_.publish()
-    else:
+    if self.turn_back_:
       goal = ReturnToOrangeGoal()
       self.return_to_orange_ac_.send_goal(goal)
       self.return_to_orange_ac_.wait_for_result()
-      self.exploration_ = True
       self.turn_back_ = False
+    
+    self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
+    rospy.Rate(5).sleep()
+    self.monitor_victim_start_pub_.publish()
   
   def exploration_restart_cb(self, goal):
     rospy.loginfo('exploration_restart_cb')
@@ -223,10 +233,10 @@ class AgentCommunications():
     rospy.Rate(5).sleep()
     self.exploration_restart_as_.set_succeeded()
   
-  def start_exploration(self, exploration_mode, restart):
+  def start_exploration(self, exploration_mode):
     rospy.loginfo('start_exploration = %i' % exploration_mode)
     
-    if restart:
+    if self.current_exploration_mode_ != 0:
       self.abort_fsm_pub_.publish()
     
     rospy.Rate(2).sleep()
@@ -247,13 +257,13 @@ class AgentCommunications():
         self.cost_function(float(rospy.get_rostime().secs - self.initial_time_))
       if current_cost < 25:
         if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
-          self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION, True)
+          self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
       elif current_cost < 35:
         if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
-          self.start_exploration(robotModeMsg.MODE_EXPLORATION, True)
+          self.start_exploration(robotModeMsg.MODE_EXPLORATION)
       else:
         if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-          self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION, True)
+          self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION)
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
       if self.valid_victims_ == 0:
         goal = RobotTurnBackGoal()
