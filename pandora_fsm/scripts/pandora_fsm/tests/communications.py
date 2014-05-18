@@ -8,15 +8,22 @@ from actionlib.msg import *
 
 from state_manager_communications.msg import RobotModeAction, RobotModeResult, \
                                               robotModeMsg
-from data_fusion_communications.msg import QrNotificationMsg
+from data_fusion_communications.msg import QrNotificationMsg, VictimFoundMsg, \
+                                            ValidateCurrentHoleAction, \
+                                            ValidateCurrentHoleResult, \
+                                            VictimToFsmMsg
 from fsm_communications.msg import *
 from std_msgs.msg import Int32, Empty
+from pandora_navigation_communications.msg import InitialTurnAction
+from move_base_msgs.msg import MoveBaseAction
+from target_selector_communications.msg import SelectTargetAction, \
+                                                SelectTargetResult
 
 state_changer_action_topic = '/robot/state/change'
+state_monitor_topic = '/robot/state/clients'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
 qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
-teleoperation_topic = '/robot/state/clients'
 teleoperation_ended_topic = '/teleoperation_ended'
 robot_reset_topic = '/robot_reset'
 robot_restart_topic = '/robot_restart'
@@ -28,6 +35,9 @@ exploration_restart_topic = 'exploration_restart'
 robot_turn_back_topic = 'robot_turn_back'
 return_to_orange_topic = 'return_to_orange'
 arena_type_topic = '/arena_type'
+victim_found_topic = '/data_fusion/alert_handler/victim_found'
+victim_update_topic = '/data_fusion/alert_handler/victim_update'
+victim_verification_topic = '/data_fusion/alert_handler/victim_verified'
 
 robot_start_topic = '/fsm/robot_start'
 exploration_start_topic = '/fsm/exploration_start'
@@ -39,14 +49,17 @@ class Communications():
   
   def __init__(self, unit):
     
+    self.counter = 0
     self.test_passed_ = False
     
     if unit:
-      self.start_subs_acs()
+      self.start_subs_acs_unit()
+    else:
+      self.start_pubs_ass_functional()
     
     self.qr_notification_pub_ = rospy.Publisher(qr_notification_topic,
                                                 QrNotificationMsg)
-    self.teleoperation_pub_ = rospy.Publisher(teleoperation_topic, robotModeMsg)
+    self.monitor_start_pub_ = rospy.Publisher(state_monitor_topic, robotModeMsg)
     self.teleoperation_ended_pub_ = rospy.Publisher(teleoperation_ended_topic,
                                                     Empty)
     self.robot_reset_pub_ = rospy.Publisher(robot_reset_topic, Empty)
@@ -74,7 +87,7 @@ class Communications():
                                                     auto_start = False)
     self.return_to_orange_as_.start()
   
-  def start_subs_acs(self):
+  def start_subs_acs_unit(self):
     self.robot_start_sub_ = rospy.Subscriber(robot_start_topic, Empty,
                                               self.robot_start_cb)
     
@@ -113,6 +126,45 @@ class Communications():
                                                       ExplorationRestartAction)
     self.exploration_restart_ac_.wait_for_server()
   
+  def start_pubs_ass_functional(self):
+    self.initial_turn_as_ = actionlib.SimpleActionServer('/initial_turn',
+                                                          InitialTurnAction,
+                                                          self.initial_turn_cb,
+                                                          False)
+    self.initial_turn_as_.start()
+    
+    self.move_base_as_ = actionlib.SimpleActionServer('/move_base',
+                                                      MoveBaseAction,
+                                                      self.move_base_cb,
+                                                      False)
+    self.move_base_as_.start()
+    
+    self.select_target_as_ = actionlib.SimpleActionServer('/select_target',
+                                                          SelectTargetAction,
+                                                          self.select_target_cb,
+                                                          False)
+    self.select_target_as_.start()
+    
+    self.validate_victim_as_ = \
+      actionlib.SimpleActionServer('/gui/validate_victim', ValidateVictimAction,
+                                    self.validate_victim_cb, False)
+    self.validate_victim_as_.start()
+    
+    self.validate_current_hole_as_ = actionlib.\
+      SimpleActionServer('/data_fusion/alert_handler/validate_current_hole',
+                          ValidateCurrentHoleAction,
+                          self.validate_current_hole_cb, False)
+    self.validate_current_hole_as_.start()
+    
+    self.monitor_victim_pub_ = rospy.Publisher(victim_found_topic,
+                                                VictimFoundMsg)
+    
+    self.monitor_victim_update_pub_ = rospy.Publisher(victim_update_topic,
+                                                      Empty)
+    
+    self.victim_verification_pub_ = rospy.Publisher(victim_verification_topic,
+                                                    VictimToFsmMsg)
+  
   def robot_start_cb(self, msg):
     rospy.loginfo('robot_start_cb')
     self.test_passed_ = True
@@ -150,3 +202,77 @@ class Communications():
     self.test_passed_ = True
     result = ReturnToOrangeResult()
     self.return_to_orange_as_.set_succeeded(result)
+  
+  def initial_turn_cb(self, goal):
+    rospy.loginfo('initial_turn_cb')
+    
+    for i in range(100):
+      rospy.Rate(10).sleep()
+      
+      if self.initial_turn_as_.is_preempt_requested():
+        self.initial_turn_as_.set_preempted()
+        break
+    else:
+      self.initial_turn_as_.set_succeeded()
+  
+  def move_base_cb(self, goal):
+    rospy.loginfo('move_base_cb')
+    
+    for i in range(100):
+      rospy.Rate(10).sleep()
+      
+      if self.move_base_as_.is_preempt_requested():
+        self.move_base_as_.set_preempted()
+        break
+    else:
+      self.move_base_as_.set_succeeded()
+  
+  def select_target_cb(self, goal):
+    rospy.loginfo('select_target_cb')
+    
+    if goal.targetType == goal.TYPE_VICTIM:
+      if self.counter != 0:
+        self.counter -= 1
+      else:
+        self.select_target_as_.set_aborted()
+        return None
+    
+    for i in range(20):
+      rospy.Rate(10).sleep()
+      
+      if self.select_target_as_.is_preempt_requested():
+        self.select_target_as_.set_preempted()
+        break
+    else:
+      result = SelectTargetResult()
+      self.select_target_as_.set_succeeded(result)
+  
+  def validate_victim_cb(self, goal):
+    rospy.loginfo('validate_victim_cb')
+    
+    for i in range(50):
+      rospy.Rate(10).sleep()
+      
+      if self.validate_victim_as_.is_preempt_requested():
+        self.validate_victim_as_.set_preempted()
+        break
+    else:
+      result = ValidateVictimResult(victimValid = True)
+      #~ result = ValidateVictimResult(victimValid = False)
+      self.validate_victim_as_.set_succeeded(result)
+  
+  def validate_current_hole_cb(self, goal):
+    rospy.loginfo('validate_current_hole_cb')
+    
+    for i in range(20):
+      rospy.Rate(10).sleep()
+      
+      if self.validate_current_hole_as_.is_preempt_requested():
+        self.validate_current_hole_as_.set_preempted()
+        break
+    else:
+      result = ValidateCurrentHoleResult()
+      self.validate_current_hole_as_.set_succeeded(result)
+  
+  def add_victims(self, num):
+    self.counter += num
