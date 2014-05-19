@@ -11,6 +11,9 @@ from fsm_communications.msg import *
 from data_fusion_communications.msg import QrNotificationMsg
 from math import exp, log
 
+from dynamic_reconfigure.server import Server
+from pandora_fsm.cfg import FSMParamsConfig
+
 from actionlib import *
 from actionlib.msg import *
 
@@ -92,6 +95,8 @@ class AgentCommunications():
                                                     ReturnToOrangeAction)
     #~ self.return_to_orange_ac_.wait_for_server()
     
+    Server(FSMParamsConfig, self.reconfigure)
+    
     self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
     self.current_score_ = 0
     self.valid_victims_ = 0
@@ -103,8 +108,6 @@ class AgentCommunications():
     
     self.robot_resets_ = 0
     self.robot_restarts_ = 0
-    
-    self.initial_time_ = rospy.get_rostime().secs
   
   def main(self):
     while not rospy.is_shutdown():
@@ -247,7 +250,7 @@ class AgentCommunications():
   def cost_function(self, time):
     cost = self.valid_victims_ * exp(3.3 - time /1020)
     cost += self.qrs_ * exp(2 - time / 420)
-    cost += self.robot_resets_ * exp(1.4 + time / 1140)
+    cost += self.robot_resets_ * exp(1 + time / 1140)
     cost += self.robot_restarts_ * (1.5 + time / 600)
     return cost
   
@@ -276,3 +279,10 @@ class AgentCommunications():
         self.abort_fsm_pub_.publish()
     elif arena_type == ArenaTypeMsg.TYPE_YELLOW_BLACK:
       rospy.Rate(1).sleep()
+  
+  def reconfigure(self, config, level):
+    self.max_time_ = config["maxTime"]
+    self.max_victims_ = config["arenaVictims"]
+    self.max_qrs_ = config["maxQRs"]
+    self.initial_time_ = rospy.get_rostime().secs - config["timePassed"]
+    return config

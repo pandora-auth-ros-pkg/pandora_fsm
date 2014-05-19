@@ -1,16 +1,22 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pandora_fsm)
-find_package(catkin REQUIRED COMPONENTS rospy 
-										#~ smach 
-										#~ smach_ros 
-										actionlib 
-										)
+
+find_package(catkin REQUIRED COMPONENTS
+		rospy
+		actionlib
+		dynamic_reconfigure
+	    )
+
+
+catkin_python_setup()
+
+generate_dynamic_reconfigure_options(
+    config/params.cfg
+)
 
 catkin_package(
     DEPENDS 
-    CATKIN_DEPENDS # TODO
-    INCLUDE_DIRS # TODO include
-    LIBRARIES # TODO
+    CATKIN_DEPENDS
+    INCLUDE_DIRS
+    LIBRARIES
 )
-
-catkin_python_setup()
