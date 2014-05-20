@@ -17,6 +17,7 @@ add_action_files(
   AbortFSM.action
   ExplorationRestart.action
   RobotTurnBack.action
+  ExplorationMode.action
 )
 
 generate_messages(

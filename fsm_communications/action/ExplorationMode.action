@@ -1,0 +1,9 @@
+#goal
+uint8 explorationMode
+uint8 MODE_DEEP=1
+uint8 MODE_NORMAL=2
+uint8 MODE_FAST=3
+---
+#result
+---
+#feedback

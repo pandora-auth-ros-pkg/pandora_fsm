@@ -19,7 +19,7 @@ from actionlib.msg import *
 
 state_changer_action_topic = '/robot/state/change'
 robot_turn_back_topic = 'robot_turn_back'
-return_to_orange_topic = 'return_to_orange'
+exploration_mode_topic = 'exploration_mode'
 arena_type_topic = '/arena_type'
 robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
 valid_victims_topic = '/data_fusion/alert_handler/valid_victims_counter'
@@ -90,7 +90,10 @@ class AgentCommunications():
     #~ self.state_changer_ac_.wait_for_server()
     self.robot_turn_back_ac_ = SimpleActionClient(robot_turn_back_topic,
                                                   RobotTurnBackAction)
-    #~ self.self.robot_turn_back_ac_.wait_for_server()
+    #~ self.robot_turn_back_ac_.wait_for_server()
+    self.exploration_mode_ac_ = SimpleActionClient(exploration_mode_topic,
+                                                    ExplorationModeAction)
+    #~ self.exploration_mode_ac_.wait_for_server()
     
     Server(FSMParamsConfig, self.reconfigure)
     
@@ -187,7 +190,7 @@ class AgentCommunications():
   def robot_started_cb(self, goal):
     rospy.loginfo('robot_started_cb')
     rospy.Rate(5).sleep()
-    self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
+    self.start_exploration(ExplorationModeGoal.MODE_DEEP)
     self.exploration_ = True
     rospy.Rate(5).sleep()
     self.robot_started_as_.set_succeeded()
@@ -241,7 +244,10 @@ class AgentCommunications():
     
     rospy.Rate(2).sleep()
     self.current_exploration_mode_ = exploration_mode
-    self.change_robot_state(exploration_mode)
+    self.change_robot_state(robotModeMsg.MODE_EXPLORATION)
+    goal = ExplorationModeGoal(explorationMode = exploration_mode)
+    self.exploration_mode_ac_.send_goal(goal)
+    self.exploration_mode_ac_.wait_for_result()
     self.exploration_start_pub_.publish()
   
   def cost_function(self, time):
@@ -282,14 +288,14 @@ class AgentCommunications():
         self.cost_function(float(rospy.get_rostime().secs - self.initial_time_))
       #~ current_cost = cost_function2()
       if current_cost < 25:
-        if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
-          self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
+        if self.current_exploration_mode_ != ExplorationModeGoal.MODE_DEEP:
+          self.start_exploration(ExplorationModeGoal.MODE_DEEP)
       elif current_cost < 35:
-        if self.current_exploration_mode_ != robotModeMsg.MODE_EXPLORATION:
-          self.start_exploration(robotModeMsg.MODE_EXPLORATION)
+        if self.current_exploration_mode_ != ExplorationModeGoal.MODE_NORMAL:
+          self.start_exploration(ExplorationModeGoal.MODE_NORMAL)
       else:
-        if self.current_exploration_mode_ != robotModeMsg.MODE_FAST_EXPLORATION:
-          self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION)
+        if self.current_exploration_mode_ != ExplorationModeGoal.MODE_FAST:
+          self.start_exploration(ExplorationModeGoal.MODE_FAST)
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
       if self.valid_victims_ == 0:
         goal = RobotTurnBackGoal(frontierExploration = False)
