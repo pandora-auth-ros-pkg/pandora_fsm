@@ -91,9 +91,6 @@ class AgentCommunications():
     self.robot_turn_back_ac_ = SimpleActionClient(robot_turn_back_topic,
                                                   RobotTurnBackAction)
     #~ self.self.robot_turn_back_ac_.wait_for_server()
-    self.return_to_orange_ac_ = SimpleActionClient(return_to_orange_topic,
-                                                    ReturnToOrangeAction)
-    #~ self.return_to_orange_ac_.wait_for_server()
     
     Server(FSMParamsConfig, self.reconfigure)
     
@@ -221,9 +218,9 @@ class AgentCommunications():
     rospy.Rate(5).sleep()
     
     if self.turn_back_:
-      goal = ReturnToOrangeGoal()
-      self.return_to_orange_ac_.send_goal(goal)
-      self.return_to_orange_ac_.wait_for_result()
+      goal = RobotTurnBackGoal(frontierExploration = True)
+      self.robot_turn_back_ac_.send_goal(goal)
+      self.robot_turn_back_ac_.wait_for_result()
       self.turn_back_ = False
     
     self.change_robot_state(robotModeMsg.MODE_IDENTIFICATION)
@@ -295,7 +292,7 @@ class AgentCommunications():
           self.start_exploration(robotModeMsg.MODE_FAST_EXPLORATION)
     elif arena_type == ArenaTypeMsg.TYPE_ORANGE:
       if self.valid_victims_ == 0:
-        goal = RobotTurnBackGoal()
+        goal = RobotTurnBackGoal(frontierExploration = False)
         self.robot_turn_back_ac_.send_goal(goal)
         self.robot_turn_back_ac_.wait_for_result()
         self.turn_back_ = True

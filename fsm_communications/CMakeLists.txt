@@ -17,7 +17,6 @@ add_action_files(
   AbortFSM.action
   ExplorationRestart.action
   RobotTurnBack.action
-  ReturnToOrange.action
 )
 
 generate_messages(
