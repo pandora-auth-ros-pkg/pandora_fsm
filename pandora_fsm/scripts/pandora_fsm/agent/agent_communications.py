@@ -248,10 +248,21 @@ class AgentCommunications():
     self.exploration_start_pub_.publish()
   
   def cost_function(self, time):
-    cost = self.valid_victims_ * exp(3.3 - time /1020)
-    cost += self.qrs_ * exp(2 - time / 420)
-    cost += self.robot_resets_ * exp(1 + time / 1140)
-    cost += self.robot_restarts_ * (1.5 + time / 600)
+    
+    cost = self.valid_victims_ * \
+      exp(5 - 0.3*self.max_victims_ - 0.000333333*self.max_time_ - \
+        time/(1320 - 300*self.max_victims_ + 0.86666664*self.max_time_))
+    
+    cost += self.qrs_ * \
+      exp(3.2 - 0.03*self.max_qrs_ - 0.000444444*self.max_time_ - \
+        time/(-60 - 6*self.max_qrs_ + 0.6*self.max_time_))
+    
+    cost += self.robot_resets_ * \
+      exp(1.8 - 0.000444444*self.max_time_ + time/(600 + 0.6*self.max_time_))
+    
+    cost += self.robot_restarts_ * \
+      (1 + exp(2.5 - 0.000555556*self.max_time_ - time/(0.6*self.max_time_)))
+    
     return cost
   
   def evaluate_current_situation(self, arena_type):
