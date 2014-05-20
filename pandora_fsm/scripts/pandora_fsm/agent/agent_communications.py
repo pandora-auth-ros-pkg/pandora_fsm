@@ -265,10 +265,25 @@ class AgentCommunications():
     
     return cost
   
+  def cost_function2(self):
+    
+    cost = self.valid_victims_ * 0.7
+    cost += self.qrs_ * 0.08
+    cost += self.robot_resets_ * 0.12
+    cost += self.robot_restarts_ * 0.1
+    
+    if cost < 1.6:
+      return 20
+    elif cost < 2.4:
+      return 30
+    else:
+      return 40
+  
   def evaluate_current_situation(self, arena_type):
     if arena_type == ArenaTypeMsg.TYPE_YELLOW:
       current_cost = \
         self.cost_function(float(rospy.get_rostime().secs - self.initial_time_))
+      #~ current_cost = cost_function2()
       if current_cost < 25:
         if self.current_exploration_mode_ != robotModeMsg.MODE_DEEP_EXPLORATION:
           self.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
