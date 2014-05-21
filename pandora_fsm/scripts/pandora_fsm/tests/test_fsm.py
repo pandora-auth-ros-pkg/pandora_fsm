@@ -71,7 +71,7 @@ class TestFSM(unittest.TestCase):
     rospy.sleep(10.)
     global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
     msg = QrNotificationMsg()
-    for i in range(6):
+    for i in range(5):
       global_vars.com.qr_notification_pub_.publish(msg)
       rospy.Rate(2).sleep()
     msg = Int32(data = 1)
@@ -80,7 +80,7 @@ class TestFSM(unittest.TestCase):
     global_vars.com.robot_restart_pub_.publish()
     rospy.sleep(2.)
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                      robotModeMsg.MODE_EXPLORATION)
+                      ExplorationModeGoal.MODE_NORMAL)
   
   def test_reset(self):
     rospy.sleep(15.)
@@ -166,3 +166,5 @@ if __name__ == '__main__':
   move_to_orange = unittest.TestSuite()
   move_to_orange.addTest(TestFSM('test_move_to_orange_without_victims_found'))
   unittest.TextTestRunner(verbosity=1).run(move_to_orange)
+  
+  global_vars.com.delete_action_servers()

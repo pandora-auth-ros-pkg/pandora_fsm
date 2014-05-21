@@ -28,7 +28,7 @@ class TestAgent(unittest.TestCase):
     global_vars.com.abort_fsm_sub_.unregister()
     global_vars.com.state_changer_as_.__del__()
     global_vars.com.robot_turn_back_as_.__del__()
-    global_vars.com.return_to_orange_as_.__del__()
+    global_vars.com.exploration_mode_as_.__del__()
   
   def setUp(self):
     global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
@@ -52,7 +52,7 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.robot_resets_ = 1
     global_vars.test_agent.robot_restarts_ = 4
     cost = global_vars.test_agent.cost_function(600.0)
-    self.assertEqual(cost, 64.6837664225596)
+    self.assertEqual(cost, 82.19256843353509)
   
   def test_evaluate_current_situation_orange_teleoperation(self):
     rospy.loginfo('test_evaluate_current_situation_orange_teleoperation')
@@ -75,11 +75,11 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.valid_victims_ = 0
     global_vars.test_agent.qrs_ = 7
     global_vars.test_agent.robot_resets_ = 0
-    global_vars.test_agent.robot_restarts_ = 2
+    global_vars.test_agent.robot_restarts_ = 1
     global_vars.test_agent.evaluate_current_situation(ArenaTypeMsg.TYPE_YELLOW)
     rospy.Rate(2).sleep()
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                      robotModeMsg.MODE_DEEP_EXPLORATION)
+                      ExplorationModeGoal.MODE_DEEP)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_evaluate_current_situation_yellow_fast(self):
@@ -92,7 +92,7 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.evaluate_current_situation(ArenaTypeMsg.TYPE_YELLOW)
     rospy.Rate(2).sleep()
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                      robotModeMsg.MODE_FAST_EXPLORATION)
+                      ExplorationModeGoal.MODE_FAST)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_evaluate_current_situation_yellow_normal(self):
@@ -101,11 +101,11 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.valid_victims_ = 1
     global_vars.test_agent.qrs_ = 6
     global_vars.test_agent.robot_resets_ = 0
-    global_vars.test_agent.robot_restarts_ = 1
+    global_vars.test_agent.robot_restarts_ = 0
     global_vars.test_agent.evaluate_current_situation(ArenaTypeMsg.TYPE_YELLOW)
     rospy.Rate(2).sleep()
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                      robotModeMsg.MODE_EXPLORATION)
+                      ExplorationModeGoal.MODE_NORMAL)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_exploration_ended(self):
@@ -167,15 +167,15 @@ class TestAgent(unittest.TestCase):
     rospy.Rate(2).sleep()
     self.assertTrue(global_vars.test_agent.exploration_)
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                      robotModeMsg.MODE_DEEP_EXPLORATION)
+                      ExplorationModeGoal.MODE_DEEP)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_start_exploration(self):
     rospy.loginfo('test_start_exploration')
-    global_vars.test_agent.start_exploration(robotModeMsg.MODE_DEEP_EXPLORATION)
+    global_vars.test_agent.start_exploration(ExplorationModeGoal.MODE_DEEP)
     rospy.Rate(2).sleep()
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                      robotModeMsg.MODE_DEEP_EXPLORATION)
+                      ExplorationModeGoal.MODE_DEEP)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_start_robot(self):

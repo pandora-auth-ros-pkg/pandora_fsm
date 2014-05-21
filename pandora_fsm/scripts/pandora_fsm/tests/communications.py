@@ -33,7 +33,7 @@ monitor_victim_ended_topic = 'monitor_victim_ended'
 validate_victim_ended_topic = 'validate_victim_ended'
 exploration_restart_topic = 'exploration_restart'
 robot_turn_back_topic = 'robot_turn_back'
-return_to_orange_topic = 'return_to_orange'
+exploration_mode_topic = 'exploration_mode'
 arena_type_topic = '/arena_type'
 victim_found_topic = '/data_fusion/alert_handler/victim_found'
 victim_update_topic = '/data_fusion/alert_handler/victim_update'
@@ -49,7 +49,7 @@ class Communications():
   
   def __init__(self, unit):
     
-    self.counter = 0
+    self.counter_ = 0
     self.test_passed_ = False
     
     if unit:
@@ -80,12 +80,12 @@ class Communications():
                                                     self.robot_turn_back_cb,
                                                   auto_start = False)
     self.robot_turn_back_as_.start()
-    self.return_to_orange_as_ = SimpleActionServer(return_to_orange_topic,
-                                                    ReturnToOrangeAction,
+    self.exploration_mode_as_ = SimpleActionServer(exploration_mode_topic,
+                                                    ExplorationModeAction,
                                                     execute_cb = \
-                                                      self.return_to_orange_cb,
+                                                      self.exploration_mode_cb,
                                                     auto_start = False)
-    self.return_to_orange_as_.start()
+    self.exploration_mode_as_.start()
   
   def start_subs_acs_unit(self):
     self.robot_start_sub_ = rospy.Subscriber(robot_start_topic, Empty,
@@ -197,11 +197,11 @@ class Communications():
     result = RobotTurnBackResult()
     self.robot_turn_back_as_.set_succeeded(result)
   
-  def return_to_orange_cb(self, goal):
-    rospy.loginfo('return_to_orange_cb')
+  def exploration_mode_cb(self, goal):
+    rospy.loginfo('exploration_mode_cb')
     self.test_passed_ = True
-    result = ReturnToOrangeResult()
-    self.return_to_orange_as_.set_succeeded(result)
+    result = ExplorationModeResult()
+    self.exploration_mode_as_.set_succeeded(result)
   
   def initial_turn_cb(self, goal):
     rospy.loginfo('initial_turn_cb')
@@ -231,8 +231,8 @@ class Communications():
     rospy.loginfo('select_target_cb')
     
     if goal.targetType == goal.TYPE_VICTIM:
-      if self.counter != 0:
-        self.counter -= 1
+      if self.counter_ != 0:
+        self.counter_ -= 1
       else:
         self.select_target_as_.set_aborted()
         return None
@@ -275,4 +275,14 @@ class Communications():
       self.validate_current_hole_as_.set_succeeded(result)
   
   def add_victims(self, num):
-    self.counter += num
+    self.counter_ += num
+  
+  def delete_action_servers(self):
+    self.state_changer_as_.__del__()
+    self.robot_turn_back_as_.__del__()
+    self.exploration_mode_as_.__del__()
+    self.initial_turn_as_.__del__()
+    self.move_base_as_.__del__()
+    self.select_target_as_.__del__()
+    self.validate_victim_as_.__del__()
+    self.validate_current_hole_as_.__del__()
