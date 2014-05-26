@@ -26,6 +26,7 @@ from std_msgs.msg import Int32
 class TestFSM(unittest.TestCase):
   
   def test_robot_start_state(self):
+    global_vars.com.start_button_pub_.publish()
     rospy.sleep(3.)
     
     msg = robotModeMsg()
@@ -34,7 +35,9 @@ class TestFSM(unittest.TestCase):
     global_vars.com.monitor_start_pub_.publish(msg)
     
     rospy.sleep(25.)
-    self.assertTrue(global_vars.test_agent.exploration_)
+    self.assertEqual(global_vars.test_agent.strategy_, 2)
+    self.assertEqual(global_vars.test_agent.current_exploration_mode_,
+                      ExplorationModeGoal.MODE_DEEP)
   
   def test_exploration_state(self):
     rospy.sleep(20.)
@@ -44,7 +47,8 @@ class TestFSM(unittest.TestCase):
     global_vars.com.monitor_victim_pub_.publish(msg)
     
     rospy.sleep(4.)
-    self.assertFalse(global_vars.test_agent.exploration_)
+    self.assertEqual(global_vars.test_agent.strategy_, 0)
+    self.assertEqual(global_vars.test_agent.current_exploration_mode_, 0)
   
   def test_victim_monitoring_state(self):
     rospy.sleep(2.)
@@ -93,14 +97,14 @@ class TestFSM(unittest.TestCase):
     global_vars.com.monitor_start_pub_.publish(msg)
     
     rospy.sleep(25.)
-    self.assertTrue(global_vars.test_agent.exploration_)
+    self.assertEqual(global_vars.test_agent.strategy_, 2)
     self.assertEqual(global_vars.test_agent.robot_resets_, 1)
   
   def test_move_to_orange_without_victims_found(self):
     msg = ArenaTypeMsg(arenaType = ArenaTypeMsg.TYPE_ORANGE)
     global_vars.com.arena_type_pub_.publish(msg)
     rospy.Rate(2).sleep()
-    self.assertTrue(global_vars.test_agent.turn_back_)
+    self.assertEqual(global_vars.test_agent.validate_victim_strategy_, 2)
     rospy.sleep(8.)
     global_vars.com.add_victims(1)
     msg = VictimFoundMsg(victimNotificationType = VictimFoundMsg.TYPE_CAMERA)
@@ -120,7 +124,7 @@ class TestFSM(unittest.TestCase):
     global_vars.com.arena_type_pub_.publish(msg)
     rospy.sleep(5.)
     self.assertEqual(global_vars.test_agent.current_arena_, ArenaTypeMsg.TYPE_ORANGE)
-    self.assertTrue(global_vars.test_agent.teleoperation_)
+    self.assertEqual(global_vars.test_agent.strategy_, 0)
 
 if __name__ == '__main__':
   rospy.init_node('test_fsm', anonymous=True)

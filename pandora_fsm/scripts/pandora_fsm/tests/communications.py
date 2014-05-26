@@ -38,6 +38,7 @@ arena_type_topic = '/arena_type'
 victim_found_topic = '/data_fusion/alert_handler/victim_found'
 victim_update_topic = '/data_fusion/alert_handler/victim_update'
 victim_verification_topic = '/data_fusion/alert_handler/victim_verified'
+start_button_topic = '/start_button'
 
 robot_start_topic = '/fsm/robot_start'
 exploration_start_topic = '/fsm/exploration_start'
@@ -67,6 +68,7 @@ class Communications():
     self.robocup_score_pub_ = rospy.Publisher(robocup_score_topic, Int32)
     self.valid_victims_pub_ = rospy.Publisher(valid_victims_topic, Int32)
     self.arena_type_pub_ = rospy.Publisher(arena_type_topic, ArenaTypeMsg)
+    self.start_button_pub_ = rospy.Publisher(start_button_topic, Empty)
     
     self.state_changer_as_ = SimpleActionServer(state_changer_action_topic,
                                                 RobotModeAction,

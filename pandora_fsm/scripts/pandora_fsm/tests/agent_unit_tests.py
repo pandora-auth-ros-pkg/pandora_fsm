@@ -36,9 +36,6 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.valid_victims_ = 0
     global_vars.test_agent.qrs_ = 0
     global_vars.test_agent.current_exploration_mode_ = 0
-    global_vars.test_agent.exploration_ = False
-    global_vars.test_agent.teleoperation_ = False
-    global_vars.test_agent.turn_back_ = False
     global_vars.test_agent.robot_resets_ = 0
     global_vars.test_agent.robot_restarts_ = 0
   
@@ -59,14 +56,13 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.valid_victims_ = 1
     global_vars.test_agent.evaluate_current_situation(ArenaTypeMsg.TYPE_ORANGE)
     rospy.Rate(2).sleep()
-    self.assertTrue(global_vars.test_agent.teleoperation_)
     self.assertEqual(global_vars.test_agent.current_arena_, ArenaTypeMsg.TYPE_ORANGE)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_evaluate_current_situation_orange_turn_back(self):
     rospy.loginfo('test_evaluate_current_situation_orange_turn_back')
     global_vars.test_agent.evaluate_current_situation(ArenaTypeMsg.TYPE_ORANGE)
-    self.assertTrue(global_vars.test_agent.turn_back_)
+    self.assertEqual(global_vars.test_agent.validate_victim_strategy_, 2)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_evaluate_current_situation_yellow_deep(self):
@@ -115,7 +111,7 @@ class TestAgent(unittest.TestCase):
     global_vars.com.exploration_ended_ac_.send_goal(goal)
     global_vars.com.exploration_ended_ac_.wait_for_result()
     rospy.Rate(2).sleep()
-    self.assertFalse(global_vars.test_agent.exploration_)
+    self.assertEqual(global_vars.test_agent.current_exploration_mode_, 0)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_exploration_restart(self):
@@ -123,7 +119,7 @@ class TestAgent(unittest.TestCase):
     goal = ExplorationRestartGoal()
     global_vars.com.exploration_restart_ac_.send_goal(goal)
     global_vars.com.exploration_restart_ac_.wait_for_result()
-    self.assertTrue(global_vars.test_agent.exploration_)
+    self.assertEqual(global_vars.test_agent.strategy_, 2)
   
   def test_monitor_victim_ended(self):
     rospy.loginfo('test_monitor_victim_ended')
@@ -152,6 +148,7 @@ class TestAgent(unittest.TestCase):
     global_vars.com.robot_reset_pub_.publish()
     rospy.sleep(2.)
     self.assertEqual(global_vars.test_agent.robot_resets_, 1)
+    self.assertEqual(global_vars.test_agent.strategy_, 1)
   
   def test_robot_restart(self):
     rospy.loginfo('test_robot_restart')
@@ -165,7 +162,7 @@ class TestAgent(unittest.TestCase):
     global_vars.com.robot_started_ac_.send_goal(goal)
     global_vars.com.robot_started_ac_.wait_for_result()
     rospy.Rate(2).sleep()
-    self.assertTrue(global_vars.test_agent.exploration_)
+    self.assertEqual(global_vars.test_agent.strategy_, 2)
     self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                       ExplorationModeGoal.MODE_DEEP)
     self.assertTrue(global_vars.com.test_passed_)
@@ -182,6 +179,7 @@ class TestAgent(unittest.TestCase):
     rospy.loginfo('test_start_robot')
     global_vars.test_agent.start_robot()
     rospy.Rate(2).sleep()
+    self.assertEqual(global_vars.test_agent.strategy_, 0)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_state_changer(self):
@@ -197,7 +195,7 @@ class TestAgent(unittest.TestCase):
     msg.type = msg.TYPE_TRANSITION
     global_vars.com.monitor_start_pub_.publish(msg)
     rospy.Rate(2).sleep()
-    self.assertTrue(global_vars.test_agent.teleoperation_)
+    self.assertEqual(global_vars.test_agent.strategy_, 0)
     self.assertTrue(global_vars.com.test_passed_)
   
   def test_teleoperation_ended(self):
@@ -205,7 +203,7 @@ class TestAgent(unittest.TestCase):
     global_vars.test_agent.teleoperation_ = True
     global_vars.com.teleoperation_ended_pub_.publish()
     rospy.Rate(2).sleep()
-    self.assertFalse(global_vars.test_agent.teleoperation_)
+    self.assertEqual(global_vars.test_agent.strategy_, 2)
   
   def test_valid_victims(self):
     rospy.loginfo('test_valid_victims')
@@ -224,12 +222,12 @@ class TestAgent(unittest.TestCase):
   
   def test_validate_victim_ended_return_to_orange(self):
     rospy.loginfo('test_validate_victim_ended_return_to_orange')
-    global_vars.test_agent.turn_back_ = True
+    global_vars.test_agent.validate_victim_strategy_ = 2
     goal = ValidateVictimEndedGoal()
     global_vars.com.validate_victim_ended_ac_.send_goal(goal)
     global_vars.com.validate_victim_ended_ac_.wait_for_result()
     rospy.Rate(2).sleep()
-    self.assertFalse(global_vars.test_agent.turn_back_)
+    self.assertEqual(global_vars.test_agent.validate_victim_strategy_, 1)
     self.assertTrue(global_vars.com.test_passed_)
 
 if __name__ == '__main__':
