@@ -19,9 +19,9 @@
    <run_depend>rospy</run_depend> 
    <run_depend>smach</run_depend> 
    <run_depend>smach_ros</run_depend> 
-   <run_depend>pandora_navigation_communications</run_depend> 
-   <run_depend>data_fusion_communications</run_depend> 
-   <run_depend>target_selector_communications</run_depend> 
+   <run_depend>move_base_msgs</run_depend> 
+   <run_depend>pandora_data_fusion_msgs</run_depend> 
+   <run_depend>pandora_navigation_msgs</run_depend> 
    <run_depend>state_manager_communications</run_depend> 
    <run_depend>fsm_communications</run_depend> 
    <run_depend>actionlib</run_depend> 
