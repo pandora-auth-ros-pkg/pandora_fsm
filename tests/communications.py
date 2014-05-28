@@ -13,6 +13,7 @@ from data_fusion_communications.msg import QrNotificationMsg, VictimFoundMsg, \
                                             ValidateCurrentHoleResult, \
                                             VictimToFsmMsg
 from fsm_communications.msg import *
+f
 from std_msgs.msg import Int32, Empty
 from pandora_navigation_communications.msg import InitialTurnAction
 from move_base_msgs.msg import MoveBaseAction

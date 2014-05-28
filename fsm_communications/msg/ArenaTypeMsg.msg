@@ -1,5 +1,0 @@
-uint8 arenaType
-uint8 TYPE_YELLOW=1
-uint8 TYPE_ORANGE=2
-uint8 TYPE_YELLOW_BLACK=3
-uint8 TYPE_RED=4
