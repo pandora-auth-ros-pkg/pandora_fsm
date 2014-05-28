@@ -9,15 +9,10 @@ add_message_files(
 
 add_action_files(
   FILES
-  ValidateVictim.action
-  RobotStarted.action
-  ExplorationEnded.action
-  MonitorVictimEnded.action
-  ValidateVictimEnded.action
-  AbortFSM.action
+  ExplorationMode.action
   ExplorationRestart.action
   RobotTurnBack.action
-  ExplorationMode.action
+  ValidateVictimGUI.action
 )
 
 generate_messages(
