@@ -123,7 +123,7 @@ class TestAgent(unittest.TestCase):
         rospy.sleep(1.)
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
         msg = QrNotificationMsg()
-        for i in range(4):
+        for i in range(10):
             global_vars.com.qr_notification_pub_.publish(msg)
             rospy.Rate(2).sleep()
         rospy.sleep(2.)
@@ -180,3 +180,5 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=1).run(exploration_normal)
 
     global_vars.com.delete_action_servers()
+
+    rospy.spin()

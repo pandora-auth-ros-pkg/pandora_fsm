@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="state_manager" type="state_server" name="StateServer" output="screen"/>
+
+  <node pkg="pandora_fsm" type="agent_unit_tests.py" name="test_agent" output="screen"/>
+</launch>
