@@ -33,15 +33,14 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-import communications
-from pandora_fsm.robocup_agent.robocup_agent import RoboCupAgent
-
-test_agent = None
-com = None
-
-
-def init():
-    global test_agent
-    test_agent = RoboCupAgent()
-    global com
-    com = communications.Communications()
+delete_victim_topic = '/data_fusion/alert_handler/delete_victim'
+qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
+robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
+data_fusion_validate_victim_topic = '/data_fusion/alert_handler/validate_victim'
+victims_topic = '/data_fusion/alert_handler/victims'
+do_exploration_topic = '/navigation/do_exploration'
+arena_type_topic = '/navigation/arena_type'
+move_base_topic = '/move_base'
+gui_validation_topic = '/gui/validate_victim'
+robot_reset_topic = '/gui/robot_reset'
+robot_restart_topic = '/gui/robot_restart'

@@ -33,15 +33,20 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-import communications
-from pandora_fsm.robocup_agent.robocup_agent import RoboCupAgent
-
-test_agent = None
-com = None
+import roslib
+roslib.load_manifest('pandora_fsm')
+import rospy
 
 
-def init():
-    global test_agent
-    test_agent = RoboCupAgent()
-    global com
-    com = communications.Communications()
+class State(object):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        self.agent_ = agent
+        self.next_states_ = next_states
+        self.cost_functions_ = cost_functions
+
+    def execute(self):
+        pass
+
+    def make_transition(self):
+        pass
