@@ -32,57 +32,44 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # Author: Chris Zalidis
+# Author: Voulgarakis George
 
-import roslib; roslib.load_manifest('pandora_fsm')
+import roslib
+roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
 
-from smach import State, StateMachine
-from smach_ros import SimpleActionState
-
-from target_selector_communications.msg import SelectTargetGoal, SelectTargetAction
-from pandora_navigation_communications.msg import InitialTurnAction
-from move_base_msgs.msg import MoveBaseAction
-	
-move_base_topic = '/move_base'
-select_target_topic = '/select_target'
-initial_turn_topic = '/initial_turn'
-
-class MoveBaseState(SimpleActionState):
-	
-	def __init__(self):
-		SimpleActionState.__init__(self, move_base_topic, MoveBaseAction, goal_key='target_pose')
-		
-		
-class SelectTargetState(SimpleActionState):
-	
-	def __init__(self, target_type):
-		
-		target_selection_goal = self.targetSelectionGoal(target_type)
-		
-		SimpleActionState.__init__(self, select_target_topic,
-				SelectTargetAction, 
-				goal=target_selection_goal,
-				result_key='target_pose'  ) 
-		
-	
-	def targetSelectionGoal(self, target_type):
-		
-		target_selection_goal = SelectTargetGoal()
-		
-		if target_type == 'explore':
-			target_selection_goal.targetType = SelectTargetGoal.TYPE_EXPLORATION
-		elif target_type == 'victim':
-			target_selection_goal.targetType = SelectTargetGoal.TYPE_VICTIM
-		else:
-			rospy.logerr('Wrong target type!')
-		return target_selection_goal
+from pandora_fsm.states.my_simple_action_state import MySimpleActionState
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from pandora_navigation_msgs.msg import DoExplorationAction, DoExplorationGoal
+from pandora_fsm.robocup_agent.agent_topics import do_exploration_topic, \
+    move_base_topic
 
 
-class InitialTurnState(SimpleActionState):
-	
-	def __init__(self):
-		SimpleActionState.__init__(self, initial_turn_topic, InitialTurnAction)
+class DoExplorationState(MySimpleActionState):
+
+    def __init__(self):
+        MySimpleActionState.__init__(self, do_exploration_topic,
+                                     DoExplorationAction,
+                                     goal_cb=self.goal_cb,
+                                     outcomes=['aborted',
+                                               'preempted'])
+
+    def goal_cb(self, userdata, goal):
+        goal = DoExplorationGoal(explorationMode=DoExplorationGoal.TYPE_DEEP)
+        return goal
 
 
+class MoveBaseState(MySimpleActionState):
+
+    def __init__(self):
+        MySimpleActionState.__init__(self, move_base_topic, MoveBaseAction,
+                                     goal_cb=self.goal_cb,
+                                     outcomes=['succeeded',
+                                               'aborted',
+                                               'preempted'],
+                                     input_keys=['target_victim'],
+                                     output_keys=['target_victim'])
+
+    def goal_cb(self, userdata, goal):
+        goal = MoveBaseGoal(target_pose=userdata[0].victimPose)
+        return goal

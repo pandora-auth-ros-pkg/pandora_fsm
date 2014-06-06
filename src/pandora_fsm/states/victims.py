@@ -32,136 +32,152 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # Author: Chris Zalidis
+# Author: Voulgarakis George
 
-import roslib; roslib.load_manifest('pandora_fsm')
+import roslib
+roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
 
-import pandora_fsm
-
-from actionlib import GoalStatus
-
-from smach import State, StateMachine
-from smach_ros import SimpleActionState
-
+from smach import State
 from pandora_fsm.states.my_monitor_state import MyMonitorState
 from pandora_fsm.states.my_simple_action_state import MySimpleActionState
-from data_fusion_communications.msg import *
-from fsm_communications.msg import ValidateVictimAction, ValidateVictimGoal, ValidateVictimResult 
-from std_msgs.msg import Empty
-
-	
-victim_found_topic = '/data_fusion/alert_handler/victim_found'
-victim_update_topic = '/data_fusion/alert_handler/victim_update'
-delete_victim_topic = '/data_fusion/alert_handler/delete_current_victim'
-validate_hole_topic = '/data_fusion/alert_handler/validate_current_hole'
-victim_verification_topic = '/data_fusion/alert_handler/victim_verified'
-gui_validation_topic = '/gui/validate_victim'
+from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
+from pandora_data_fusion_msgs.msg import VictimsMsg, ValidateVictimAction, \
+    ValidateVictimGoal, DeleteVictimAction, DeleteVictimGoal
+from pandora_fsm.robocup_agent.agent_topics import victims_topic, \
+    delete_victim_topic, gui_validation_topic, data_fusion_validate_victim_topic
 
 
-class MonitorVictimState(MyMonitorState):
-	
-	def __init__(self, input_keys=[], output_keys=[]):
-		MyMonitorState.__init__(self, victim_found_topic, VictimFoundMsg, 
-		self.monitor_cb, extra_outcomes=['camera','thermal'], in_keys=input_keys, out_keys=output_keys)
-		
-	def monitor_cb(self, userdata, msg):
-		if msg.victimNotificationType == msg.TYPE_THERMAL:
-			return 'thermal'
-		elif msg.victimNotificationType == msg.TYPE_CAMERA:
-			return 'camera'
-		else:
-			return None
+class NewVictimState(MyMonitorState):
 
-class MonitorVictimUpdateState(MyMonitorState):
-	
-	def __init__(self):
-		MyMonitorState.__init__(self, victim_update_topic, Empty,
-		self.monitor_cb, extra_outcomes=['update_victim'])
-		
-	def monitor_cb(self, userdata, msg):
-		return 'update_victim'
-		
+    def __init__(self):
+        MyMonitorState.__init__(self, victims_topic, VictimsMsg,
+                                self.monitor_cb, extra_outcomes=['victim'],
+                                in_keys=['target_victim'],
+                                out_keys=['target_victim'])
+
+    def monitor_cb(self, userdata, msg):
+        if len(msg.victims) > 0:
+            userdata[0].id = msg.victims[0].id
+            userdata[0].victimPose = msg.victims[0].victimPose
+            userdata[0].probability = msg.victims[0].probability
+            userdata[0].sensors = msg.victims[0].sensors
+            return 'victim'
+
+
+class UpdateVictimState(MyMonitorState):
+
+    def __init__(self):
+        MyMonitorState.__init__(self, victims_topic, VictimsMsg,
+                                self.monitor_cb,
+                                extra_outcomes=['update_victim'],
+                                in_keys=['target_victim'],
+                                out_keys=['target_victim'])
+
+    def monitor_cb(self, userdata, msg):
+        for victim in msg.victims:
+            if victim.id == userdata[0].id:
+                if fabs(victim.probability - userdata[0].probability) \
+                        > 0.001 or \
+                    userdata[0].victimPose.pose.position.x != \
+                        victim.victimPose.pose.position.x or \
+                    userdata[0].victimPose.pose.position.y != \
+                        victim.victimPose.pose.position.y or \
+                    userdata[0].victimPose.pose.position.z != \
+                        victim.victimPose.pose.position.z:
+                    userdata[0].id = victim.id
+                    userdata[0].victimPose = victim.victimPose
+                    userdata[0].probability = victim.probability
+                    userdata[0].sensors = victim.sensors
+                    return 'update_victim'
+                return None
+
+
+class VerifyVictimState(MyMonitorState):
+
+    def __init__(self):
+        MyMonitorState.__init__(self, victims_topic, VictimsMsg,
+                                self.monitor_cb,
+                                extra_outcomes=['victim_verified', 'time_out'],
+                                in_keys=['target_victim'],
+                                out_keys=['target_victim'])
+
+    def execute(self, userdata):
+        counter = 0
+        while counter < 10:
+            rospy.sleep(1)
+
+            counter = counter + 1
+
+            if self.preempt_requested():
+                self.service_preempt()
+                return 'preempted'
+
+        return 'time_out'
+
+    def monitor_cb(self, userdata, msg):
+        for victim in msg.victims:
+            if victim.id == userdata[0].id:
+                if victim.probability > 0.5:
+                    return 'victim_verified'
+                return None
+
+
 class DeleteVictimState(MySimpleActionState):
-	
-	def __init__(self):
-		MySimpleActionState.__init__(self, delete_victim_topic, 
-									DeleteCurrentVictimAction,
-									goal=DeleteCurrentVictimGoal(),
-									outcomes=['succeeded','preempted'])
 
-class ValidateHoleState(MySimpleActionState):
-	
-	def __init__(self, val):
-		
-		hole_goal = ValidateCurrentHoleGoal(valid=val)
-		
-		MySimpleActionState.__init__(self, validate_hole_topic,
-									ValidateCurrentHoleAction,
-									outcomes=['succeeded','preempted'],
-									goal=hole_goal)
+    def __init__(self):
+        MySimpleActionState.__init__(self, delete_victim_topic,
+                                     DeleteVictimAction,
+                                     goal_cb=self.goal_cb,
+                                     outcomes=['succeeded', 'preempted'],
+                                     input_keys=['target_victim'],
+                                     output_keys=['target_victim'])
 
-class VictimVerificationState(MyMonitorState):
-	
-	def __init__(self):
-		MyMonitorState.__init__(self, victim_verification_topic, VictimToFsmMsg,
-		self.monitor_cb, extra_outcomes=['got_verification'], in_keys=['victim_info'], out_keys=['victim_info'])
-	
-	def monitor_cb(self, userdata, msg):
-		userdata[0].victim_info.x = msg.x
-		userdata[0].victim_info.y = msg.y
-		userdata[0].victim_info.probability = msg.probability
-		userdata[0].victim_info.sensors = msg.sensors
-		return 'got_verification'
-		
-class DataFusionHold(State):
-	
-	def __init__(self):
-		State.__init__(self, outcomes=['time_out','preempted'])
-		
-	def execute(self, userdata):
-		counter = 0
-		while counter < 10:
-			rospy.sleep(1)
-			
-			counter = counter + 1
-			
-			# Check for preempt
-			if self.preempt_requested():
-				self.service_preempt()
-				return 'preempted'
-		
-		return 'time_out'
-		
+    def goal_cb(self, userdata, goal):
+        goal = DeleteVictimGoal(victimId=userdata[0].id)
+        return goal
+
+
+class ValidateVictimGUIState(MySimpleActionState):
+
+    def __init__(self):
+        MySimpleActionState.__init__(self, gui_validation_topic,
+                                     ValidateVictimGUIAction,
+                                     goal_cb=self.goal_cb,
+                                     result_cb=self.result_cb,
+                                     outcomes=['succeeded', 'preempted'],
+                                     input_keys=['target_victim',
+                                                 'validation_result'],
+                                     output_keys=['target_victim',
+                                                  'validation_result'])
+
+    def goal_cb(self, userdata, goal):
+        goal = ValidateVictimGUIGoal
+        goal.victimFoundx = userdata[0].victimPose.pose.position.x
+        goal.victimFoundy = userdata[0].victimPose.pose.position.y
+        goal.probability = userdata[0].probability
+        goal.sensorIDsFound = userdata[0].sensors
+        return goal
+
+    def result_cb(self, userdata, status, result):
+        userdata[1] = result.victimValid
+        return 'succeeded'
+
 
 class ValidateVictimState(MySimpleActionState):
-	
-	def __init__(self):
-		
-		MySimpleActionState.__init__(self, gui_validation_topic, 
-									ValidateVictimAction,
-									goal_cb=self.goal_callback,
-									outcomes=['valid','not_valid','preempted'],
-									result_cb=self.result_callback,
-									input_keys=['victim_info']
-									)
 
-	def goal_callback(self, userdata, goal):
-		
-		goal = ValidateVictimGoal();
-		goal.victimFoundx = userdata.victim_info.x
-		goal.victimFoundy = userdata.victim_info.y
-		goal.probability = userdata.victim_info.probability
-		goal.sensorIDsFound = userdata.victim_info.sensors
-		return goal
-		
+    def __init__(self):
+        MySimpleActionState.__init__(self, data_fusion_validate_victim_topic,
+                                     ValidateVictimAction,
+                                     goal_cb=self.goal_cb,
+                                     outcomes=['succeeded', 'preempted'],
+                                     input_keys=['target_victim',
+                                                'validation_result'],
+                                     output_keys=['target_victim',
+                                                  'validation_result'])
 
-	def result_callback(self, userdata, status, result):
-		if status == GoalStatus.SUCCEEDED:
-			if result.victimValid:
-				return 'valid'
-			else:
-				return 'not_valid'
-			
-		
+    def goal_cb(self, userdata, goal):
+        goal = ValidateVictimGoal
+        goal.victimId = userdata[0].id
+        goal.victimValid = userdata[1]
+        return goal

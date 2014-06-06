@@ -31,61 +31,47 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Chris Zalidis
+# Author: Voulgarakis George
 
 import roslib
-roslib.load_manifest('pandora_fsm')  
-roslib.load_manifest('smach')
-roslib.load_manifest('smach_ros')
+roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
 
-import pandora_fsm
-
-import threading
-
-from smach import State, StateMachine
-
-from pandora_fsm.states.navigation import *
-from pandora_fsm.containers.exploration import *
-
-def main():
-	rospy.init_node('exploration_fsm')
-	
-	sm = StateMachine(outcomes=['succeeded','aborted','preempted'])
-    
-	with sm:
-		StateMachine.add(
-		    'INITIAL_TURN',
-		    InitialTurnState(), 
-		    transitions={
-			'succeeded':'EXPLORATION',
-			'aborted':'EXPLORATION',
-			'preempted':'preempted'}
-		)
-			
-		StateMachine.add(
-		    'EXPLORATION',
-		    simpleExplorationContainer(), 
-		    transitions={
-			'preempted':'preempted'}
-		)
+from smach import StateMachine
+from pandora_fsm.states.victims import ValidateVictimGUIState, \
+    ValidateVictimState
 
 
-	sis = smach_ros.IntrospectionServer('fsm_introspection', sm, '/EXPLORATION_FSM')
-	
-	sis.start()
-    
-	smach_ros.set_preempt_handler(sm)
+def validation():
 
-	# Execute SMACH tree in a separate thread so that we can ctrl-c the script
-	smach_thread = threading.Thread(target = sm.execute)
-	smach_thread.start()
-		
-	rospy.spin()
-	sis.stop()
+    sm = StateMachine(outcomes=['succeeded', 'preempted'],
+                      input_keys=['target_victim'],
+                      output_keys=['target_victim'])
 
+    sm.userdata.validation_result = None
 
-if __name__ == '__main__':
-	main()
+    with sm:
+
+        StateMachine.add(
+            'VALIDATION_FROM_GUI',
+            ValidateVictimGUIState(),
+            transitions={
+                'succeeded': 'DF_VALIDATION',
+                'preempted': 'preempted'
+            },
+            remapping={'target_info': 'target_info',
+                       'validation_result': 'validation_result'}
+        )
+
+        StateMachine.add(
+            'DF_VALIDATION',
+            ValidateVictimState(),
+            transitions={
+                'succeeded': 'succeeded',
+                'preempted': 'preempted'
+            },
+            remapping={'target_info': 'target_info',
+                       'validation_result': 'validation_result'}
+        )
+
+    return sm

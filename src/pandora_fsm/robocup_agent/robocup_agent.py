@@ -274,7 +274,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
 def main():
 
-    rospy.init_node('pandora_agent')
+    rospy.init_node('agent')
 
     agent = RoboCupAgent()
 

@@ -38,7 +38,7 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import cost_function
 
-from math import exp, log
+from math import exp, log, fabs
 
 
 class ExplorationModeCostFunction(cost_function.CostFunction):
@@ -114,8 +114,8 @@ class UpdateVictimCostFunction(cost_function.CostFunction):
         rospy.loginfo('UpdateVictimCostFunction')
         for victim in self.agent_.new_victims_:
             if victim.id == self.agent_.target_victim_.id:
-                if self.agent_.target_victim_.probability - victim.probability \
-                        > 0.001 or \
+                if fabs(self.agent_.target_victim_.probability -
+                        victim.probability) > 0.001 or \
                     self.agent_.target_victim_.victimPose.pose.position.x != \
                         victim.victimPose.pose.position.x or \
                     self.agent_.target_victim_.victimPose.pose.position.y != \

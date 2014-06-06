@@ -31,18 +31,38 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Voulgarakis George <turbolapingr@gmail.com>
+# Author: Voulgarakis George
 
-delete_victim_topic = '/data_fusion/alert_handler/delete_victim'
-qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
-robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
-data_fusion_validate_victim_topic = '/data_fusion/alert_handler/validate_victim'
-victims_topic = '/data_fusion/alert_handler/victims'
-do_exploration_topic = '/navigation/do_exploration'
-arena_type_topic = '/navigation/arena_type'
-move_base_topic = '/move_base'
-gui_validation_topic = '/gui/validate_victim'
-robot_reset_topic = '/gui/robot_reset'
-robot_restart_topic = '/gui/robot_restart'
-state_changer_action_topic = '/robot/state/change'
-state_monitor_topic = '/robot/state/clients'
+import roslib
+roslib.load_manifest('pandora_fsm')
+
+from smach import StateMachine
+from pandora_fsm.states.state_changer import MonitorModeState, Timer
+from state_manager_communications.msg import robotModeMsg
+
+
+def robot_start():
+
+    sm = StateMachine(outcomes=['succeeded', 'preempted'])
+
+    with sm:
+
+        StateMachine.add(
+            'START_BUTTON',
+            MonitorModeState(robotModeMsg.MODE_START_AUTONOMOUS),
+            transitions={
+                'valid': 'WAIT_FOR_SLAM',
+                'preempted': 'preempted'
+            }
+        )
+
+        StateMachine.add(
+            'WAIT_FOR_SLAM',
+            Timer(10),
+            transitions={
+                'time_out': 'succeeded',
+                'preempted': 'preempted'
+            }
+        )
+
+    return sm

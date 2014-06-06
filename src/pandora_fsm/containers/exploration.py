@@ -31,104 +31,72 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Chris Zalidis
+# Author: Voulgarakis George
 
-import roslib; roslib.load_manifest('pandora_fsm')
+import roslib
+roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
 
-import pandora_fsm
+from smach import StateMachine, Concurrence
+from pandora_fsm.states.state_changer import ChangeRobotModeState
+from pandora_fsm.states.navigation import DoExplorationState
+from pandora_fsm.states.victims import NewVictimState
+from state_manager_communications.msg import robotModeMsg
 
-from smach import State, StateMachine, Concurrence
 
-from fsm_communications.msg import ExplorationEndedAction, ExplorationEndedGoal
-from pandora_fsm.agent.agent_servers import ExplorationStart
-from pandora_fsm.states.navigation import *
-from pandora_fsm.states.victims import *
-	
-def simpleExplorationContainer():
-	
-	sm_simple_exploration = StateMachine(outcomes=['preempted'])
-	
-	with sm_simple_exploration:
-		
-		StateMachine.add(
-		    'SELECT_TARGET',
-		    SelectTargetState('explore'), 
-		    transitions={
-			'succeeded':'MOVE_BASE',
-			'aborted':'SELECT_TARGET',
-			'preempted':'preempted'}
-		)
-		
-		StateMachine.add(
-		    'MOVE_BASE',
-		    MoveBaseState(), 
-		    transitions={
-			'succeeded':'SELECT_TARGET',
-			'aborted':'SELECT_TARGET',
-			'preempted':'preempted'}
-		)
-		
-		
-	return sm_simple_exploration
-	
+def exploration():
 
-def explorationWithVictims():
-	
-	def _termination_cb(outcome_map):
-		return True
-	
-	sm = StateMachine(outcomes=['succeeded', 'preempted'])
-	
-	with sm:
-		
-		StateMachine.add(
-			'EXPLORATION_START',
-			ExplorationStart(),
-			transitions={
-				'succeeded':'EXPLORATION_WITH_VICTIMS',
-				'invalid':'EXPLORATION_START',
-				'preempted':'preempted'
-			}
-		)
-		
-		cc = Concurrence(
-			outcomes=[
-				'thermal_alert',
-				'camera_alert',
-				'preempted' ], 
-			default_outcome = 'preempted',
-			outcome_map = {
-				'thermal_alert':{'VICTIM_MONITOR':'thermal'}, 
-				'camera_alert':{'VICTIM_MONITOR':'camera'},
-				'preempted':{'EXPLORE':'preempted','VICTIM_MONITOR':'preempted'} },
-			child_termination_cb=_termination_cb)
-		
-		with cc:
-			Concurrence.add('VICTIM_MONITOR', MonitorVictimState())
-			Concurrence.add('EXPLORE', simpleExplorationContainer())
-		
-		StateMachine.add(
-			'EXPLORATION_WITH_VICTIMS',
-			cc,
-			transitions={
-				'thermal_alert':'EXPLORATION_ENDED',
-				'camera_alert':'EXPLORATION_ENDED',
-				'preempted':'preempted'
-			}
-		)
-		
-		StateMachine.add(
-			'EXPLORATION_ENDED',
-			MySimpleActionState('exploration_ended', ExplorationEndedAction,
-													goal=ExplorationEndedGoal(),
-													outcomes=['succeeded','preempted']),
-			transitions = {
-				'succeeded':'EXPLORATION_START',
-				'preempted':'preempted'
-			}
-		)
-		
-	return sm
+    sm = StateMachine(outcomes=['victim_found', 'preempted'],
+                      input_keys=['target_victim'],
+                      output_keys=['target_victim'])
+
+    with sm:
+
+        StateMachine.add(
+            'ROBOT_MODE_EXPLORATION',
+            ChangeRobotModeState(robotModeMsg.MODE_EXPLORATION),
+            transitions={
+                'succeeded': 'EXPLORATION_WITH_VICTIMS',
+                'preempted': 'preempted'
+            }
+        )
+
+        cc = Concurrence(
+            outcomes=[
+                'exploration_aborted',
+                'victim_found',
+                'preempted'
+            ],
+            default_outcome='preempted',
+            input_keys=['target_victim'],
+            output_keys=['target_victim'],
+            outcome_map={
+                'exploration_aborted': {'EXPLORE': 'aborted'},
+                'victim_found': {'NEW_VICTIM_MONITOR': 'victim'},
+                'preempted': {'EXPLORE': 'preempted',
+                              'NEW_VICTIM_MONITOR': 'preempted'}
+            },
+            child_termination_cb=termination_cb
+        )
+
+        with cc:
+            Concurrence.add('EXPLORE', DoExplorationState())
+            Concurrence.add('NEW_VICTIM_MONITOR', NewVictimState(),
+                            remapping={'target_info': 'target_info'})
+
+        StateMachine.add(
+            'EXPLORATION_WITH_VICTIMS',
+            cc,
+            transitions={
+                'exploration_aborted': 'EXPLORATION_WITH_VICTIMS',
+                'victim_found': 'victim_found',
+                'preempted': 'preempted'
+            },
+            remapping={'target_info': 'target_info'}
+        )
+
+    return sm
+
+
+def termination_cb(outcome_map):
+    return True

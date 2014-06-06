@@ -31,70 +31,56 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Chris Zalidis
+# Author: Voulgarakis George
 
-import roslib; roslib.load_manifest('pandora_fsm')
+import roslib
+roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
 
-import pandora_fsm
+from smach import StateMachine
+from pandora_fsm.states.state_changer import ChangeRobotModeState
+from pandora_fsm.states.victims import VerifyVictimState, DeleteVictimState
+from state_manager_communications.msg import robotModeMsg
 
-from smach import State, StateMachine, Concurrence
 
-from pandora_fsm.states.victims import *
-	
-def dataFusionHold():
-	
-	def _termination_cb(outcome_map):
-		return True
-	
-	sm  = StateMachine(outcomes=['verified','not_verified','preempted'], input_keys=['victim_info'], output_keys=['victim_info'])
-	
-	with sm:
-		
-		#~ sm.userdata.victim_info = None
-	
-		cc = Concurrence(
-			outcomes=[
-				'verified',
-				'time_out',
-				'preempted'], 
-			default_outcome = 'time_out',
-			outcome_map = {
-				'verified':{'MONITOR_VERIFICATION':'got_verification'},
-				'time_out':{'MONITOR_VERIFICATION':'preempted','TIMER':'time_out'},
-				'preempted':{'TIMER':'preempted', 'MONITOR_VERIFICATION':'preempted'}},
-			child_termination_cb=_termination_cb,
-			input_keys=['victim_info'],
-			output_keys=['victim_info'])
-			
-		with cc:
-			
-			Concurrence.add('MONITOR_VERIFICATION', VictimVerificationState(), remapping={'victim_info':'victim_info'})
-			
-			Concurrence.add('TIMER', DataFusionHold())
-		
-		StateMachine.add(
-			'WAIT_FOR_DF',
-			cc,
-			transitions={
-			'time_out':'DELETE_CURRENT_HOLE',
-			'verified':'verified',
-			'preempted':'preempted'},
-			remapping={'victim_info':'victim_info'}
-		)
-		
-		StateMachine.add(
-			'DELETE_CURRENT_HOLE',
-			ValidateHoleState(False),
-			transitions={
-			'succeeded':'not_verified',
-			'preempted':'preempted'
-			}
-		)
-	
-	
-	return sm
-	
+def data_fusion_hold():
 
+    sm = StateMachine(outcomes=['victim_verified',
+                                'victim_deleted',
+                                'preempted'],
+                      input_keys=['target_victim'],
+                      output_keys=['target_victim'])
+
+    with sm:
+
+        StateMachine.add(
+            'ROBOT_MODE_DF_HOLD',
+            ChangeRobotModeState(robotModeMsg.MODE_DF_HOLD),
+            transitions={
+                'succeeded': 'WAIT_FOR_DF',
+                'preempted': 'preempted'
+            }
+        )
+
+        StateMachine.add(
+            'WAIT_FOR_DF',
+            VerifyVictimState(),
+            transitions={
+                'victim_verified': 'victim_verified',
+                'time_out': 'DELETE_CURRENT_VICTIM',
+                'preempted': 'preempted'
+            },
+            remapping={'target_info': 'target_info'}
+        )
+
+        StateMachine.add(
+            'DELETE_CURRENT_VICTIM',
+            DeleteVictimState(),
+            transitions={
+                'succeeded': 'victim_deleted',
+                'preempted': 'preempted'
+            },
+            remapping={'target_info': 'target_info'}
+        )
+
+    return sm

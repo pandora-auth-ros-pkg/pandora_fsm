@@ -31,48 +31,77 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# Author: Chris Zalidis
+# Author: Voulgarakis George
 
-import roslib; roslib.load_manifest('pandora_fsm')
+import roslib
+roslib.load_manifest('pandora_fsm')
 import rospy
-import smach
-import smach_ros
 
-import pandora_fsm
-
-from smach import State, StateMachine, Concurrence
-
-from pandora_fsm.states.navigation import *
-from pandora_fsm.states.victims import *
-from pandora_fsm.states.state_changer import *
-
+from smach import StateMachine, Concurrence
+from pandora_fsm.states.state_changer import ChangeRobotModeState
+from pandora_fsm.states.navigation import MoveBaseState
+from pandora_fsm.states.victims import UpdateVictimState
 from state_manager_communications.msg import robotModeMsg
-	
-def cameraIdentificationSimple():
-	
-	def _termination_cb(outcome_map):
-		return True
-	
-	sm = StateMachine(outcomes=['victim_approached','aborted','preempted'])
-	
-	with sm:
-		
-		StateMachine.add('GET_VICTIM',
-			SelectTargetState('victim'),
-			transitions={
-			'succeeded':'GO_TO_VICTIM',
-			'aborted':'aborted',
-			'preempted':'preempted'}
-		)
-		
-		StateMachine.add('GO_TO_VICTIM',
-			MoveBaseState(),
-			transitions={
-			'succeeded':'victim_approached',
-			'aborted':'GET_VICTIM',
-			'preempted':'preempted'}
-		)
-		
-		
-	return sm	
-	
+
+
+def identification():
+
+    sm = StateMachine(outcomes=['victim_approached',
+                                'victim_aborted',
+                                'preempted'],
+                      input_keys=['target_victim'],
+                      output_keys=['target_victim'])
+
+    with sm:
+
+        StateMachine.add(
+            'ROBOT_MODE_IDENTIFICATION',
+            ChangeRobotModeState(robotModeMsg.MODE_IDENTIFICATION),
+            transitions={
+                'succeeded': 'GO_TO_VICTIM',
+                'preempted': 'preempted'
+            }
+        )
+
+        cc = Concurrence(
+            outcomes=[
+                'victim_approached',
+                'victim_aborted',
+                'victim_updated',
+                'preempted'
+            ],
+            default_outcome='preempted',
+            input_keys=['target_victim'],
+            output_keys=['target_victim'],
+            outcome_map={
+                'victim_approached': {'APPROACH_VICTIM': 'succeeded'},
+                'victim_aborted': {'APPROACH_VICTIM': 'aborted'},
+                'victim_updated': {'UPDATE_VICTIM_MONITOR': 'update_victim'},
+                'preempted': {'APPROACH_VICTIM': 'preempted',
+                              'UPDATE_VICTIM_MONITOR': 'preempted'}
+            },
+            child_termination_cb=termination_cb
+        )
+
+        with cc:
+            Concurrence.add('APPROACH_VICTIM', MoveBaseState())
+            Concurrence.add('UPDATE_VICTIM_MONITOR', UpdateVictimState(),
+                            remapping={'target_info': 'target_info'})
+
+        StateMachine.add(
+            'GO_TO_VICTIM',
+            cc,
+            transitions={
+                'victim_approached': 'victim_approached',
+                'victim_aborted': 'victim_aborted',
+                'victim_updated': 'GO_TO_VICTIM',
+                'preempted': 'preempted'
+            },
+            remapping={'target_info': 'target_info'}
+        )
+
+    return sm
+
+
+def termination_cb(outcome_map):
+    return True
