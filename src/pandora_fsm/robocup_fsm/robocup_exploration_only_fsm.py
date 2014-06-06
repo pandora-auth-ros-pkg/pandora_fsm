@@ -35,68 +35,96 @@
 
 import roslib
 roslib.load_manifest('pandora_fsm')
+roslib.load_manifest('smach')
+roslib.load_manifest('smach_ros')
 import rospy
+import smach_ros
+import threading
 
 from smach import StateMachine, Concurrence
-from pandora_fsm.states.state_changer import ChangeRobotModeState
+from pandora_fsm.states.state_changer import MonitorModeState
 from pandora_fsm.states.navigation import DoExplorationState
-from pandora_fsm.states.victims import NewVictimState
+from pandora_fsm.containers.robot_start import robot_start
 from state_manager_communications.msg import robotModeMsg
 
 
-def exploration():
+def main():
 
-    sm = StateMachine(outcomes=['victim_found', 'preempted'],
-                      input_keys=['target_victim'],
-                      output_keys=['target_victim'])
+    rospy.init_node('fsm')
+
+    sm = StateMachine(outcomes=['preempted'])
 
     with sm:
 
         StateMachine.add(
-            'ROBOT_MODE_EXPLORATION',
-            ChangeRobotModeState(robotModeMsg.MODE_EXPLORATION),
+            'ROBOT_START',
+            robot_start(),
             transitions={
-                'succeeded': 'EXPLORATION_WITH_VICTIMS',
+                'succeeded': 'EXPLORATION',
                 'preempted': 'preempted'
             }
         )
 
-        cc = Concurrence(
-            outcomes=[
-                'exploration_aborted',
-                'victim_found',
-                'preempted'
-            ],
-            default_outcome='preempted',
-            input_keys=['target_victim'],
-            output_keys=['target_victim'],
-            outcome_map={
-                'exploration_aborted': {'EXPLORE': 'aborted'},
-                'victim_found': {'NEW_VICTIM_MONITOR': 'victim'},
-                'preempted': {'EXPLORE': 'preempted',
-                              'NEW_VICTIM_MONITOR': 'preempted'}
-            },
-            child_termination_cb=termination_cb
+        StateMachine.add(
+            'EXPLORATION',
+            DoExplorationState(),
+            transitions={
+                'aborted': 'EXPLORATION',
+                'preempted': 'preempted'
+            }
         )
 
-        with cc:
-            Concurrence.add('EXPLORE', DoExplorationState())
-            Concurrence.add('NEW_VICTIM_MONITOR', NewVictimState(),
-                            remapping={'target_info': 'target_info'})
+    cc = Concurrence(
+        outcomes=[
+            'teleoperation',
+            'preempted'
+        ],
+        default_outcome='preempted',
+        outcome_map={
+            'teleoperation': {'AUTONOMOUS': 'preempted',
+                              'TELEOPERATION': 'valid'},
+            'preempted': {'AUTONOMOUS': 'preempted',
+                          'TELEOPERATION': 'preempted'}
+        },
+        child_termination_cb=termination_cb
+    )
+
+    with cc:
+        Concurrence.add('AUTONOMOUS', sm)
+        Concurrence.add('TELEOPERATION',
+                        MonitorModeState(robotModeMsg.
+                                         MODE_TELEOPERATED_LOCOMOTION))
+
+    sm_all = StateMachine(outcomes=['preempted'])
+
+    with sm_all:
 
         StateMachine.add(
-            'EXPLORATION_WITH_VICTIMS',
+            'PANDORA_FSM',
             cc,
             transitions={
-                'exploration_aborted': 'EXPLORATION_WITH_VICTIMS',
-                'victim_found': 'victim_found',
+                'teleoperation': 'PANDORA_FSM',
                 'preempted': 'preempted'
-            },
-            remapping={'target_info': 'target_info'}
+            }
         )
 
-    return sm
+    sis = smach_ros.IntrospectionServer('fsm_introspection',
+                                        sm_all,
+                                        '/PANDORA_FSM')
+
+    sis.start()
+
+    smach_ros.set_preempt_handler(sm_all)
+
+    smach_thread = threading.Thread(target=sm_all.execute)
+    smach_thread.start()
+
+    rospy.spin()
+    sis.stop()
 
 
 def termination_cb(outcome_map):
     return True
+
+if __name__ == '__main__':
+    main()
