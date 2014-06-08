@@ -44,4 +44,4 @@ def init():
     global test_agent
     test_agent = RoboCupAgent()
     global com
-    com = communications.Communications()
+    com = communications.Communications('agent')

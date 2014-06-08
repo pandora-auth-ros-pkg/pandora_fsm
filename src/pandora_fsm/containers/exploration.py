@@ -82,7 +82,7 @@ def exploration():
         with cc:
             Concurrence.add('EXPLORE', DoExplorationState())
             Concurrence.add('NEW_VICTIM_MONITOR', NewVictimState(),
-                            remapping={'target_info': 'target_info'})
+                            remapping={'target_victim': 'target_victim'})
 
         StateMachine.add(
             'EXPLORATION_WITH_VICTIMS',
@@ -92,7 +92,7 @@ def exploration():
                 'victim_found': 'victim_found',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
     return sm

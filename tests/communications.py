@@ -36,15 +36,12 @@
 import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
+import state_manager
 import dynamic_reconfigure.client
 import global_vars
-from pandora_fsm.robocup_agent.agent_topics import arena_type_topic, \
-    robocup_score_topic, qr_notification_topic, robot_reset_topic, \
-    robot_restart_topic, victims_topic, do_exploration_topic, move_base_topic, \
-    delete_victim_topic, gui_validation_topic, data_fusion_validate_victim_topic
 
-from actionlib import SimpleActionServer
-
+from actionlib import SimpleActionServer, SimpleActionClient
+from state_manager_communications.msg import robotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Int32, Empty
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIResult
@@ -54,18 +51,35 @@ from pandora_data_fusion_msgs.msg import VictimsMsg, VictimInfoMsg, \
 from move_base_msgs.msg import MoveBaseAction, MoveBaseFeedback, MoveBaseResult
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationAction, \
     DoExplorationFeedback, DoExplorationResult
+from pandora_fsm.robocup_agent.agent_topics import arena_type_topic, \
+    robocup_score_topic, qr_notification_topic, robot_reset_topic, \
+    robot_restart_topic, victims_topic, do_exploration_topic, move_base_topic, \
+    gui_validation_topic, data_fusion_validate_victim_topic, \
+    delete_victim_topic, state_changer_action_topic
+
+
+class TestStateClient(state_manager.state_client.StateClient):
+
+    def __init__(self):
+        state_manager.state_client.StateClient.__init__(self)
+        self.client_initialize()
 
 
 class Communications():
 
-    def __init__(self):
+    def __init__(self, high_logic_type):
 
+        self.high_logic_type = high_logic_type
         self.robot_pose_ = PoseStamped()
         self.move_base_succeeded_ = False
         self.move_base_aborted_ = False
 
-        self.dynamic_reconfigure_client = \
-            dynamic_reconfigure.client.Client("test_agent")
+        if high_logic_type == 'agent':
+            self.dynamic_reconfigure_client = \
+                dynamic_reconfigure.client.Client("test_agent")
+        else:
+            self.state_changer_ac_ = \
+                SimpleActionClient(state_changer_action_topic, RobotModeAction)
 
         self.arena_type_pub_ = rospy.Publisher(arena_type_topic, ArenaTypeMsg)
         self.robocup_score_pub_ = rospy.Publisher(robocup_score_topic, Int32)
@@ -158,9 +172,10 @@ class Communications():
 
     def delete_victim_cb(self, goal):
         rospy.loginfo('delete_victim_cb')
-        for victim in global_vars.test_agent.new_victims_:
-            if victim.id == goal.victimId:
-                global_vars.test_agent.new_victims_.remove(victim)
+        if self.high_logic_type == 'agent':
+            for victim in global_vars.test_agent.new_victims_:
+                if victim.id == goal.victimId:
+                    global_vars.test_agent.new_victims_.remove(victim)
 
         result = DeleteVictimResult()
         self.delete_victim_as_.set_succeeded(result)
@@ -180,9 +195,10 @@ class Communications():
 
     def data_fusion_validate_victim_cb(self, goal):
         rospy.loginfo('data_fusion_validate_victim_cb')
-        for victim in global_vars.test_agent.new_victims_:
-            if victim.id == goal.victimId:
-                global_vars.test_agent.new_victims_.remove(victim)
+        if self.high_logic_type == 'agent':
+            for victim in global_vars.test_agent.new_victims_:
+                if victim.id == goal.victimId:
+                    global_vars.test_agent.new_victims_.remove(victim)
 
         result = ValidateVictimResult()
         self.data_fusion_validate_victim_as_.set_succeeded(result)

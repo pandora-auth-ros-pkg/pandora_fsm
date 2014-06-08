@@ -37,8 +37,8 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
 
-from smach import StateMachine
-from pandora_fsm.states.state_changer import ChangeRobotModeState
+from smach import StateMachine, Concurrence
+from pandora_fsm.states.state_changer import ChangeRobotModeState, Timer
 from pandora_fsm.states.victims import VerifyVictimState, DeleteVictimState
 from state_manager_communications.msg import robotModeMsg
 
@@ -62,15 +62,38 @@ def data_fusion_hold():
             }
         )
 
+        cc = Concurrence(
+            outcomes=[
+                'victim_verified',
+                'time_out',
+                'preempted'
+            ],
+            default_outcome='preempted',
+            input_keys=['target_victim'],
+            output_keys=['target_victim'],
+            outcome_map={
+                'victim_verified': {'VERIFY_VICTIM': 'victim_verified'},
+                'time_out': {'DF_TIMEOUT': 'time_out'},
+                'preempted': {'VERIFY_VICTIM': 'preempted',
+                              'DF_TIMEOUT': 'preempted'}
+            },
+            child_termination_cb=termination_cb
+        )
+
+        with cc:
+            Concurrence.add('VERIFY_VICTIM', VerifyVictimState(),
+                            remapping={'target_victim': 'target_victim'})
+            Concurrence.add('DF_TIMEOUT', Timer(10))
+
         StateMachine.add(
             'WAIT_FOR_DF',
-            VerifyVictimState(),
+            cc,
             transitions={
                 'victim_verified': 'victim_verified',
                 'time_out': 'DELETE_CURRENT_VICTIM',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
         StateMachine.add(
@@ -80,7 +103,11 @@ def data_fusion_hold():
                 'succeeded': 'victim_deleted',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
     return sm
+
+
+def termination_cb(outcome_map):
+    return True

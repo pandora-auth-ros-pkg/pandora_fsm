@@ -84,9 +84,10 @@ def identification():
         )
 
         with cc:
-            Concurrence.add('APPROACH_VICTIM', MoveBaseState())
+            Concurrence.add('APPROACH_VICTIM', MoveBaseState(),
+                            remapping={'target_victim': 'target_victim'})
             Concurrence.add('UPDATE_VICTIM_MONITOR', UpdateVictimState(),
-                            remapping={'target_info': 'target_info'})
+                            remapping={'target_victim': 'target_victim'})
 
         StateMachine.add(
             'GO_TO_VICTIM',
@@ -97,7 +98,7 @@ def identification():
                 'victim_updated': 'GO_TO_VICTIM',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
     return sm

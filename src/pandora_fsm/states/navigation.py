@@ -55,7 +55,7 @@ class DoExplorationState(MySimpleActionState):
                                                'preempted'])
 
     def goal_cb(self, userdata, goal):
-        goal = DoExplorationGoal(explorationMode=DoExplorationGoal.TYPE_DEEP)
+        goal = DoExplorationGoal(exploration_type=DoExplorationGoal.TYPE_DEEP)
         return goal
 
 
@@ -71,5 +71,5 @@ class MoveBaseState(MySimpleActionState):
                                      output_keys=['target_victim'])
 
     def goal_cb(self, userdata, goal):
-        goal = MoveBaseGoal(target_pose=userdata[0].victimPose)
+        goal = MoveBaseGoal(target_pose=userdata.target_victim.victimPose)
         return goal

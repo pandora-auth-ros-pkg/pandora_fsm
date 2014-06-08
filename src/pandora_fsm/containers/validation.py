@@ -59,7 +59,7 @@ def validation():
                 'succeeded': 'DF_VALIDATION',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info',
+            remapping={'target_victim': 'target_victim',
                        'validation_result': 'validation_result'}
         )
 
@@ -70,7 +70,7 @@ def validation():
                 'succeeded': 'succeeded',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info',
+            remapping={'target_victim': 'target_victim',
                        'validation_result': 'validation_result'}
         )
 

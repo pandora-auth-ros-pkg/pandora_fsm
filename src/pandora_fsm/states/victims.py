@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#!/usr/bin/env python
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2014, P.A.N.D.O.R.A. Team.
@@ -38,6 +39,7 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
 
+from math import fabs
 from smach import State
 from pandora_fsm.states.my_monitor_state import MyMonitorState
 from pandora_fsm.states.my_simple_action_state import MySimpleActionState
@@ -58,10 +60,7 @@ class NewVictimState(MyMonitorState):
 
     def monitor_cb(self, userdata, msg):
         if len(msg.victims) > 0:
-            userdata[0].id = msg.victims[0].id
-            userdata[0].victimPose = msg.victims[0].victimPose
-            userdata[0].probability = msg.victims[0].probability
-            userdata[0].sensors = msg.victims[0].sensors
+            userdata[0].target_victim = msg.victims[0]
             return 'victim'
 
 
@@ -76,21 +75,18 @@ class UpdateVictimState(MyMonitorState):
 
     def monitor_cb(self, userdata, msg):
         for victim in msg.victims:
-            if victim.id == userdata[0].id:
-                if fabs(victim.probability - userdata[0].probability) \
+            if victim.id == userdata[0].target_victim.id:
+                if fabs(victim.probability - userdata[0].target_victim.probability) \
                         > 0.001 or \
-                    userdata[0].victimPose.pose.position.x != \
+                    userdata[0].target_victim.victimPose.pose.position.x != \
                         victim.victimPose.pose.position.x or \
-                    userdata[0].victimPose.pose.position.y != \
+                    userdata[0].target_victim.victimPose.pose.position.y != \
                         victim.victimPose.pose.position.y or \
-                    userdata[0].victimPose.pose.position.z != \
+                    userdata[0].target_victim.victimPose.pose.position.z != \
                         victim.victimPose.pose.position.z:
-                    userdata[0].id = victim.id
-                    userdata[0].victimPose = victim.victimPose
-                    userdata[0].probability = victim.probability
-                    userdata[0].sensors = victim.sensors
+                    userdata[0].target_victim = victim
                     return 'update_victim'
-                return None
+            return None
 
 
 class VerifyVictimState(MyMonitorState):
@@ -102,23 +98,11 @@ class VerifyVictimState(MyMonitorState):
                                 in_keys=['target_victim'],
                                 out_keys=['target_victim'])
 
-    def execute(self, userdata):
-        counter = 0
-        while counter < 10:
-            rospy.sleep(1)
-
-            counter = counter + 1
-
-            if self.preempt_requested():
-                self.service_preempt()
-                return 'preempted'
-
-        return 'time_out'
-
     def monitor_cb(self, userdata, msg):
         for victim in msg.victims:
-            if victim.id == userdata[0].id:
+            if victim.id == userdata[0].target_victim.id:
                 if victim.probability > 0.5:
+                    userdata[0].target_victim = victim
                     return 'victim_verified'
                 return None
 
@@ -134,7 +118,7 @@ class DeleteVictimState(MySimpleActionState):
                                      output_keys=['target_victim'])
 
     def goal_cb(self, userdata, goal):
-        goal = DeleteVictimGoal(victimId=userdata[0].id)
+        goal = DeleteVictimGoal(victimId=userdata.target_victim.id)
         return goal
 
 
@@ -153,14 +137,14 @@ class ValidateVictimGUIState(MySimpleActionState):
 
     def goal_cb(self, userdata, goal):
         goal = ValidateVictimGUIGoal
-        goal.victimFoundx = userdata[0].victimPose.pose.position.x
-        goal.victimFoundy = userdata[0].victimPose.pose.position.y
-        goal.probability = userdata[0].probability
-        goal.sensorIDsFound = userdata[0].sensors
+        goal.victimFoundx = userdata.target_victim.victimPose.pose.position.x
+        goal.victimFoundy = userdata.target_victim.victimPose.pose.position.y
+        goal.probability = userdata.target_victim.probability
+        goal.sensorIDsFound = userdata.target_victim.sensors
         return goal
 
     def result_cb(self, userdata, status, result):
-        userdata[1] = result.victimValid
+        userdata.validation_result = result.victimValid
         return 'succeeded'
 
 
@@ -172,12 +156,12 @@ class ValidateVictimState(MySimpleActionState):
                                      goal_cb=self.goal_cb,
                                      outcomes=['succeeded', 'preempted'],
                                      input_keys=['target_victim',
-                                                'validation_result'],
+                                                 'validation_result'],
                                      output_keys=['target_victim',
                                                   'validation_result'])
 
     def goal_cb(self, userdata, goal):
         goal = ValidateVictimGoal
-        goal.victimId = userdata[0].id
-        goal.victimValid = userdata[1]
+        goal.victimId = userdata.target_victim.id
+        goal.victimValid = userdata.validation_result
         return goal

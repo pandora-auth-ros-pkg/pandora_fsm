@@ -78,18 +78,18 @@ def main():
                 'victim_found': 'IDENTIFICATION',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
         StateMachine.add(
             'IDENTIFICATION',
             identification(),
             transitions={
-                'victim_approached': 'IDENTIFICATION',
+                'victim_approached': 'DATA_FUSION_HOLD',
                 'victim_aborted': 'EXPLORATION',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
         StateMachine.add(
@@ -100,7 +100,7 @@ def main():
                 'victim_deleted': 'EXPLORATION',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
         StateMachine.add(
@@ -110,7 +110,7 @@ def main():
                 'succeeded': 'EXPLORATION',
                 'preempted': 'preempted'
             },
-            remapping={'target_info': 'target_info'}
+            remapping={'target_victim': 'target_victim'}
         )
 
     cc = Concurrence(
