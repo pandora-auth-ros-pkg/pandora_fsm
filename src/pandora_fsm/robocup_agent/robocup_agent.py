@@ -69,7 +69,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.valid_victims_ = 0
         self.qrs_ = 0
         self.current_robot_pose_ = PoseStamped()
-        self.current_exploration_mode_ = 0
+        self.current_exploration_mode_ = -1
         self.aborted_victims_ = []
         self.new_victims_ = []
         self.target_victim_ = VictimInfoMsg()
@@ -250,7 +250,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.valid_victims_ = 0
         self.qrs_ = 0
         self.current_robot_pose_ = PoseStamped()
-        self.current_exploration_mode_ = 0
+        self.current_exploration_mode_ = -1
         self.aborted_victims_ = []
         self.new_victims_ = []
         self.target_victim_ = VictimInfoMsg()

@@ -199,7 +199,7 @@ class ExplorationState(state.State):
         return self.next_states_[2]
 
     def start_exploration(self, exploration_mode):
-        if self.agent_.current_exploration_mode_ != 0:
+        if self.agent_.current_exploration_mode_ != -1:
             self.end_exploration()
 
         rospy.Rate(2).sleep()
@@ -210,14 +210,14 @@ class ExplorationState(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = 0
+        self.agent_.current_exploration_mode_ = -1
         self.agent_.do_exploration_ac_.cancel_all_goals()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
-        self.agent_.current_exploration_mode_ = 0
+        self.agent_.current_exploration_mode_ = -1
 
 
 class OldExplorationState(state.State):
