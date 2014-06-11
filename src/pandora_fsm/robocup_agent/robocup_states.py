@@ -48,11 +48,14 @@ from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
 
 class WaitingToStartState(state.State):
 
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "waiting_to_start_state"
+
     def execute(self):
-        rospy.loginfo('WaitingToStartState execute')
+        pass
 
     def make_transition(self):
-        rospy.loginfo('WaitingToStartState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
@@ -76,14 +79,13 @@ class RobotStartState(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "robot_start_state"
         self.counter_ = 0
 
     def execute(self):
-        rospy.loginfo('RobotStartState execute')
         self.wait_for_slam()
 
     def make_transition(self):
-        rospy.loginfo('RobotStartState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.counter_ = 0
@@ -93,6 +95,13 @@ class RobotStartState(state.State):
                     self.agent_.new_robot_state_ack_:
                 pass
             return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
 
         if self.counter_ == 10:
             self.counter_ = 0
@@ -102,30 +111,40 @@ class RobotStartState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[2]
-        return self.next_states_[1]
+            return self.next_states_[3]
+        return self.next_states_[2]
 
     def wait_for_slam(self):
-        rospy.loginfo('wait_for_slam')
         self.counter_ += 1
         rospy.sleep(1.)
 
 
 class ExplorationState(state.State):
 
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "exploration_state"
+
     def execute(self):
-        rospy.loginfo('ExplorationState execute')
+        pass
 
     def make_transition(self):
-        rospy.loginfo('ExplorationState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.end_exploration()
             self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
             while not rospy.is_shutdown() and \
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
             return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
 
         new_victims_cost = self.cost_functions_[0].execute()
         max_victim_cost = 0
@@ -143,7 +162,7 @@ class ExplorationState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[2]
+            return self.next_states_[3]
 
         current_cost = 0
         for function in self.cost_functions_[1]:
@@ -177,11 +196,9 @@ class ExplorationState(state.State):
                     robotModeMsg.MODE_TELEOPERATED_LOCOMOTION
                 return self.next_states_[0]
 
-        return self.next_states_[1]
+        return self.next_states_[2]
 
     def start_exploration(self, exploration_mode):
-        rospy.loginfo('start_exploration = %i' % exploration_mode)
-
         if self.agent_.current_exploration_mode_ != 0:
             self.end_exploration()
 
@@ -193,8 +210,6 @@ class ExplorationState(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        rospy.loginfo('end_exploration')
-
         self.agent_.current_exploration_mode_ = 0
         self.agent_.do_exploration_ac_.cancel_all_goals()
 
@@ -207,11 +222,14 @@ class ExplorationState(state.State):
 
 class OldExplorationState(state.State):
 
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "old_exploration_state"
+
     def execute(self):
-        rospy.loginfo('OldExplorationState execute')
+        pass
 
     def make_transition(self):
-        rospy.loginfo('OldExplorationState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
@@ -220,6 +238,13 @@ class OldExplorationState(state.State):
                     self.agent_.new_robot_state_ack_:
                 pass
             return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
 
         new_victims_cost = self.cost_functions_[0].execute()
         max_victim_cost = 0
@@ -237,16 +262,14 @@ class OldExplorationState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[2]
+            return self.next_states_[3]
 
         if self.agent_.current_exploration_mode_ != DoExplorationGoal.TYPE_DEEP:
             self.start_exploration(DoExplorationGoal.TYPE_DEEP)
 
-        return self.next_states_[1]
+        return self.next_states_[2]
 
     def start_exploration(self, exploration_mode):
-        rospy.loginfo('start_exploration = %i' % exploration_mode)
-
         if self.agent_.current_exploration_mode_ != 0:
             self.end_exploration()
 
@@ -258,8 +281,6 @@ class OldExplorationState(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        rospy.loginfo('end_exploration')
-
         self.agent_.current_exploration_mode_ = 0
         self.agent_.do_exploration_ac_.cancel_all_goals()
 
@@ -274,28 +295,35 @@ class IdentificationState(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "identification_state"
         self.move_base_to_victim_ = True
 
     def execute(self):
-        rospy.loginfo('IdentificationState execute')
         self.move_to_victim()
 
     def make_transition(self):
-        rospy.loginfo('IdentificationState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.move_base_ac_.cancel_all_goals()
             self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
             while not rospy.is_shutdown() and \
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
             return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
 
         updated_victim = self.cost_functions_[1].execute()
         if updated_victim == 1:
             self.agent_.move_base_ac_.cancel_all_goals()
             self.move_base_to_victim_ = True
-            return self.next_states_[1]
+            return self.next_states_[2]
 
         if self.agent_.move_base_ac_.get_state() == \
                 actionlib.GoalStatus.SUCCEEDED:
@@ -306,7 +334,7 @@ class IdentificationState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[2]
+            return self.next_states_[3]
         elif self.agent_.move_base_ac_.get_state() == \
                 actionlib.GoalStatus.ABORTED:
             self.move_base_to_victim_ = True
@@ -338,7 +366,7 @@ class IdentificationState(state.State):
             if max_victim_cost > 0:
                 self.agent_.move_base_ac_.cancel_all_goals()
                 self.agent_.target_victim_ = max_victim
-                return self.next_states_[1]
+                return self.next_states_[2]
 
             self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
             self.agent_.new_robot_state_ack_ = robotModeMsg.MODE_EXPLORATION
@@ -346,13 +374,11 @@ class IdentificationState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[3]
+            return self.next_states_[4]
 
-        return self.next_states_[1]
+        return self.next_states_[2]
 
     def move_to_victim(self):
-        rospy.loginfo('move_to_victim')
-
         if self.move_base_to_victim_:
             self.move_base_to_victim_ = False
             goal = MoveBaseGoal(target_pose=self.agent_.
@@ -368,14 +394,13 @@ class DataFusionHoldState(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "data_fusion_hold_state"
         self.counter_ = 0
 
     def execute(self):
-        rospy.loginfo('DataFusionHoldState execute')
         self.data_fusion_hold()
 
     def make_transition(self):
-        rospy.loginfo('DataFusionHoldState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.counter_ = 0
@@ -385,6 +410,13 @@ class DataFusionHoldState(state.State):
                     self.agent_.new_robot_state_ack_:
                 pass
             return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
 
         if self.counter_ == 10:
             self.counter_ = 0
@@ -392,7 +424,7 @@ class DataFusionHoldState(state.State):
                 if victim.id == self.agent_.target_victim_.id:
                     if victim.probability > \
                             self.agent_.valid_victim_probability_:
-                        return self.next_states_[2]
+                        return self.next_states_[3]
                     else:
                         goal = ValidateVictimGoal()
                         goal.victimId = self.agent_.target_victim_.id
@@ -420,7 +452,7 @@ class DataFusionHoldState(state.State):
                                     self.agent_.current_robot_state_ != \
                                     self.agent_.new_robot_state_ack_:
                                 pass
-                            return self.next_states_[3]
+                            return self.next_states_[4]
                         self.agent_.transition_to_state(robotModeMsg.
                                                         MODE_EXPLORATION)
                         self.agent_.new_robot_state_ack_ = \
@@ -429,24 +461,25 @@ class DataFusionHoldState(state.State):
                                 self.agent_.current_robot_state_ != \
                                 self.agent_.new_robot_state_ack_:
                             pass
-                        return self.next_states_[4]
-        return self.next_states_[1]
+                        return self.next_states_[5]
+        return self.next_states_[2]
 
     def data_fusion_hold(self):
-        rospy.loginfo('data_fusion_hold')
         self.counter_ += 1
         rospy.sleep(1.)
 
 
 class ValidationState(state.State):
 
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "validation_state"
+
     def execute(self):
-        rospy.loginfo('ValidationState execute')
         self.reset_arena_type_to_yellow()
         self.validate_current_victim()
 
     def make_transition(self):
-        rospy.loginfo('ValidationState make_transition')
         if self.agent_.new_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
@@ -455,6 +488,13 @@ class ValidationState(state.State):
                     self.agent_.new_robot_state_ack_:
                 pass
             return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
 
         rospy.sleep(1.)
 
@@ -473,21 +513,19 @@ class ValidationState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[1]
+            return self.next_states_[2]
         self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
         self.agent_.new_robot_state_ack_ = robotModeMsg.MODE_EXPLORATION
         while not rospy.is_shutdown() and \
                 self.agent_.current_robot_state_ != \
                 self.agent_.new_robot_state_ack_:
             pass
-        return self.next_states_[2]
+        return self.next_states_[3]
 
     def reset_arena_type_to_yellow(self):
-        rospy.loginfo('reset_arena_type_to_yellow')
         self.agent_.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
 
     def validate_current_victim(self):
-        rospy.loginfo('validate_current_victim')
         goal = ValidateVictimGUIGoal()
         goal.victimFoundx = self.agent_.target_victim_.victimPose.pose.position.x
         goal.victimFoundy = self.agent_.target_victim_.victimPose.pose.position.y
@@ -510,13 +548,22 @@ class ValidationState(state.State):
 
 class TeleoperationState(state.State):
 
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "teleoperation_state"
+
     def execute(self):
-        rospy.loginfo('TeleoperationState execute')
         pass
 
     def make_transition(self):
-        rospy.loginfo('TeleoperationState make_transition')
-        if self.agent_.new_robot_state_ == robotModeMsg.MODE_START_AUTONOMOUS:
+        if self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_START_AUTONOMOUS:
             for victim in self.agent_.new_victims_:
                 goal = DeleteVictimGoal(victimId=victim_.id)
                 self.agent_.delete_victim_ac_.send_goal(goal)
@@ -527,5 +574,33 @@ class TeleoperationState(state.State):
                     self.agent_.current_robot_state_ != \
                     self.agent_.new_robot_state_ack_:
                 pass
-            return self.next_states_[1]
+            return self.next_states_[2]
         return self.next_states_[0]
+
+
+class StopButtonState(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "stop_button_state"
+
+    def execute(self):
+        pass
+
+    def make_transition(self):
+        if self.agent_.new_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_START_AUTONOMOUS:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[2]
+        return self.next_states_[1]
