@@ -54,7 +54,7 @@ from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
 from std_msgs.msg import Int32, Empty
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
-from pandora_data_fusion_msgs.msg import VictimsMsg, VictimInfoMsg, \
+from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg, ValidateVictimAction, DeleteVictimAction
 from move_base_msgs.msg import MoveBaseAction
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationAction
@@ -100,8 +100,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                          self.robot_reset_cb)
         rospy.Subscriber(agent_topics.robot_restart_topic, Empty,
                          self.robot_restart_cb)
-        rospy.Subscriber(agent_topics.victims_topic, VictimsMsg,
-                         self.victims_cb)
+        rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
+                         self.world_model_cb)
 
         self.do_exploration_ac_ = \
             actionlib.SimpleActionClient(agent_topics.do_exploration_topic,
@@ -272,7 +272,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
     def score_cb(self, msg):
         self.current_score_ = msg.data
 
-    def victims_cb(self, msg):
+    def world_model_cb(self, msg):
         self.new_victims_ = msg.victims
 
     def reconfigure(self, config, level):

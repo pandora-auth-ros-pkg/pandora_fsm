@@ -33,11 +33,11 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-delete_victim_topic = '/data_fusion/alert_handler/delete_victim'
-qr_notification_topic = '/data_fusion/alert_handler/qr_notification'
-robocup_score_topic = '/data_fusion/alert_handler/robocup_score'
-data_fusion_validate_victim_topic = '/data_fusion/alert_handler/validate_victim'
-victims_topic = '/data_fusion/alert_handler/victims'
+delete_victim_topic = '/data_fusion/delete_victim'
+qr_notification_topic = '/data_fusion/qr_notification'
+robocup_score_topic = '/data_fusion/robocup_score'
+data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
+world_model_topic = '/data_fusion/world_model'
 do_exploration_topic = '/navigation/do_exploration'
 arena_type_topic = '/navigation/arena_type'
 move_base_topic = '/move_base'
