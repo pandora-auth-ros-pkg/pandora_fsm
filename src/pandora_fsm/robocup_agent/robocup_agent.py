@@ -37,6 +37,7 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
 import actionlib
+import threading
 import state_manager
 import dynamic_reconfigure.server
 import agent
@@ -82,8 +83,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.robot_resets_ = 0
         self.robot_restarts_ = 0
 
-        self.new_robot_state_ = robotModeMsg.MODE_OFF
-        self.new_robot_state_ack_ = robotModeMsg.MODE_OFF
+        self.new_robot_state_cond_ = threading.Condition()
+        self.current_robot_state_cond_ = threading.Condition()
         self.current_robot_state_ = robotModeMsg.MODE_OFF
 
         self.previous_state_ = "waiting_to_start_state"
@@ -252,14 +253,18 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def start_transition(self, state):
         rospy.loginfo("[%s] Starting Transition to state %i", self._name, state)
-        self.new_robot_state_ = state
-        while self.new_robot_state_ack_ != state:
-            pass
+        self.new_robot_state_cond_.acquire()
+        self.current_robot_state_ = state
+        self.new_robot_state_cond_.notify()
+        self.new_robot_state_cond_.wait()
+        self.new_robot_state_cond_.release()
         self.transition_complete(state)
 
     def complete_transition(self):
         rospy.loginfo("[%s] System Transitioned, starting work", self._name)
-        self.current_robot_state_ = self.new_robot_state_ack_
+        self.current_robot_state_cond_.acquire()
+        self.current_robot_state_cond_.notify()
+        self.current_robot_state_cond_.release()
 
     def arena_type_cb(self, msg):
         if self.current_arena_ == msg.TYPE_YELLOW:
@@ -282,8 +287,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
         self.robot_restarts_ = 0
 
-        self.new_robot_state_ = robotModeMsg.MODE_OFF
-        self.new_robot_state_ack_ = robotModeMsg.MODE_OFF
         self.current_robot_state_ = robotModeMsg.MODE_OFF
 
         self.previous_state_ = "waiting_to_start_state"

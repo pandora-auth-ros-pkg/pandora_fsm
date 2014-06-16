@@ -44,7 +44,8 @@ from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import Int32
 from pandora_fsm.robocup_agent.robocup_cost_functions import \
     ExplorationModeCostFunction, ExplorationModeCostFunction2, \
-    FindNewVictimToGoCostFunction, UpdateVictimCostFunction, ExplorationModeCostFunction3
+    ExplorationModeCostFunction3, FindNewVictimToGoCostFunction, \
+    UpdateVictimCostFunction
 from pandora_data_fusion_msgs.msg import VictimInfoMsg, QrNotificationMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
 
@@ -68,8 +69,6 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 0
 
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_OFF
-        global_vars.test_agent.new_robot_state_ack_ = robotModeMsg.MODE_OFF
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_OFF
 
         global_vars.test_agent.previous_state_ = "waiting_to_start_state"
@@ -120,7 +119,7 @@ class TestAgent(unittest.TestCase):
 
     def test_data_fusion_hold_state_exploration(self):
         rospy.loginfo('test_data_fusion_hold_state_exploration')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.\
             all_states_["data_fusion_hold_state"].counter_ = 10
         global_vars.test_agent.current_robot_pose_.pose.position.x = 4.8
@@ -150,7 +149,7 @@ class TestAgent(unittest.TestCase):
 
     def test_data_fusion_hold_state_find_new_victim(self):
         rospy.loginfo('test_data_fusion_hold_state_find_new_victim')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.\
             all_states_["data_fusion_hold_state"].counter_ = 10
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.8
@@ -187,7 +186,7 @@ class TestAgent(unittest.TestCase):
 
     def test_data_fusion_hold_state_teleoperation(self):
         rospy.loginfo('test_data_fusion_hold_state_teleoperation')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
         rospy.Rate(10).sleep()
@@ -200,7 +199,7 @@ class TestAgent(unittest.TestCase):
 
     def test_data_fusion_hold_state_validation(self):
         rospy.loginfo('test_data_fusion_hold_state_validation')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.\
             all_states_["data_fusion_hold_state"].counter_ = 10
         victims = []
@@ -210,6 +209,8 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
         victim.probability = 0.9
+        victim.sensors.append('FACE')
+        victim.sensors.append('THERMAL')
         victims.append(victim)
         global_vars.test_agent.new_victims_ = victims
         victim = VictimInfoMsg()
@@ -261,7 +262,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy1_state_exploration(self):
         rospy.loginfo('test_exploration_strategy1_state_exploration')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.exploration_strategy_ = \
             "exploration_strategy1_state"
         global_vars.test_agent.define_states()
@@ -279,7 +281,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy2_state_exploration(self):
         rospy.loginfo('test_exploration_strategy2_state_exploration')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
         global_vars.test_agent.valid_victims_ = 2
         global_vars.test_agent.qrs_ = 10
@@ -294,7 +297,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy2_state_identification(self):
         rospy.loginfo('test_exploration_strategy2_state_identification')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.5
         global_vars.test_agent.current_robot_pose_.pose.position.y = 5.2
         victims = []
@@ -322,7 +326,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy2_state_orange_no_victims(self):
         rospy.loginfo('test_exploration_strategy2_state_orange_no_victims')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
         next_state = global_vars.test_agent.\
             all_states_["exploration_strategy2_state"].make_transition()
@@ -333,7 +338,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy2_state_orange_with_victims(self):
         rospy.loginfo('test_exploration_strategy2_state_orange_with_victims')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
         global_vars.test_agent.valid_victims_ = 2
         next_state = global_vars.test_agent.\
@@ -345,7 +351,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy2_state_teleoperation(self):
         rospy.loginfo('test_exploration_strategy2_state_teleoperation')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
         rospy.Rate(10).sleep()
@@ -358,7 +365,8 @@ class TestAgent(unittest.TestCase):
 
     def test_exploration_strategy3_state_exploration(self):
         rospy.loginfo('test_exploration_strategy3_state_exploration')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.exploration_strategy_ = \
             "exploration_strategy3_state"
         global_vars.test_agent.define_states()
@@ -411,7 +419,7 @@ class TestAgent(unittest.TestCase):
     def test_identification_state_aborted_victim_find_new_victim(self):
         rospy.loginfo('test_identification_state_\
                       aborted_victim_find_new_victim')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 8.6
@@ -445,7 +453,7 @@ class TestAgent(unittest.TestCase):
     def test_identification_state_aborted_victim_return_to_exploration(self):
         rospy.loginfo('test_identification_state_\
                       aborted_victim_return_to_exploration')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 8.6
@@ -469,7 +477,7 @@ class TestAgent(unittest.TestCase):
 
     def test_identification_state_succeeded_victim(self):
         rospy.loginfo('test_identification_state_succeeded_victim')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
         victims = []
         victim = VictimInfoMsg()
@@ -500,7 +508,7 @@ class TestAgent(unittest.TestCase):
 
     def test_identification_state_teleoperation(self):
         rospy.loginfo('test_identification_state_teleoperation')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
@@ -514,7 +522,7 @@ class TestAgent(unittest.TestCase):
 
     def test_identification_state_update_victim(self):
         rospy.loginfo('test_identification_state_update_victim')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
         victims = []
         victim = VictimInfoMsg()
@@ -586,7 +594,7 @@ class TestAgent(unittest.TestCase):
 
     def test_robot_start_state_start_exploration(self):
         rospy.loginfo('test_robot_start_state_start_exploration')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_START_AUTONOMOUS
         global_vars.test_agent.all_states_["robot_start_state"].counter_ = 10
         next_state = global_vars.test_agent.\
@@ -598,7 +606,7 @@ class TestAgent(unittest.TestCase):
 
     def test_robot_start_state_start_teleoperation(self):
         rospy.loginfo('test_robot_start_state_start_teleoperation')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_START_AUTONOMOUS
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
@@ -612,7 +620,7 @@ class TestAgent(unittest.TestCase):
 
     def test_teleoperation_state_start_autonomous(self):
         rospy.loginfo('test_teleoperation_state_start_autonomous')
-        global_vars.test_agent.new_robot_state_ = \
+        global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_TELEOPERATED_LOCOMOTION
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_START_AUTONOMOUS)
@@ -655,7 +663,7 @@ class TestAgent(unittest.TestCase):
 
     def test_validation_state_exploration(self):
         rospy.loginfo('test_validation_state_exploration')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.current_robot_pose_.pose.position.x = 4.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 11.6
         victims = []
@@ -683,7 +691,7 @@ class TestAgent(unittest.TestCase):
 
     def test_validation_state_find_new_victim(self):
         rospy.loginfo('test_validation_state_find_new_victim')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 8.6
         victims = []
@@ -718,7 +726,7 @@ class TestAgent(unittest.TestCase):
 
     def test_validation_state_teleoperation(self):
         rospy.loginfo('test_validation_state_teleoperation')
-        global_vars.test_agent.new_robot_state_ = robotModeMsg.MODE_DF_HOLD
+        global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
         rospy.Rate(10).sleep()
@@ -775,8 +783,8 @@ class TestAgent(unittest.TestCase):
 if __name__ == '__main__':
     rospy.init_node('test_agent')
     global_vars.init()
-    rospy.sleep(1.)
+    rospy.sleep(3.)
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAgent)
     unittest.TextTestRunner(verbosity=1).run(suite)
     global_vars.com.delete_action_servers()
-    rospy.spin()
+    rospy.signal_shutdown('Unit tests finished')

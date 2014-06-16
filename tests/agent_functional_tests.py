@@ -76,7 +76,7 @@ class TestAgent(unittest.TestCase):
         victims.append(victim)
         global_vars.com.victims_pub_.publish(victims)
 
-        rospy.sleep(1.)
+        rospy.sleep(2.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               IdentificationState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
@@ -114,9 +114,11 @@ class TestAgent(unittest.TestCase):
             global_vars.test_agent.target_victim_.victimPose.pose.position.y
         victim.victimPose.pose.position.z = 0.4
         victim.probability = 0.8
+        victim.sensors.append('FACE')
+        victim.sensors.append('THERMAL')
         victims.append(victim)
         global_vars.com.victims_pub_.publish(victims)
-        rospy.sleep(17.)
+        rospy.sleep(19.)
         self.assertEqual(global_vars.test_agent.valid_victims_, 1)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               ExplorationStrategy2State)
@@ -177,7 +179,8 @@ if __name__ == '__main__':
 
     #change EXPLORATION type to TYPE_NORMAL
     exploration_normal = unittest.TestSuite()
-    exploration_normal.addTest(TestAgent('test_exploration_state_change_to_normal'))
+    exploration_normal.\
+        addTest(TestAgent('test_exploration_state_change_to_normal'))
     unittest.TextTestRunner(verbosity=1).run(exploration_normal)
 
     #test TELEOPERATION state
@@ -186,5 +189,4 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=1).run(teleoperation_state)
 
     global_vars.com.delete_action_servers()
-
-    rospy.spin()
+    rospy.signal_shutdown('Unit tests finished')
