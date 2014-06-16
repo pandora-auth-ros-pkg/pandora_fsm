@@ -45,7 +45,7 @@ from state_manager_communications.msg import robotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Int32, Empty
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIResult
-from pandora_data_fusion_msgs.msg import VictimsMsg, VictimInfoMsg, \
+from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg, ValidateVictimAction, ValidateVictimResult, \
     DeleteVictimAction, DeleteVictimResult
 from move_base_msgs.msg import MoveBaseAction, MoveBaseFeedback, MoveBaseResult
@@ -53,8 +53,8 @@ from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationAction, \
     DoExplorationFeedback, DoExplorationResult
 from pandora_fsm.robocup_agent.agent_topics import arena_type_topic, \
     robocup_score_topic, qr_notification_topic, robot_reset_topic, \
-    robot_restart_topic, victims_topic, do_exploration_topic, move_base_topic, \
-    gui_validation_topic, data_fusion_validate_victim_topic, \
+    robot_restart_topic, world_model_topic, do_exploration_topic, \
+    gui_validation_topic, data_fusion_validate_victim_topic, move_base_topic, \
     delete_victim_topic, state_changer_action_topic
 
 
@@ -87,7 +87,7 @@ class Communications():
                                                     QrNotificationMsg)
         self.robot_reset_pub_ = rospy.Publisher(robot_reset_topic, Empty)
         self.robot_restart_pub_ = rospy.Publisher(robot_restart_topic, Empty)
-        self.victims_pub_ = rospy.Publisher(victims_topic, VictimsMsg)
+        self.victims_pub_ = rospy.Publisher(world_model_topic, WorldModelMsg)
 
         self.do_exploration_as_ = SimpleActionServer(do_exploration_topic,
                                                      DoExplorationAction,
