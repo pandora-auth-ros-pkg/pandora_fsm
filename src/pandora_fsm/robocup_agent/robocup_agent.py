@@ -47,7 +47,8 @@ from pandora_fsm.cfg import FSMParamsConfig
 from math import sqrt, pow
 
 from robocup_states import WaitingToStartState, RobotStartState, \
-    ExplorationState, OldExplorationState, IdentificationState, \
+    ExplorationStrategy1State, ExplorationStrategy2State, \
+    ExplorationStrategy3State, OldExplorationState, IdentificationState, \
     DataFusionHoldState, ValidationState, StopButtonState, TeleoperationState
 
 from geometry_msgs.msg import PoseStamped
@@ -64,12 +65,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def __init__(self):
 
+        state_manager.state_client.StateClient.__init__(self)
+
         self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
+        self.area_explored_ = 0
         self.current_score_ = 0
         self.valid_victims_ = 0
         self.qrs_ = 0
         self.current_robot_pose_ = PoseStamped()
         self.current_exploration_mode_ = -1
+
         self.aborted_victims_ = []
         self.new_victims_ = []
         self.target_victim_ = VictimInfoMsg()
@@ -81,15 +86,14 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.new_robot_state_ack_ = robotModeMsg.MODE_OFF
         self.current_robot_state_ = robotModeMsg.MODE_OFF
 
-        self.new_exploration_strategy_ = "exploration_state"
         self.previous_state_ = "waiting_to_start_state"
+
+        dynamic_reconfigure.server.Server(FSMParamsConfig, self.reconfigure)
 
         self.define_states()
         self.current_state_ = self.all_states_["waiting_to_start_state"]
 
-        state_manager.state_client.StateClient.__init__(self)
-
-        dynamic_reconfigure.server.Server(FSMParamsConfig, self.reconfigure)
+        self.fast_limit_ = self.deep_limit_ * 1.4
 
         rospy.Subscriber(agent_topics.arena_type_topic, ArenaTypeMsg,
                          self.arena_type_cb)
@@ -156,32 +160,52 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                                 ["teleoperation_state",
                                  "stop_button_state",
                                  "robot_start_state",
-                                 self.new_exploration_strategy_]),
-                "exploration_state":
-                ExplorationState(self,
-                                 ["teleoperation_state",
-                                  "stop_button_state",
-                                  self.new_exploration_strategy_,
-                                  "identification_state"],
-                                 [robocup_cost_functions.
-                                  FindNewVictimToGoCostFunction(self),
-                                  [robocup_cost_functions.
-                                   ExplorationModeCostFunction(self),
-                                   robocup_cost_functions.
-                                   ExplorationModeCostFunction2(self)]]),
+                                 self.exploration_strategy_]),
+                "exploration_strategy1_state":
+                ExplorationStrategy1State(self,
+                                          ["teleoperation_state",
+                                           "stop_button_state",
+                                           self.exploration_strategy_,
+                                           "identification_state"],
+                                          [robocup_cost_functions.
+                                           FindNewVictimToGoCostFunction(self),
+                                           robocup_cost_functions.
+                                           ExplorationModeCostFunction(self)]),
+                "exploration_strategy2_state":
+                ExplorationStrategy2State(self,
+                                          ["teleoperation_state",
+                                           "stop_button_state",
+                                           self.exploration_strategy_,
+                                           "identification_state"],
+                                          [robocup_cost_functions.
+                                           FindNewVictimToGoCostFunction(self),
+                                           robocup_cost_functions.
+                                           ExplorationModeCostFunction2(self)]),
+                "exploration_strategy3_state":
+                ExplorationStrategy3State(self,
+                                          ["teleoperation_state",
+                                           "stop_button_state",
+                                           self.exploration_strategy_,
+                                           "identification_state"],
+                                          [robocup_cost_functions.
+                                           FindNewVictimToGoCostFunction(self),
+                                           robocup_cost_functions.
+                                           ExplorationModeCostFunction3(self)]),
                 "old_exploration_state":
                 OldExplorationState(self,
                                     ["teleoperation_state",
                                      "stop_button_state",
-                                     self.new_exploration_strategy_,
-                                     "identification_state"]),
+                                     self.exploration_strategy_,
+                                     "identification_state"],
+                                    [robocup_cost_functions.
+                                     FindNewVictimToGoCostFunction(self)]),
                 "identification_state":
                 IdentificationState(self,
                                     ["teleoperation_state",
                                      "stop_button_state",
                                      "identification_state",
                                      "data_fusion_hold_state",
-                                     self.new_exploration_strategy_],
+                                     self.exploration_strategy_],
                                     [robocup_cost_functions.
                                      FindNewVictimToGoCostFunction(self),
                                      robocup_cost_functions.
@@ -193,7 +217,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                                      "data_fusion_hold_state",
                                      "validation_state",
                                      "identification_state",
-                                     self.new_exploration_strategy_],
+                                     self.exploration_strategy_],
                                     [robocup_cost_functions.
                                      FindNewVictimToGoCostFunction(self)]),
                 "validation_state":
@@ -201,14 +225,14 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                                 ["teleoperation_state",
                                  "stop_button_state",
                                  "identification_state",
-                                 self.new_exploration_strategy_],
+                                 self.exploration_strategy_],
                                 [robocup_cost_functions.
                                  FindNewVictimToGoCostFunction(self)]),
                 "teleoperation_state":
                 TeleoperationState(self,
                                    ["teleoperation_state",
                                     "stop_button_state",
-                                    self.new_exploration_strategy_]),
+                                    self.exploration_strategy_]),
                 "stop_button_state":
                 StopButtonState(self,
                                 ["teleoperation_state",
@@ -246,6 +270,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def robot_reset_cb(self, msg):
         self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
+        self.area_explored_ = 0
         self.current_score_ = 0
         self.valid_victims_ = 0
         self.qrs_ = 0
@@ -279,11 +304,20 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.max_time_ = config["maxTime"]
         self.max_victims_ = config["arenaVictims"]
         self.max_qrs_ = config["maxQRs"]
+        self.max_area_ = config["arenaArea"]
         self.initial_time_ = rospy.get_rostime().secs - config["timePassed"]
+        self.minutes_passed_ = config["timePassed"]
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
-        if not config["newFSMStrategy"]:
-            self.new_exploration_strategy_ = "old_exploration_state"
+        if config["explorationStrategy"] == 0:
+            self.exploration_strategy_ = "old_exploration_state"
+        elif config["explorationStrategy"] == 1:
+            self.exploration_strategy_ = "exploration_strategy1_state"
+        elif config["explorationStrategy"] == 2:
+            self.exploration_strategy_ = "exploration_strategy2_state"
+        elif config["explorationStrategy"] == 3:
+            self.exploration_strategy_ = "exploration_strategy3_state"
+        self.deep_limit_ = config["deepLimit"]
         self.define_states()
         return config
 

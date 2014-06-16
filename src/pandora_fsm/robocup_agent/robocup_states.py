@@ -119,11 +119,11 @@ class RobotStartState(state.State):
         rospy.sleep(1.)
 
 
-class ExplorationState(state.State):
+class ExplorationStrategy1State(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
-        self.name_ = "exploration_state"
+        self.name_ = "exploration_strategy1_state"
 
     def execute(self):
         pass
@@ -164,11 +164,7 @@ class ExplorationState(state.State):
                 pass
             return self.next_states_[3]
 
-        current_cost = 0
-        for function in self.cost_functions_[1]:
-            current_cost += function.execute()
-
-        current_cost /= len(self.cost_functions_)
+        current_cost = self.cost_functions_[1].execute()
 
         if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
             if current_cost < 25:
@@ -176,6 +172,207 @@ class ExplorationState(state.State):
                         DoExplorationGoal.TYPE_DEEP:
                     self.start_exploration(DoExplorationGoal.TYPE_DEEP)
             elif current_cost < 35:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_NORMAL:
+                    self.start_exploration(DoExplorationGoal.TYPE_NORMAL)
+            else:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_FAST:
+                    self.start_exploration(DoExplorationGoal.TYPE_FAST)
+        elif self.agent_.current_arena_ == ArenaTypeMsg.TYPE_ORANGE:
+            if self.agent_.valid_victims_ == 0:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_FAST:
+                    self.start_exploration(DoExplorationGoal.TYPE_FAST)
+            else:
+                self.agent_.\
+                    transition_to_state(robotModeMsg.
+                                        MODE_TELEOPERATED_LOCOMOTION)
+                self.agent_.new_robot_state_ack_ = \
+                    robotModeMsg.MODE_TELEOPERATED_LOCOMOTION
+                return self.next_states_[0]
+
+        return self.next_states_[2]
+
+    def start_exploration(self, exploration_mode):
+        if self.agent_.current_exploration_mode_ != -1:
+            self.end_exploration()
+
+        rospy.Rate(2).sleep()
+        self.agent_.current_exploration_mode_ = exploration_mode
+        goal = DoExplorationGoal(exploration_type=exploration_mode)
+        self.agent_.do_exploration_ac_.send_goal(goal,
+                                                 feedback_cb=self.feedback_cb,
+                                                 done_cb=self.done_cb)
+
+    def end_exploration(self):
+        self.agent_.current_exploration_mode_ = -1
+        self.agent_.do_exploration_ac_.cancel_all_goals()
+
+    def feedback_cb(self, feedback):
+        self.agent_.current_robot_pose_ = feedback.base_position
+
+    def done_cb(self, status, result):
+        self.agent_.current_exploration_mode_ = -1
+
+
+class ExplorationStrategy2State(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "exploration_strategy2_state"
+
+    def execute(self):
+        pass
+
+    def make_transition(self):
+        if self.agent_.new_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.end_exploration()
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
+
+        new_victims_cost = self.cost_functions_[0].execute()
+        max_victim_cost = 0
+        for i in range(0, len(new_victims_cost)):
+            if new_victims_cost[i] > max_victim_cost:
+                max_victim_cost = new_victims_cost[i]
+                max_victim = self.agent_.new_victims_[i]
+
+        if max_victim_cost > 0:
+            self.end_exploration()
+            self.agent_.target_victim_ = max_victim
+            self.agent_.transition_to_state(robotModeMsg.MODE_IDENTIFICATION)
+            self.agent_.new_robot_state_ack_ = robotModeMsg.MODE_IDENTIFICATION
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[3]
+
+        current_cost = self.cost_functions_[1].execute()
+
+        if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
+            if current_cost < 1.2:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_DEEP:
+                    self.start_exploration(DoExplorationGoal.TYPE_DEEP)
+            elif current_cost < 2.4:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_NORMAL:
+                    self.start_exploration(DoExplorationGoal.TYPE_NORMAL)
+            else:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_FAST:
+                    self.start_exploration(DoExplorationGoal.TYPE_FAST)
+        elif self.agent_.current_arena_ == ArenaTypeMsg.TYPE_ORANGE:
+            if self.agent_.valid_victims_ == 0:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_FAST:
+                    self.start_exploration(DoExplorationGoal.TYPE_FAST)
+            else:
+                self.agent_.\
+                    transition_to_state(robotModeMsg.
+                                        MODE_TELEOPERATED_LOCOMOTION)
+                self.agent_.new_robot_state_ack_ = \
+                    robotModeMsg.MODE_TELEOPERATED_LOCOMOTION
+                return self.next_states_[0]
+
+        return self.next_states_[2]
+
+    def start_exploration(self, exploration_mode):
+        if self.agent_.current_exploration_mode_ != -1:
+            self.end_exploration()
+
+        rospy.Rate(2).sleep()
+        self.agent_.current_exploration_mode_ = exploration_mode
+        goal = DoExplorationGoal(exploration_type=exploration_mode)
+        self.agent_.do_exploration_ac_.send_goal(goal,
+                                                 feedback_cb=self.feedback_cb,
+                                                 done_cb=self.done_cb)
+
+    def end_exploration(self):
+        self.agent_.current_exploration_mode_ = -1
+        self.agent_.do_exploration_ac_.cancel_all_goals()
+
+    def feedback_cb(self, feedback):
+        self.agent_.current_robot_pose_ = feedback.base_position
+
+    def done_cb(self, status, result):
+        self.agent_.current_exploration_mode_ = -1
+
+
+class ExplorationStrategy3State(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "exploration_strategy3_state"
+
+    def execute(self):
+        pass
+
+    def make_transition(self):
+        if self.agent_.new_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.end_exploration()
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[0]
+        elif self.agent_.new_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.new_robot_state_ack_ = self.agent_.new_robot_state_
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[1]
+
+        new_victims_cost = self.cost_functions_[0].execute()
+        max_victim_cost = 0
+        for i in range(0, len(new_victims_cost)):
+            if new_victims_cost[i] > max_victim_cost:
+                max_victim_cost = new_victims_cost[i]
+                max_victim = self.agent_.new_victims_[i]
+
+        if max_victim_cost > 0:
+            self.end_exploration()
+            self.agent_.target_victim_ = max_victim
+            self.agent_.transition_to_state(robotModeMsg.MODE_IDENTIFICATION)
+            self.agent_.new_robot_state_ack_ = robotModeMsg.MODE_IDENTIFICATION
+            while not rospy.is_shutdown() and \
+                    self.agent_.current_robot_state_ != \
+                    self.agent_.new_robot_state_ack_:
+                pass
+            return self.next_states_[3]
+
+        current_cost = self.cost_functions_[1].execute()
+
+        if rospy.get_rostime().secs - self.agent_.minutes_passed_ >= 60:
+            self.agent_.minutes_passed_ += 60
+            self.agent_.deep_limit_ = \
+                (1 + 0.135 - 0.003*self.agent_.max_time_/60) * \
+                self.agent_.deep_limit_
+            self.agent_.fast_limit_ = self.agent_.deep_limit_ * 1.4
+
+        if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
+            if current_cost < self.agent_.deep_limit_:
+                if self.agent_.current_exploration_mode_ != \
+                        DoExplorationGoal.TYPE_DEEP:
+                    self.start_exploration(DoExplorationGoal.TYPE_DEEP)
+            elif current_cost < self.agent_.fast_limit_:
                 if self.agent_.current_exploration_mode_ != \
                         DoExplorationGoal.TYPE_NORMAL:
                     self.start_exploration(DoExplorationGoal.TYPE_NORMAL)
@@ -423,8 +620,14 @@ class DataFusionHoldState(state.State):
             for victim in self.agent_.new_victims_:
                 if victim.id == self.agent_.target_victim_.id:
                     if victim.probability > \
-                            self.agent_.valid_victim_probability_:
+                            self.agent_.valid_victim_probability_ and \
+                            len(victim.sensors) >= 2:
                         return self.next_states_[3]
+                    elif victim.probability > \
+                            self.agent_.valid_victim_probability_ and \
+                            len(victim.sensors) == 1:
+                        self.counter_ = 5
+                        return self.next_states_[2]
                     else:
                         goal = ValidateVictimGoal()
                         goal.victimId = self.agent_.target_victim_.id
