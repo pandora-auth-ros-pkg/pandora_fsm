@@ -680,6 +680,7 @@ class DataFusionHoldState(state.State):
                     if victim.probability > \
                             self.agent_.valid_victim_probability_ and \
                             (len(victim.sensors) >= 2 or face):
+                        self.agent_.target_victim_ = victim
                         return self.next_states_[3]
                     else:
                         goal = ValidateVictimGoal()
