@@ -44,6 +44,8 @@ from actionlib import SimpleActionServer, SimpleActionClient
 from state_manager_communications.msg import robotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Int32, Empty
+from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
+    MoveEndEffectorResult
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIResult
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg, ValidateVictimAction, ValidateVictimResult, \
@@ -55,7 +57,8 @@ from pandora_fsm.robocup_agent.agent_topics import arena_type_topic, \
     robocup_score_topic, qr_notification_topic, robot_reset_topic, \
     robot_restart_topic, world_model_topic, do_exploration_topic, \
     gui_validation_topic, data_fusion_validate_victim_topic, move_base_topic, \
-    delete_victim_topic, state_changer_action_topic
+    delete_victim_topic, move_end_effector_planner_topic, \
+    state_changer_action_topic
 
 
 class TestStateClient(state_manager.state_client.StateClient):
@@ -73,6 +76,8 @@ class Communications():
         self.robot_pose_ = PoseStamped()
         self.move_base_succeeded_ = False
         self.move_base_aborted_ = False
+        self.move_end_effector_succeeded_ = False
+        self.move_end_effector_aborted_ = False
 
         if high_logic_type == 'agent':
             self.dynamic_reconfigure_client = \
@@ -119,6 +124,13 @@ class Communications():
                                self.data_fusion_validate_victim_cb,
                                auto_start=False)
         self.data_fusion_validate_victim_as_.start()
+
+        self.end_effector_planner_as_ = \
+            SimpleActionServer(move_end_effector_planner_topic,
+                               MoveEndEffectorAction,
+                               self.end_effector_planner_cb,
+                               auto_start=False)
+        self.end_effector_planner_as_.start()
 
     def do_exploration_cb(self, goal):
         rospy.loginfo('do_exploration_cb')
@@ -203,9 +215,32 @@ class Communications():
         result = ValidateVictimResult()
         self.data_fusion_validate_victim_as_.set_succeeded(result)
 
+    def end_effector_planner_cb(self, goal):
+        rospy.loginfo('end_effector_planner_cb')
+        
+        for i in range(5):
+            rospy.Rate(1).sleep()
+            if self.move_end_effector_succeeded_:
+                self.move_end_effector_succeeded_ = False
+                result = MoveEndEffectorResult()
+                self.end_effector_planner_as_.set_succeeded(result)
+                break
+            if self.move_end_effector_aborted_:
+                self.move_end_effector_aborted_ = False
+                result = MoveEndEffectorResult()
+                self.end_effector_planner_as_.set_aborted(result)
+                break
+            if self.move_base_as_.is_preempt_requested():
+                self.end_effector_planner_as_.set_preempted()
+                break
+        else:
+            result = MoveEndEffectorResult()
+            self.end_effector_planner_as_.set_succeeded(result)
+
     def delete_action_servers(self):
         self.do_exploration_as_.__del__()
         self.move_base_as_.__del__()
         self.delete_victim_as_.__del__()
         self.gui_validate_victim_as_.__del__()
         self.data_fusion_validate_victim_as_.__del__()
+        self.end_effector_planner_as_.__del__()

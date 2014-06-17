@@ -43,8 +43,9 @@ import global_vars
 from state_manager_communications.msg import robotModeMsg
 from geometry_msgs.msg import Point
 from std_msgs.msg import Int32
-from pandora_fsm.robocup_agent.robocup_states import IdentificationState, \
-    ExplorationStrategy2State, DataFusionHoldState, TeleoperationState
+from pandora_fsm.robocup_agent.robocup_states import DataFusionHoldState, \
+    ExplorationStrategy2State, IdentificationCheckForVictimsState, \
+    TeleoperationState
 from pandora_data_fusion_msgs.msg import VictimInfoMsg, QrNotificationMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
 
@@ -56,7 +57,7 @@ class TestAgent(unittest.TestCase):
         rospy.loginfo('Simulate start button')
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_START_AUTONOMOUS)
-        rospy.sleep(12.)
+        rospy.sleep(22.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               ExplorationStrategy2State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
@@ -76,9 +77,9 @@ class TestAgent(unittest.TestCase):
         victims.append(victim)
         global_vars.com.victims_pub_.publish(victims)
 
-        rospy.sleep(2.)
+        rospy.sleep(3.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
-                              IdentificationState)
+                              IdentificationCheckForVictimsState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_IDENTIFICATION)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_, -1)
@@ -189,4 +190,4 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=1).run(teleoperation_state)
 
     global_vars.com.delete_action_servers()
-    rospy.signal_shutdown('Unit tests finished')
+    rospy.signal_shutdown('Functional tests finished')

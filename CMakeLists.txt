@@ -13,7 +13,7 @@ generate_dynamic_reconfigure_options(
 )
 
 catkin_package(
-  DEPENDS 
+  DEPENDS
   CATKIN_DEPENDS
     rospy
     actionlib
@@ -24,7 +24,7 @@ catkin_package(
 )
 
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
-     ${PROJECT_SOURCE_DIR} 
+     ${PROJECT_SOURCE_DIR}
      src/pandora_fsm/containers/data_fusion_hold.py
      src/pandora_fsm/containers/exploration.py
      src/pandora_fsm/containers/identification.py

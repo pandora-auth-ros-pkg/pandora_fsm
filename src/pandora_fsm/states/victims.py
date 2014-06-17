@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#!/usr/bin/env python
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2014, P.A.N.D.O.R.A. Team.
@@ -40,7 +39,6 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 
 from math import fabs
-from smach import State
 from pandora_fsm.states.my_monitor_state import MyMonitorState
 from pandora_fsm.states.my_simple_action_state import MySimpleActionState
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
