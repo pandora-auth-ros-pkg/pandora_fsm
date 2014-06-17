@@ -673,15 +673,14 @@ class DataFusionHoldState(state.State):
             self.counter_ = 0
             for victim in self.agent_.new_victims_:
                 if victim.id == self.agent_.target_victim_.id:
+                    face = False
+                    for sensor in victim.sensors:
+                        if sensor == 'FACE':
+                            face = True
                     if victim.probability > \
                             self.agent_.valid_victim_probability_ and \
-                            len(victim.sensors) >= 2:
+                            (len(victim.sensors) >= 2 or face):
                         return self.next_states_[3]
-                    elif victim.probability > \
-                            self.agent_.valid_victim_probability_ and \
-                            len(victim.sensors) == 1:
-                        self.counter_ = 5
-                        return self.next_states_[2]
                     else:
                         goal = ValidateVictimGoal()
                         goal.victimId = self.agent_.target_victim_.id
