@@ -44,9 +44,10 @@ from state_manager_communications.msg import robotModeMsg
 from geometry_msgs.msg import Point
 from std_msgs.msg import Int32
 from pandora_fsm.robocup_agent.robocup_states import DataFusionHoldState, \
-    ExplorationStrategy2State, IdentificationCheckForVictimsState, \
+    ExplorationStrategy4State, IdentificationCheckForVictimsState, \
     TeleoperationState
-from pandora_data_fusion_msgs.msg import VictimInfoMsg, QrNotificationMsg
+from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
+    QrNotificationMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
 
 
@@ -59,13 +60,14 @@ class TestAgent(unittest.TestCase):
                                                    MODE_START_AUTONOMOUS)
         rospy.sleep(22.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
-                              ExplorationStrategy2State)
+                              ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_EXPLORATION)
 
     def test_exploration_state(self):
+        rospy.sleep(10.)
         rospy.loginfo('Publish a victim')
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 5
         victim.victimPose.pose.position.x = \
@@ -73,9 +75,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = \
             global_vars.com.robot_pose_.pose.position.y - 0.5
         victim.victimPose.pose.position.z = 0.4
+        victim.victimPose.header.frame_id = "dummy_frame"
         victim.probability = 0.0
-        victims.append(victim)
-        global_vars.com.victims_pub_.publish(victims)
+        victims_to_go.victims.append(victim)
+        global_vars.com.victims_pub_.publish(victims_to_go)
 
         rospy.sleep(3.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
@@ -86,7 +89,7 @@ class TestAgent(unittest.TestCase):
 
     def test_identification_state(self):
         rospy.loginfo('Update target victim')
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 5
         victim.victimPose.pose.position.x = \
@@ -95,9 +98,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = \
             global_vars.test_agent.target_victim_.victimPose.pose.position.y
         victim.victimPose.pose.position.z = 0.4
+        victim.victimPose.header.frame_id = "dummy_frame"
         victim.probability = 0.0
-        victims.append(victim)
-        global_vars.com.victims_pub_.publish(victims)
+        victims_to_go.victims.append(victim)
+        global_vars.com.victims_pub_.publish(victims_to_go)
         rospy.sleep(11.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               DataFusionHoldState)
@@ -106,7 +110,7 @@ class TestAgent(unittest.TestCase):
 
     def test_validation_state(self):
         rospy.loginfo('Publish target victim with increased probability')
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 5
         victim.victimPose.pose.position.x = \
@@ -114,26 +118,28 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = \
             global_vars.test_agent.target_victim_.victimPose.pose.position.y
         victim.victimPose.pose.position.z = 0.4
+        victim.victimPose.header.frame_id = "dummy_frame"
         victim.probability = 0.8
         victim.sensors.append('FACE')
         victim.sensors.append('THERMAL')
-        victims.append(victim)
-        global_vars.com.victims_pub_.publish(victims)
+        victims_to_go.victims.append(victim)
+        global_vars.com.victims_pub_.publish(victims_to_go)
         rospy.sleep(19.)
         self.assertEqual(global_vars.test_agent.valid_victims_, 1)
         self.assertIsInstance(global_vars.test_agent.current_state_,
-                              ExplorationStrategy2State)
+                              ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_EXPLORATION)
 
     def test_exploration_state_change_to_normal(self):
         rospy.loginfo('Change exploration type to normal')
         rospy.sleep(1.)
-        global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
         msg = QrNotificationMsg()
         for i in range(10):
             global_vars.com.qr_notification_pub_.publish(msg)
-            rospy.Rate(2).sleep()
+            rospy.Rate(10).sleep()
+        global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 400
+        global_vars.test_agent.area_explored_ = 10
         rospy.sleep(2.)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                          DoExplorationGoal.TYPE_NORMAL)

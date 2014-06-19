@@ -50,7 +50,8 @@ from math import sqrt, pow
 from robocup_states import WaitingToStartState, \
     TestAndParkEndEffectorPlannerState, RobotStartState, \
     ScanEndEffectorPlannerState, ExplorationStrategy1State, \
-    ExplorationStrategy2State, ExplorationStrategy3State, OldExplorationState, \
+    ExplorationStrategy2State, ExplorationStrategy3State, \
+    ExplorationStrategy4State, OldExplorationState, \
     TrackEndEffectorPlannerState, IdentificationMoveToVictimState, \
     IdentificationCheckForVictimsState, DataFusionHoldState, ValidationState, \
     TeleoperationState, StopButtonState
@@ -98,7 +99,14 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.define_states()
         self.current_state_ = self.all_states_["waiting_to_start_state"]
 
-        self.fast_limit_ = self.deep_limit_ * 1.4
+        self.strategy3_fast_limit_ = self.strategy3_deep_limit_ * 1.4
+
+        self.strategy4_previous_victims_ = 0
+        self.strategy4_previous_qrs_ = 0
+        self.strategy4_previous_area_ = 0
+        self.strategy4_previous_resets_ = 0
+        self.strategy4_previous_restarts_ = 0
+        self.strategy4_current_cost_ = 0
 
         rospy.Subscriber(agent_topics.arena_type_topic, ArenaTypeMsg,
                          self.arena_type_cb)
@@ -152,7 +160,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
             new_state = self.current_state_.make_transition()
             if new_state != self.current_state_.name_:
                 self.previous_state_ = self.current_state_.name_
-                self.define_states()
+                if new_state == "stop_button_state":
+                    self.define_states()
                 rospy.loginfo("Agent's state is changing from %s to %s",
                               self.previous_state_, new_state)
 
@@ -211,6 +220,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                                            FindNewVictimToGoCostFunction(self),
                                            robocup_cost_functions.
                                            ExplorationModeCostFunction3(self)]),
+                "exploration_strategy4_state":
+                ExplorationStrategy4State(self,
+                                          ["teleoperation_state",
+                                           "stop_button_state",
+                                           self.exploration_strategy_,
+                                           "track_end_effector_planner_state"],
+                                          [robocup_cost_functions.
+                                           FindNewVictimToGoCostFunction(self),
+                                           robocup_cost_functions.
+                                           ExplorationModeCostFunction4(self)]),
                 "old_exploration_state":
                 OldExplorationState(self,
                                     ["teleoperation_state",
@@ -314,6 +333,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
         self.robot_restarts_ = 0
 
+        self.strategy3_deep_limit_ = self.configs_["strategy3DeepLimit"]
+        self.strategy3_fast_limit_ = self.strategy3_deep_limit_ * 1.4
+
+        self.strategy4_previous_victims_ = 0
+        self.strategy4_previous_qrs_ = 0
+        self.strategy4_previous_area_ = 0
+        self.strategy4_previous_resets_ = 0
+        self.strategy4_previous_restarts_ = 0
+        self.strategy4_current_cost_ = 0
+
         self.current_robot_state_ = robotModeMsg.MODE_OFF
 
         self.previous_state_ = "waiting_to_start_state"
@@ -347,8 +376,13 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
             self.exploration_strategy_ = "exploration_strategy2_state"
         elif config["explorationStrategy"] == 3:
             self.exploration_strategy_ = "exploration_strategy3_state"
-        self.deep_limit_ = config["deepLimit"]
+        elif config["explorationStrategy"] == 4:
+            self.exploration_strategy_ = "exploration_strategy4_state"
+        self.strategy3_deep_limit_ = config["strategy3DeepLimit"]
+        self.strategy4_deep_limit_ = config["strategy4DeepLimit"]
+        self.strategy4_fast_limit_ = config["strategy4FastLimit"]
         self.define_states()
+        self.configs_ = config
         return config
 
 

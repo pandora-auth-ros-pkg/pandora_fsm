@@ -73,24 +73,24 @@ class ExplorationModeCostFunction2(cost_function.CostFunction):
 
     def __init__(self, agent):
         cost_function.CostFunction.__init__(self, agent)
-        self.w1 = 1.8 - 0.3*self.agent_.max_victims_
-        self.w2 = 0.24 - 0.008*self.agent_.max_qrs_
-        self.w3 = 0.06 - 0.001333333*self.agent_.max_area_
-        self.w4 = 0.15
-        self.w5 = 0.05
-        self.w6 = -(0.06 - 0.001333333*self.agent_.max_time_/60)
-        self.sum_weights = self.w1 + self.w2 + self.w3 + \
-            self.w4 + self.w5 + self.w6
+        self.w1_ = 1.8 - 0.3*self.agent_.max_victims_
+        self.w2_ = 0.24 - 0.008*self.agent_.max_qrs_
+        self.w3_ = 0.06 - 0.001333333*self.agent_.max_area_
+        self.w4_ = 0.15
+        self.w5_ = 0.05
+        self.w6_ = -(0.06 - 0.001333333*self.agent_.max_time_/60)
+        self.sum_weights_ = self.w1_ + self.w2_ + self.w3_ + \
+            self.w4_ + self.w5_ + self.w6_
 
     def execute(self):
-        cost = self.agent_.valid_victims_ * self.w1
-        cost += self.agent_.qrs_ * self.w2
-        cost += self.agent_.qrs_ * self.w3
-        cost += self.agent_.robot_resets_ * self.w4
-        cost += self.agent_.robot_restarts_ * self.w5
+        cost = self.agent_.valid_victims_ * self.w1_
+        cost += self.agent_.qrs_ * self.w2_
+        cost += self.agent_.area_explored_ * self.w3_
+        cost += self.agent_.robot_resets_ * self.w4_
+        cost += self.agent_.robot_restarts_ * self.w5_
         cost += (rospy.get_rostime().secs - self.agent_.initial_time_) * \
-            self.w6/60
-        cost /= self.sum_weights
+            self.w6_/60
+        cost /= self.sum_weights_
 
         # < 1.2 DEEP
         # < 2.4 NORMAL
@@ -101,23 +101,69 @@ class ExplorationModeCostFunction3(cost_function.CostFunction):
 
     def __init__(self, agent):
         cost_function.CostFunction.__init__(self, agent)
-        self.w1 = 1.8 - 0.3*self.agent_.max_victims_
-        self.w2 = 0.24 - 0.008*self.agent_.max_qrs_
-        self.w3 = 0.06 - 0.001333333*self.agent_.max_area_
-        self.w4 = 0.15
-        self.w5 = 0.05
-        self.sum_weights = self.w1 + self.w2 + self.w3 + self.w4 + self.w5
+        self.w1_ = 1.8 - 0.3*self.agent_.max_victims_
+        self.w2_ = 0.24 - 0.008*self.agent_.max_qrs_
+        self.w3_ = 0.06 - 0.001333333*self.agent_.max_area_
+        self.w4_ = 0.15
+        self.w5_ = 0.05
+        self.sum_weights_ = self.w1_ + self.w2_ + self.w3_ + self.w4_ + self.w5_
 
     def execute(self):
-        cost = self.agent_.valid_victims_ * self.w1
-        cost += self.agent_.qrs_ * self.w2
-        cost += self.agent_.qrs_ * self.w3
-        cost += self.agent_.robot_resets_ * self.w4
-        cost += self.agent_.robot_restarts_ * self.w5
-        cost /= self.sum_weights
+        cost = self.agent_.valid_victims_ * self.w1_
+        cost += self.agent_.qrs_ * self.w2_
+        cost += self.agent_.area_explored_ * self.w3_
+        cost += self.agent_.robot_resets_ * self.w4_
+        cost += self.agent_.robot_restarts_ * self.w5_
+        cost /= self.sum_weights_
 
         # < 1.4 DEEP
         # < 2.8 NORMAL
+        return cost
+
+
+class ExplorationModeCostFunction4(cost_function.CostFunction):
+
+    def __init__(self, agent):
+        cost_function.CostFunction.__init__(self, agent)
+        self.w1_ = 0.5
+        self.w2_ = 0.2
+        self.w3_ = 0.2
+        self.w4_ = 0.02
+        self.w5_ = 0.005
+        self.w6_ = 0.9
+        self.sum_weights_ = self.w1_ + self.w2_ + self.w3_ + \
+            self.w4_ + self.w5_ + self.w6_
+
+    def execute(self):
+        cost = float(self.agent_.valid_victims_ -
+                self.agent_.strategy4_previous_victims_) / \
+                    self.agent_.max_victims_ * self.w1_
+
+        cost += float(self.agent_.qrs_ - self.agent_.strategy4_previous_qrs_) / \
+            self.agent_.max_qrs_ * self.w2_
+
+        cost += float(self.agent_.area_explored_ -
+                 self.agent_.strategy4_previous_area_) / \
+                    self.agent_.max_area_ * self.w3_
+
+        cost += float(self.agent_.robot_resets_ - \
+            self.agent_.strategy4_previous_resets_) * self.w4_
+
+        cost += float(self.agent_.robot_restarts_ - \
+            self.agent_.strategy4_previous_restarts_) * self.w5_
+
+        current_minutes_passed_in_seconds = \
+            (rospy.get_rostime().secs - self.agent_.initial_time_) / 60
+        current_minutes_passed_in_seconds *= 60
+
+        cost += float(self.agent_.minutes_passed_ -
+                 current_minutes_passed_in_seconds) / \
+                    self.agent_.max_time_ * self.w6_
+
+        cost /= float(self.sum_weights_)
+
+        cost += self.agent_.strategy4_current_cost_
+
         return cost
 
 

@@ -46,7 +46,8 @@ from pandora_fsm.robocup_agent.robocup_cost_functions import \
     ExplorationModeCostFunction, ExplorationModeCostFunction2, \
     ExplorationModeCostFunction3, FindNewVictimToGoCostFunction, \
     UpdateVictimCostFunction
-from pandora_data_fusion_msgs.msg import VictimInfoMsg, QrNotificationMsg
+from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
+    QrNotificationMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
 
 
@@ -68,6 +69,18 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 0
 
+        global_vars.test_agent.strategy3_deep_limit_ = \
+            global_vars.test_agent.configs_["strategy3DeepLimit"]
+        global_vars.test_agent.strategy3_fast_limit_ = \
+            global_vars.test_agent.strategy3_deep_limit_ * 1.4
+
+        global_vars.test_agent.strategy4_previous_victims_ = 0
+        global_vars.test_agent.strategy4_previous_qrs_ = 0
+        global_vars.test_agent.strategy4_previous_area_ = 0
+        global_vars.test_agent.strategy4_previous_resets_ = 0
+        global_vars.test_agent.strategy4_previous_restarts_ = 0
+        global_vars.test_agent.strategy4_current_cost_ = 0
+
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_OFF
 
         global_vars.test_agent.previous_state_ = "waiting_to_start_state"
@@ -79,10 +92,12 @@ class TestAgent(unittest.TestCase):
             update_configuration({"arenaVictims": 4, "maxQRs": 20,
                                   "arenaArea": 18, "maxTime": 1200,
                                   "timePassed": 0,
-                                  "explorationStrategy": 2,
+                                  "explorationStrategy": 4,
                                   "validVictimProbability": 0.5,
                                   "abortedVictimsDistance": 0.05,
-                                  "deepLimit": 0.85})
+                                  "strategy3DeepLimit": 0.85,
+                                  "strategy4DeepLimit": 0,
+                                  "strategy4FastLimit": 0.1})
 
     def test_arena_type(self):
         rospy.loginfo('test_arena_type')
@@ -123,15 +138,15 @@ class TestAgent(unittest.TestCase):
             all_states_["data_fusion_hold_state"].counter_ = 10
         global_vars.test_agent.current_robot_pose_.pose.position.x = 4.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 11.6
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
         victim.probability = 0.3
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -153,22 +168,22 @@ class TestAgent(unittest.TestCase):
             all_states_["data_fusion_hold_state"].counter_ = 10
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 8.6
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
         victim.probability = 0.3
-        victims.append(victim)
+        victims_to_go.victims.append(victim)
         victim = VictimInfoMsg()
         victim.id = 9
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 9
         victim.victimPose.pose.position.z = 3.2
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -213,7 +228,7 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.\
             all_states_["data_fusion_hold_state"].counter_ = 10
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -222,8 +237,8 @@ class TestAgent(unittest.TestCase):
         victim.probability = 0.9
         victim.sensors.append('FACE')
         victim.sensors.append('THERMAL')
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -286,7 +301,8 @@ class TestAgent(unittest.TestCase):
         next_state = global_vars.test_agent.\
             all_states_["exploration_strategy1_state"].make_transition()
         rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "exploration_strategy1_state")
+        self.assertEqual(next_state,
+                         global_vars.test_agent.exploration_strategy_)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                          DoExplorationGoal.TYPE_NORMAL)
 
@@ -295,6 +311,7 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
+        global_vars.test_agent.area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 2
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 1
@@ -302,90 +319,10 @@ class TestAgent(unittest.TestCase):
         next_state = global_vars.test_agent.\
             all_states_["exploration_strategy2_state"].make_transition()
         rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "exploration_strategy2_state")
+        self.assertEqual(next_state,
+                         global_vars.test_agent.exploration_strategy_)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                          DoExplorationGoal.TYPE_FAST)
-
-    def test_exploration_strategy2_state_identification(self):
-        rospy.loginfo('test_exploration_strategy2_state_identification')
-        global_vars.test_agent.current_robot_state_ = \
-            robotModeMsg.MODE_EXPLORATION
-        global_vars.test_agent.current_robot_pose_.pose.position.x = 1.5
-        global_vars.test_agent.current_robot_pose_.pose.position.y = 5.2
-        victims = []
-        victim = VictimInfoMsg()
-        victim.id = 5
-        victim.victimPose.pose.position.x = 3
-        victim.victimPose.pose.position.y = 4
-        victim.victimPose.pose.position.z = 3
-        victim.probability = 0.2
-        victims.append(victim)
-        victim = VictimInfoMsg()
-        victim.id = 8
-        victim.victimPose.pose.position.x = 2
-        victim.victimPose.pose.position.y = 6
-        victim.victimPose.pose.position.z = 3.2
-        victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
-        next_state = global_vars.test_agent.\
-            all_states_["exploration_strategy2_state"].make_transition()
-        rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "track_end_effector_planner_state")
-        self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_IDENTIFICATION)
-
-    def test_exploration_strategy2_state_orange_no_victims(self):
-        rospy.loginfo('test_exploration_strategy2_state_orange_no_victims')
-        global_vars.test_agent.current_robot_state_ = \
-            robotModeMsg.MODE_EXPLORATION
-        global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
-        next_state = global_vars.test_agent.\
-            all_states_["exploration_strategy2_state"].make_transition()
-        rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "exploration_strategy2_state")
-        self.assertEqual(global_vars.test_agent.current_exploration_mode_,
-                         DoExplorationGoal.TYPE_FAST)
-
-    def test_exploration_strategy2_state_orange_with_victims(self):
-        rospy.loginfo('test_exploration_strategy2_state_orange_with_victims')
-        global_vars.test_agent.current_robot_state_ = \
-            robotModeMsg.MODE_EXPLORATION
-        global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
-        global_vars.test_agent.valid_victims_ = 2
-        next_state = global_vars.test_agent.\
-            all_states_["exploration_strategy2_state"].make_transition()
-        rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "teleoperation_state")
-        self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
-
-    def test_exploration_strategy2_state_stop_button(self):
-        rospy.loginfo('test_exploration_strategy2_state_stop_button')
-        global_vars.test_agent.current_robot_state_ = \
-            robotModeMsg.MODE_EXPLORATION
-        global_vars.test_agent.transition_to_state(robotModeMsg.MODE_OFF)
-        rospy.Rate(10).sleep()
-        next_state = global_vars.test_agent.\
-            all_states_["exploration_strategy2_state"].make_transition()
-        rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "stop_button_state")
-        self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_OFF)
-
-    def test_exploration_strategy2_state_teleoperation(self):
-        rospy.loginfo('test_exploration_strategy2_state_teleoperation')
-        global_vars.test_agent.current_robot_state_ = \
-            robotModeMsg.MODE_EXPLORATION
-        global_vars.test_agent.transition_to_state(robotModeMsg.
-                                                   MODE_TELEOPERATED_LOCOMOTION)
-        rospy.Rate(10).sleep()
-        next_state = global_vars.test_agent.\
-            all_states_["exploration_strategy2_state"].make_transition()
-        rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "teleoperation_state")
-        self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
 
     def test_exploration_strategy3_state_exploration(self):
         rospy.loginfo('test_exploration_strategy3_state_exploration')
@@ -401,30 +338,132 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 1
         for i in range(10):
-            global_vars.test_agent.deep_limit_ = \
+            global_vars.test_agent.minutes_passed_ += 60
+            global_vars.test_agent.strategy3_deep_limit_ = \
                 (1 + 0.135 - 0.003*global_vars.test_agent.max_time_/60) * \
-                global_vars.test_agent.deep_limit_
-        global_vars.test_agent.fast_limit_ = \
-            global_vars.test_agent.deep_limit_ * 1.4
+                global_vars.test_agent.strategy3_deep_limit_
+        global_vars.test_agent.strategy3_fast_limit_ = \
+            global_vars.test_agent.strategy3_deep_limit_ * 1.4
         next_state = global_vars.test_agent.\
             all_states_["exploration_strategy3_state"].make_transition()
         rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "exploration_strategy3_state")
+        self.assertEqual(next_state,
+                         global_vars.test_agent.exploration_strategy_)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                          DoExplorationGoal.TYPE_NORMAL)
 
-    def test_find_new_victim_to_go_cost_function(self):
-        rospy.loginfo('test_find_new_victim_to_go_cost_function')
+    def test_exploration_strategy4_state_exploration(self):
+        rospy.loginfo('test_exploration_strategy4_state_exploration')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
+        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.valid_victims_ = 2
+        global_vars.test_agent.qrs_ = 10
+        global_vars.test_agent.robot_resets_ = 1
+        global_vars.test_agent.robot_restarts_ = 4
+        next_state = global_vars.test_agent.\
+            all_states_["exploration_strategy4_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state,
+                         global_vars.test_agent.exploration_strategy_)
+        self.assertEqual(global_vars.test_agent.current_exploration_mode_,
+                         DoExplorationGoal.TYPE_NORMAL)
+
+    def test_exploration_strategy4_state_identification(self):
+        rospy.loginfo('test_exploration_strategy4_state_identification')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.5
         global_vars.test_agent.current_robot_pose_.pose.position.y = 5.2
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 5
         victim.victimPose.pose.position.x = 3
         victim.victimPose.pose.position.y = 4
         victim.victimPose.pose.position.z = 3
         victim.probability = 0.2
-        victims.append(victim)
+        victims_to_go.victims.append(victim)
+        victim = VictimInfoMsg()
+        victim.id = 8
+        victim.victimPose.pose.position.x = 2
+        victim.victimPose.pose.position.y = 6
+        victim.victimPose.pose.position.z = 3.2
+        victim.probability = 0.2
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
+        next_state = global_vars.test_agent.\
+            all_states_["exploration_strategy4_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "track_end_effector_planner_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_IDENTIFICATION)
+
+    def test_exploration_strategy4_state_orange_no_victims(self):
+        rospy.loginfo('test_exploration_strategy4_state_orange_no_victims')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
+        next_state = global_vars.test_agent.\
+            all_states_["exploration_strategy4_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state,
+                         global_vars.test_agent.exploration_strategy_)
+        self.assertEqual(global_vars.test_agent.current_exploration_mode_,
+                         DoExplorationGoal.TYPE_FAST)
+
+    def test_exploration_strategy4_state_orange_with_victims(self):
+        rospy.loginfo('test_exploration_strategy4_state_orange_with_victims')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_ORANGE
+        global_vars.test_agent.valid_victims_ = 2
+        next_state = global_vars.test_agent.\
+            all_states_["exploration_strategy4_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_exploration_strategy4_state_stop_button(self):
+        rospy.loginfo('test_exploration_strategy4_state_stop_button')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.MODE_OFF)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["exploration_strategy4_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "stop_button_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_OFF)
+
+    def test_exploration_strategy4_state_teleoperation(self):
+        rospy.loginfo('test_exploration_strategy4_state_teleoperation')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.
+                                                   MODE_TELEOPERATED_LOCOMOTION)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["exploration_strategy4_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_find_new_victim_to_go_cost_function(self):
+        rospy.loginfo('test_find_new_victim_to_go_cost_function')
+        global_vars.test_agent.current_robot_pose_.pose.position.x = 1.5
+        global_vars.test_agent.current_robot_pose_.pose.position.y = 5.2
+        victims_to_go = WorldModelMsg()
+        victim = VictimInfoMsg()
+        victim.id = 5
+        victim.victimPose.pose.position.x = 3
+        victim.victimPose.pose.position.y = 4
+        victim.victimPose.pose.position.z = 3
+        victim.probability = 0.2
+        victims_to_go.victims.append(victim)
         global_vars.test_agent.aborted_victims_.append([victim, 1])
         victim = VictimInfoMsg()
         victim.id = 8
@@ -432,8 +471,8 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         rospy.Rate(10).sleep()
         cost_function = FindNewVictimToGoCostFunction(global_vars.test_agent)
         cost = cost_function.execute()
@@ -474,15 +513,15 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_pose_.pose.position.y = 8.6
         global_vars.com.robot_pose_.pose.position.x = 1.8
         global_vars.com.robot_pose_.pose.position.y = 8.6
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 9
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 9
         victim.victimPose.pose.position.z = 3.5
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -546,15 +585,15 @@ class TestAgent(unittest.TestCase):
         rospy.loginfo('test_identification_state_succeeded_victim')
         global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -594,15 +633,15 @@ class TestAgent(unittest.TestCase):
         rospy.loginfo('test_identification_state_update_victim')
         global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_IDENTIFICATION
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -632,7 +671,9 @@ class TestAgent(unittest.TestCase):
                                   "explorationStrategy": 1,
                                   "validVictimProbability": 0.7,
                                   "abortedVictimsDistance": 0.1,
-                                  "deepLimit": 0.9})
+                                  "strategy3DeepLimit": 0.9,
+                                  "strategy4DeepLimit": 0.1,
+                                  "strategy4FastLimit": 0.2})
         rospy.Rate(10).sleep()
         self.assertEqual(global_vars.test_agent.max_victims_, 3)
         self.assertEqual(global_vars.test_agent.max_qrs_, 17)
@@ -642,7 +683,9 @@ class TestAgent(unittest.TestCase):
                          "exploration_strategy1_state")
         self.assertEqual(global_vars.test_agent.valid_victim_probability_, 0.7)
         self.assertEqual(global_vars.test_agent.aborted_victims_distance_, 0.1)
-        self.assertEqual(global_vars.test_agent.deep_limit_, 0.9)
+        self.assertEqual(global_vars.test_agent.strategy3_deep_limit_, 0.9)
+        self.assertEqual(global_vars.test_agent.strategy4_deep_limit_, 0.1)
+        self.assertEqual(global_vars.test_agent.strategy4_fast_limit_, 0.2)
 
     def test_robocup_score(self):
         rospy.loginfo('test_robocup_score')
@@ -809,15 +852,15 @@ class TestAgent(unittest.TestCase):
 
     def test_update_victim_cost_function(self):
         rospy.loginfo('test_update_victim_cost_function')
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 3
         victim.victimPose.pose.position.x = 1
         victim.victimPose.pose.position.y = 2
         victim.victimPose.pose.position.z = 5.2
         victim.probability = 0.5
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         rospy.Rate(10).sleep()
         victim = VictimInfoMsg()
         victim.id = 3
@@ -841,15 +884,15 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.current_robot_pose_.pose.position.x = 4.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 11.6
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
         victim.probability = 0.3
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -869,22 +912,22 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_DF_HOLD
         global_vars.test_agent.current_robot_pose_.pose.position.x = 1.8
         global_vars.test_agent.current_robot_pose_.pose.position.y = 8.6
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
         victim.probability = 0.3
-        victims.append(victim)
+        victims_to_go.victims.append(victim)
         victim = VictimInfoMsg()
         victim.id = 9
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 9
         victim.victimPose.pose.position.z = 3.2
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.test_agent.new_victims_ = victims
+        victims_to_go.victims.append(victim)
+        global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
@@ -926,14 +969,14 @@ class TestAgent(unittest.TestCase):
 
     def test_victims_list(self):
         rospy.loginfo('test_victims_list')
-        victims = []
+        victims_to_go = WorldModelMsg()
         victim = VictimInfoMsg()
         victim.id = 5
         victim.victimPose.pose.position.x = 3
         victim.victimPose.pose.position.y = 4
         victim.probability = 0.2
-        victims.append(victim)
-        global_vars.com.victims_pub_.publish(victims)
+        victims_to_go.victims.append(victim)
+        global_vars.com.victims_pub_.publish(victims_to_go)
         rospy.Rate(10).sleep()
         self.assertEqual(global_vars.test_agent.new_victims_[0].id, 5)
         self.assertEqual(global_vars.test_agent.new_victims_[0].
