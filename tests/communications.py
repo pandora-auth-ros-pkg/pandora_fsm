@@ -217,7 +217,7 @@ class Communications():
 
     def end_effector_planner_cb(self, goal):
         rospy.loginfo('end_effector_planner_cb')
-        
+
         for i in range(5):
             rospy.Rate(1).sleep()
             if self.move_end_effector_succeeded_:

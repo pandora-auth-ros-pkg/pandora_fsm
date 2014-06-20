@@ -128,37 +128,37 @@ class ExplorationModeCostFunction4(cost_function.CostFunction):
         self.w1_ = 0.5
         self.w2_ = 0.2
         self.w3_ = 0.2
-        self.w4_ = 0.02
-        self.w5_ = 0.005
+        self.w4_ = 0.01
+        self.w5_ = 0.003
         self.w6_ = 0.9
         self.sum_weights_ = self.w1_ + self.w2_ + self.w3_ + \
             self.w4_ + self.w5_ + self.w6_
 
     def execute(self):
         cost = float(self.agent_.valid_victims_ -
-                self.agent_.strategy4_previous_victims_) / \
-                    self.agent_.max_victims_ * self.w1_
+                     self.agent_.strategy4_previous_victims_) / \
+            self.agent_.max_victims_ * self.w1_
 
         cost += float(self.agent_.qrs_ - self.agent_.strategy4_previous_qrs_) / \
             self.agent_.max_qrs_ * self.w2_
 
         cost += float(self.agent_.area_explored_ -
-                 self.agent_.strategy4_previous_area_) / \
-                    self.agent_.max_area_ * self.w3_
+                      self.agent_.strategy4_previous_area_) / \
+            self.agent_.max_area_ * self.w3_
 
-        cost += float(self.agent_.robot_resets_ - \
-            self.agent_.strategy4_previous_resets_) * self.w4_
+        cost += float(self.agent_.robot_resets_ -
+                      self.agent_.strategy4_previous_resets_) * self.w4_
 
-        cost += float(self.agent_.robot_restarts_ - \
-            self.agent_.strategy4_previous_restarts_) * self.w5_
+        cost += float(self.agent_.robot_restarts_ -
+                      self.agent_.strategy4_previous_restarts_) * self.w5_
 
         current_minutes_passed_in_seconds = \
             (rospy.get_rostime().secs - self.agent_.initial_time_) / 60
         current_minutes_passed_in_seconds *= 60
 
         cost += float(self.agent_.minutes_passed_ -
-                 current_minutes_passed_in_seconds) / \
-                    self.agent_.max_time_ * self.w6_
+                      current_minutes_passed_in_seconds) / \
+            self.agent_.max_time_ * self.w6_
 
         cost /= float(self.sum_weights_)
 
