@@ -43,7 +43,7 @@ import global_vars
 from actionlib import SimpleActionServer, SimpleActionClient
 from state_manager_communications.msg import robotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Int32, Empty
+from std_msgs.msg import Int32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
     MoveEndEffectorResult
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIResult
@@ -90,8 +90,6 @@ class Communications():
         self.robocup_score_pub_ = rospy.Publisher(robocup_score_topic, Int32)
         self.qr_notification_pub_ = rospy.Publisher(qr_notification_topic,
                                                     QrNotificationMsg)
-        self.robot_reset_pub_ = rospy.Publisher(robot_reset_topic, Empty)
-        self.robot_restart_pub_ = rospy.Publisher(robot_restart_topic, Empty)
         self.victims_pub_ = rospy.Publisher(world_model_topic, WorldModelMsg)
 
         self.do_exploration_as_ = SimpleActionServer(do_exploration_topic,

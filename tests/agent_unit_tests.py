@@ -66,25 +66,12 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.new_victims_ = []
         global_vars.test_agent.target_victim_ = VictimInfoMsg()
 
-        global_vars.test_agent.robot_resets_ = 0
-        global_vars.test_agent.robot_restarts_ = 0
-
-        global_vars.test_agent.strategy3_deep_limit_ = \
-            global_vars.test_agent.configs_["strategy3DeepLimit"]
-        global_vars.test_agent.strategy3_fast_limit_ = \
-            global_vars.test_agent.strategy3_deep_limit_ * 1.4
-
         global_vars.test_agent.strategy4_previous_victims_ = 0
         global_vars.test_agent.strategy4_previous_qrs_ = 0
         global_vars.test_agent.strategy4_previous_area_ = 0
         global_vars.test_agent.strategy4_previous_resets_ = 0
         global_vars.test_agent.strategy4_previous_restarts_ = 0
         global_vars.test_agent.strategy4_current_cost_ = 0
-
-        global_vars.test_agent.strategy5_deep_limit_ = \
-            global_vars.test_agent.configs_["strategy5DeepLimit"]
-        global_vars.test_agent.strategy5_fast_limit_ = \
-            global_vars.test_agent.strategy5_deep_limit_ * 1.4
 
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_OFF
 
@@ -97,12 +84,20 @@ class TestAgent(unittest.TestCase):
             update_configuration({"arenaVictims": 4, "maxQRs": 20,
                                   "arenaArea": 18, "maxTime": 1200,
                                   "timePassed": 0,
-                                  "explorationStrategy": 4,
                                   "validVictimProbability": 0.5,
                                   "abortedVictimsDistance": 0.05,
+                                  "robotResets": 0,
+                                  "robotRestarts": 0,
+                                  "explorationStrategy": 4,
                                   "strategy3DeepLimit": 0.85,
                                   "strategy4DeepLimit": 0,
-                                  "strategy4FastLimit": 0.1})
+                                  "strategy4FastLimit": 0.1,
+                                  "strategy5DeepLimit": 0.85})
+        
+        global_vars.test_agent.strategy3_fast_limit_ = \
+            global_vars.test_agent.strategy3_deep_limit_ * 1.4
+        global_vars.test_agent.strategy5_fast_limit_ = \
+            global_vars.test_agent.strategy5_deep_limit_ * 1.4
 
     def test_arena_type(self):
         rospy.loginfo('test_arena_type')
@@ -713,24 +708,30 @@ class TestAgent(unittest.TestCase):
             update_configuration({"arenaVictims": 3, "maxQRs": 17,
                                   "arenaArea": 20, "maxTime": 1790,
                                   "timePassed": 0,
-                                  "explorationStrategy": 1,
                                   "validVictimProbability": 0.7,
                                   "abortedVictimsDistance": 0.1,
+                                  "robotResets": 1,
+                                  "robotRestarts": 3,
+                                  "explorationStrategy": 1,
                                   "strategy3DeepLimit": 0.9,
                                   "strategy4DeepLimit": 0.1,
-                                  "strategy4FastLimit": 0.2})
+                                  "strategy4FastLimit": 0.2,
+                                  "strategy5DeepLimit": 0.95})
         rospy.Rate(10).sleep()
         self.assertEqual(global_vars.test_agent.max_victims_, 3)
         self.assertEqual(global_vars.test_agent.max_qrs_, 17)
         self.assertEqual(global_vars.test_agent.max_area_, 20)
         self.assertEqual(global_vars.test_agent.max_time_, 1790)
-        self.assertEqual(global_vars.test_agent.exploration_strategy_,
-                         "exploration_strategy1_state")
         self.assertEqual(global_vars.test_agent.valid_victim_probability_, 0.7)
         self.assertEqual(global_vars.test_agent.aborted_victims_distance_, 0.1)
+        self.assertEqual(global_vars.test_agent.robot_resets_, 1)
+        self.assertEqual(global_vars.test_agent.robot_restarts_, 3)
+        self.assertEqual(global_vars.test_agent.exploration_strategy_,
+                         "exploration_strategy1_state")
         self.assertEqual(global_vars.test_agent.strategy3_deep_limit_, 0.9)
         self.assertEqual(global_vars.test_agent.strategy4_deep_limit_, 0.1)
         self.assertEqual(global_vars.test_agent.strategy4_fast_limit_, 0.2)
+        self.assertEqual(global_vars.test_agent.strategy5_deep_limit_, 0.95)
 
     def test_robocup_score(self):
         rospy.loginfo('test_robocup_score')
@@ -738,18 +739,6 @@ class TestAgent(unittest.TestCase):
         global_vars.com.robocup_score_pub_.publish(msg)
         rospy.Rate(10).sleep()
         self.assertEqual(global_vars.test_agent.current_score_, 25)
-
-    def test_robot_reset(self):
-        rospy.loginfo('test_robot_reset')
-        global_vars.com.robot_reset_pub_.publish()
-        rospy.Rate(10).sleep()
-        self.assertEqual(global_vars.test_agent.robot_resets_, 1)
-
-    def test_robot_restart(self):
-        rospy.loginfo('test_robot_restart')
-        global_vars.com.robot_restart_pub_.publish()
-        rospy.Rate(10).sleep()
-        self.assertEqual(global_vars.test_agent.robot_restarts_, 1)
 
     def test_robot_start_state_start_exploration(self):
         rospy.loginfo('test_robot_start_state_start_exploration')

@@ -58,7 +58,7 @@ from robocup_states import WaitingToStartState, \
 
 from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
-from std_msgs.msg import Int32, Empty
+from std_msgs.msg import Int32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
@@ -84,9 +84,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.aborted_victims_ = []
         self.new_victims_ = []
         self.target_victim_ = VictimInfoMsg()
-
-        self.robot_resets_ = 0
-        self.robot_restarts_ = 0
 
         self.new_robot_state_cond_ = threading.Condition()
         self.current_robot_state_cond_ = threading.Condition()
@@ -115,10 +112,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         rospy.Subscriber(agent_topics.robocup_score_topic, Int32, self.score_cb)
         rospy.Subscriber(agent_topics.qr_notification_topic, QrNotificationMsg,
                          self.qr_notification_cb)
-        rospy.Subscriber(agent_topics.robot_reset_topic, Empty,
-                         self.robot_reset_cb)
-        rospy.Subscriber(agent_topics.robot_restart_topic, Empty,
-                         self.robot_restart_cb)
         rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
                          self.world_model_cb)
 
@@ -331,43 +324,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
     def qr_notification_cb(self, msg):
         self.qrs_ += 1
 
-    def robot_reset_cb(self, msg):
-        self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
-        self.area_explored_ = 0
-        self.current_score_ = 0
-        self.valid_victims_ = 0
-        self.qrs_ = 0
-        self.current_robot_pose_ = PoseStamped()
-        self.current_exploration_mode_ = -1
-        self.aborted_victims_ = []
-        self.new_victims_ = []
-        self.target_victim_ = VictimInfoMsg()
-
-        self.robot_restarts_ = 0
-
-        self.strategy3_deep_limit_ = self.configs_["strategy3DeepLimit"]
-        self.strategy3_fast_limit_ = self.strategy3_deep_limit_ * 1.4
-
-        self.strategy4_previous_victims_ = 0
-        self.strategy4_previous_qrs_ = 0
-        self.strategy4_previous_area_ = 0
-        self.strategy4_previous_resets_ = 0
-        self.strategy4_previous_restarts_ = 0
-        self.strategy4_current_cost_ = 0
-
-        self.strategy5_deep_limit_ = self.configs_["strategy5DeepLimit"]
-        self.strategy5_fast_limit_ = self.strategy5_deep_limit_ * 1.4
-
-        self.current_robot_state_ = robotModeMsg.MODE_OFF
-
-        self.previous_state_ = "waiting_to_start_state"
-        self.current_state_ = self.all_states_["waiting_to_start_state"]
-
-        self.robot_resets_ += 1
-
-    def robot_restart_cb(self, msg):
-        self.robot_restarts_ += 1
-
     def score_cb(self, msg):
         self.current_score_ = msg.data
 
@@ -383,6 +339,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.minutes_passed_ = config["timePassed"]
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
+        self.robot_resets_ = config["robotResets"]
+        self.robot_restarts_ = config["robotRestarts"]
         if config["explorationStrategy"] == 0:
             self.exploration_strategy_ = "old_exploration_state"
         elif config["explorationStrategy"] == 1:
@@ -400,7 +358,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.strategy4_fast_limit_ = config["strategy4FastLimit"]
         self.strategy5_deep_limit_ = config["strategy5DeepLimit"]
         self.define_states()
-        self.configs_ = config
         return config
 
 
