@@ -25,29 +25,10 @@ catkin_package(
 
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
      ${PROJECT_SOURCE_DIR}
-     src/pandora_fsm/containers/data_fusion_hold.py
-     src/pandora_fsm/containers/exploration.py
-     src/pandora_fsm/containers/identification.py
-     src/pandora_fsm/containers/robot_start.py
-     src/pandora_fsm/containers/validation.py
-     src/pandora_fsm/robocup_agent/agent.py
-     src/pandora_fsm/robocup_agent/agent_topics.py
-     src/pandora_fsm/robocup_agent/cost_function.py
-     src/pandora_fsm/robocup_agent/robocup_agent.py
-     src/pandora_fsm/robocup_agent/robocup_cost_functions.py
-     src/pandora_fsm/robocup_agent/robocup_states.py
-     src/pandora_fsm/robocup_agent/state.py
-     src/pandora_fsm/robocup_fsm/robocup_exploration_only_fsm.py
-     src/pandora_fsm/robocup_fsm/robocup_fsm.py
-     src/pandora_fsm/states/my_monitor_state.py
-     src/pandora_fsm/states/my_simple_action_state.py
-     src/pandora_fsm/states/navigation.py
-     src/pandora_fsm/states/state_changer.py
-     src/pandora_fsm/states/victims.py
-     tests/agent_functional_tests.py
-     tests/agent_unit_tests.py
-     tests/communications.py
-     tests/fsm_functional_test.py
-     tests/global_vars.py
+     src/pandora_fsm/containers/*.py
+     src/pandora_fsm/robocup_agent/*.py
+     src/pandora_fsm/robocup_fsm/*.py
+     src/pandora_fsm/states/*.py
+     tests/*.py
     )
 roslint_python(${${PROJECT_NAME}_LINT_PYTHON})
