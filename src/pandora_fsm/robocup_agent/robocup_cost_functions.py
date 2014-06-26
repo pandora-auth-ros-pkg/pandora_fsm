@@ -75,7 +75,7 @@ class ExplorationModeCostFunction2(cost_function.CostFunction):
         cost_function.CostFunction.__init__(self, agent)
         self.w1_ = 1.8 - 0.3*self.agent_.max_victims_
         self.w2_ = 0.24 - 0.008*self.agent_.max_qrs_
-        self.w3_ = 0.06 - 0.001333333*self.agent_.max_area_
+        self.w3_ = 0.06 - 0.001333333*self.agent_.max_yellow_area_
         self.w4_ = 0.15
         self.w5_ = 0.05
         self.w6_ = -(0.06 - 0.001333333*self.agent_.max_time_/60)
@@ -85,7 +85,7 @@ class ExplorationModeCostFunction2(cost_function.CostFunction):
     def execute(self):
         cost = self.agent_.valid_victims_ * self.w1_
         cost += self.agent_.qrs_ * self.w2_
-        cost += self.agent_.area_explored_ * self.w3_
+        cost += self.agent_.yellow_arena_area_explored_ * self.w3_
         cost += self.agent_.robot_resets_ * self.w4_
         cost += self.agent_.robot_restarts_ * self.w5_
         cost += (rospy.get_rostime().secs - self.agent_.initial_time_) * \
@@ -103,7 +103,7 @@ class ExplorationModeCostFunction3(cost_function.CostFunction):
         cost_function.CostFunction.__init__(self, agent)
         self.w1_ = 1.8 - 0.3*self.agent_.max_victims_
         self.w2_ = 0.24 - 0.008*self.agent_.max_qrs_
-        self.w3_ = 0.06 - 0.001333333*self.agent_.max_area_
+        self.w3_ = 0.06 - 0.001333333*self.agent_.max_yellow_area_
         self.w4_ = 0.15
         self.w5_ = 0.05
         self.sum_weights_ = self.w1_ + self.w2_ + self.w3_ + self.w4_ + self.w5_
@@ -111,7 +111,7 @@ class ExplorationModeCostFunction3(cost_function.CostFunction):
     def execute(self):
         cost = self.agent_.valid_victims_ * self.w1_
         cost += self.agent_.qrs_ * self.w2_
-        cost += self.agent_.area_explored_ * self.w3_
+        cost += self.agent_.yellow_arena_area_explored_ * self.w3_
         cost += self.agent_.robot_resets_ * self.w4_
         cost += self.agent_.robot_restarts_ * self.w5_
         cost /= self.sum_weights_
@@ -142,9 +142,9 @@ class ExplorationModeCostFunction4(cost_function.CostFunction):
         cost += float(self.agent_.qrs_ - self.agent_.strategy4_previous_qrs_) / \
             self.agent_.max_qrs_ * self.w2_
 
-        cost += float(self.agent_.area_explored_ -
+        cost += float(self.agent_.yellow_arena_area_explored_ -
                       self.agent_.strategy4_previous_area_) / \
-            self.agent_.max_area_ * self.w3_
+            self.agent_.max_yellow_area_ * self.w3_
 
         cost += float(self.agent_.robot_resets_ -
                       self.agent_.strategy4_previous_resets_) * self.w4_

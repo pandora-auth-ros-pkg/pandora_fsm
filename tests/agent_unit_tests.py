@@ -56,7 +56,8 @@ class TestAgent(unittest.TestCase):
     def tearDown(self):
         global_vars.com.robot_pose_ = PoseStamped()
         global_vars.test_agent.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
-        global_vars.test_agent.area_explored_ = 0
+        global_vars.test_agent.yellow_arena_area_explored_ = 0
+        global_vars.test_agent.yellow_black_arena_area_explored_ = 0
         global_vars.test_agent.current_score_ = 0
         global_vars.test_agent.valid_victims_ = 0
         global_vars.test_agent.qrs_ = 0
@@ -75,14 +76,15 @@ class TestAgent(unittest.TestCase):
 
         global_vars.test_agent.current_robot_state_ = robotModeMsg.MODE_OFF
 
-        global_vars.test_agent.previous_state_ = "waiting_to_start_state"
-
         global_vars.test_agent.current_state_ = \
             global_vars.test_agent.all_states_["waiting_to_start_state"]
 
         global_vars.com.dynamic_reconfigure_client.\
-            update_configuration({"arenaVictims": 4, "maxQRs": 20,
-                                  "arenaArea": 18, "maxTime": 1200,
+            update_configuration({"arenaVictims": 4,
+                                  "maxQRs": 20,
+                                  "yellowArenaArea": 18,
+                                  "yellowBlackArenaArea": 12,
+                                  "maxTime": 1200,
                                   "timePassed": 0,
                                   "validVictimProbability": 0.5,
                                   "abortedVictimsDistance": 0.05,
@@ -93,7 +95,7 @@ class TestAgent(unittest.TestCase):
                                   "strategy4DeepLimit": 0,
                                   "strategy4FastLimit": 0.1,
                                   "strategy5DeepLimit": 0.85})
-        
+
         global_vars.test_agent.strategy3_fast_limit_ = \
             global_vars.test_agent.strategy3_deep_limit_ * 1.4
         global_vars.test_agent.strategy5_fast_limit_ = \
@@ -265,7 +267,7 @@ class TestAgent(unittest.TestCase):
     def test_exploration_mode_cost_function2(self):
         rospy.loginfo('test_exploration_mode_cost_function2')
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 1
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
@@ -277,7 +279,7 @@ class TestAgent(unittest.TestCase):
     def test_exploration_mode_cost_function3(self):
         rospy.loginfo('test_exploration_mode_cost_function3')
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 1
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
@@ -289,7 +291,7 @@ class TestAgent(unittest.TestCase):
     def test_exploration_mode_cost_function4(self):
         rospy.loginfo('test_exploration_mode_cost_function4')
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 1
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
@@ -323,7 +325,7 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 2
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 1
@@ -344,7 +346,7 @@ class TestAgent(unittest.TestCase):
             "exploration_strategy3_state"
         global_vars.test_agent.define_states()
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 1
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
@@ -369,7 +371,7 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.current_robot_state_ = \
             robotModeMsg.MODE_EXPLORATION
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 2
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 1
@@ -472,7 +474,7 @@ class TestAgent(unittest.TestCase):
             "exploration_strategy5_state"
         global_vars.test_agent.define_states()
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 600
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         global_vars.test_agent.valid_victims_ = 1
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
@@ -705,8 +707,11 @@ class TestAgent(unittest.TestCase):
     def test_reconfigure(self):
         rospy.loginfo('test_reconfigure')
         global_vars.com.dynamic_reconfigure_client.\
-            update_configuration({"arenaVictims": 3, "maxQRs": 17,
-                                  "arenaArea": 20, "maxTime": 1790,
+            update_configuration({"arenaVictims": 3,
+                                  "maxQRs": 17,
+                                  "yellowArenaArea": 20,
+                                  "yellowBlackArenaArea": 15,
+                                  "maxTime": 1790,
                                   "timePassed": 0,
                                   "validVictimProbability": 0.7,
                                   "abortedVictimsDistance": 0.1,
@@ -720,7 +725,8 @@ class TestAgent(unittest.TestCase):
         rospy.Rate(10).sleep()
         self.assertEqual(global_vars.test_agent.max_victims_, 3)
         self.assertEqual(global_vars.test_agent.max_qrs_, 17)
-        self.assertEqual(global_vars.test_agent.max_area_, 20)
+        self.assertEqual(global_vars.test_agent.max_yellow_area_, 20)
+        self.assertEqual(global_vars.test_agent.max_yellow_black_area_, 15)
         self.assertEqual(global_vars.test_agent.max_time_, 1790)
         self.assertEqual(global_vars.test_agent.valid_victim_probability_, 0.7)
         self.assertEqual(global_vars.test_agent.aborted_victims_distance_, 0.1)
@@ -813,9 +819,22 @@ class TestAgent(unittest.TestCase):
         next_state = global_vars.test_agent.\
             all_states_["teleoperation_state"].make_transition()
         rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "robot_start_state")
+        self.assertEqual(next_state, "scan_end_effector_planner_state")
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_START_AUTONOMOUS)
+                         robotModeMsg.MODE_EXPLORATION)
+
+    def test_teleoperation_state_stop_button(self):
+        rospy.loginfo('test_teleoperation_state_stop_button')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_TELEOPERATED_LOCOMOTION
+        global_vars.test_agent.transition_to_state(robotModeMsg.MODE_OFF)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["teleoperation_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "stop_button_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_OFF)
 
     def test_test_and_park_end_effector_planner_state_robot_start(self):
         rospy.loginfo('test_test_and_park_end_effector_planner_state_\
@@ -1039,6 +1058,180 @@ class TestAgent(unittest.TestCase):
         rospy.Rate(10).sleep()
         next_state = global_vars.test_agent.\
             all_states_["waiting_to_start_state"].make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_yellow_black_arena_exploration_strategy1_state_exploration(self):
+        rospy.loginfo('test_yellow_black_arena_exploration_strategy1_state_\
+                      exploration')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.yellow_black_arena_area_explored_ = \
+            global_vars.test_agent.max_yellow_black_area_ * 0.8
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_exploration_strategy1_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(global_vars.test_agent.current_exploration_mode_,
+                         DoExplorationGoal.TYPE_DEEP)
+
+    def test_yellow_black_arena_exploration_strategy1_state_stop_button(self):
+        rospy.loginfo('test_yellow_black_arena_exploration_strategy1_state_\
+                      stop_button')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.MODE_OFF)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_exploration_strategy1_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "stop_button_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_OFF)
+
+    def test_yellow_black_arena_exploration_strategy1_state_teleoperation(self):
+        rospy.loginfo('test_yellow_black_arena_exploration_strategy1_state_\
+                      teleoperation')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.
+                                                   MODE_TELEOPERATED_LOCOMOTION)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_exploration_strategy1_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_yellow_black_arena_save_robot_pose_state_exploration(self):
+        rospy.loginfo('test_yellow_black_arena_save_robot_pose_state_\
+                      exploration')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        starting_x = 1.8
+        starting_y = 8.6
+        global_vars.com.robot_pose_.pose.position.x = starting_x
+        global_vars.com.robot_pose_.pose.position.y = starting_y
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_save_robot_pose_state"].execute()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_save_robot_pose_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state,
+                         "yellow_black_arena_exploration_strategy1_state")
+        self.assertGreater(global_vars.test_agent.
+                           save_robot_pose_.pose.position.x, starting_x)
+        self.assertGreater(global_vars.test_agent.
+                           save_robot_pose_.pose.position.y, starting_y)
+        self.assertEqual(global_vars.test_agent.current_exploration_mode_, -1)
+
+    def test_yellow_black_arena_save_robot_pose_state_teleoperation(self):
+        rospy.loginfo('test_yellow_black_arena_save_robot_pose_state_\
+                      teleoperation')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.
+                                                   MODE_TELEOPERATED_LOCOMOTION)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_save_robot_pose_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_yellow_black_arena_turn_back_check_state_aborted(self):
+        rospy.loginfo('test_yellow_black_arena_turn_back_check_state_aborted')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_move_base_state"].\
+            execute()
+        global_vars.com.move_base_aborted_ = True
+        rospy.sleep(2.)
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_check_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state,
+                         "yellow_black_arena_turn_back_move_base_state")
+
+    def test_yellow_black_arena_turn_back_check_state_stop_button(self):
+        rospy.loginfo('test_yellow_black_arena_turn_back_check_state_\
+                      stop_button')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.MODE_OFF)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_check_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "stop_button_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_OFF)
+
+    def test_yellow_black_arena_turn_back_check_state_succeeded(self):
+        rospy.loginfo('test_yellow_black_arena_turn_back_check_state_succeeded')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_move_base_state"].\
+            execute()
+        global_vars.com.move_base_succeeded_ = True
+        rospy.sleep(2.)
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_check_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_yellow_black_arena_turn_back_check_state_teleoperation(self):
+        rospy.loginfo('test_yellow_black_arena_turn_back_check_state_\
+                      teleoperation')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.
+                                                   MODE_TELEOPERATED_LOCOMOTION)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_check_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
+    def test_yellow_black_arena_turn_back_move_base_state_check(self):
+        rospy.loginfo('test_yellow_black_arena_turn_back_move_base_state_check')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_move_base_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "yellow_black_arena_turn_back_check_state")
+
+    def test_yellow_black_arena_turn_back_move_base_state_teleoperation(self):
+        rospy.loginfo('test_yellow_black_arena_turn_back_move_base_state_\
+                      teleoperation')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_EXPLORATION
+        global_vars.test_agent.transition_to_state(robotModeMsg.
+                                                   MODE_TELEOPERATED_LOCOMOTION)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["yellow_black_arena_turn_back_move_base_state"].\
+            make_transition()
         rospy.Rate(10).sleep()
         self.assertEqual(next_state, "teleoperation_state")
         self.assertEqual(global_vars.test_agent.current_robot_state_,

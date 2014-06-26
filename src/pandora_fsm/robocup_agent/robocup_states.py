@@ -84,7 +84,6 @@ class TestAndParkEndEffectorPlannerState(state.State):
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
         self.name_ = "test_and_park_end_effector_planner_state"
-        self.abort_robot_start_ = False
 
     def execute(self):
         self.test_and_park_end_effector_planner()
@@ -100,8 +99,8 @@ class TestAndParkEndEffectorPlannerState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
-        if self.abort_robot_start_:
-            self.abort_robot_start_ = False
+        if self.agent_.end_effector_planner_ac_.get_state() == \
+                actionlib.GoalStatus.ABORTED:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.transition_to_state(robotModeMsg.MODE_OFF)
             self.agent_.new_robot_state_cond_.wait()
@@ -119,14 +118,10 @@ class TestAndParkEndEffectorPlannerState(state.State):
         self.agent_.end_effector_planner_ac_.wait_for_result()
         if self.agent_.end_effector_planner_ac_.get_state() == \
                 actionlib.GoalStatus.ABORTED:
-            self.abort_robot_start_ = True
             return None
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
         self.agent_.end_effector_planner_ac_.send_goal(goal)
         self.agent_.end_effector_planner_ac_.wait_for_result()
-        if self.agent_.end_effector_planner_ac_.get_state() == \
-                actionlib.GoalStatus.ABORTED:
-            self.abort_robot_start_ = True
 
 
 class RobotStartState(state.State):
@@ -202,6 +197,7 @@ class ScanEndEffectorPlannerState(state.State):
 
     def scan_end_effector_planner(self):
         self.agent_.end_effector_planner_ac_.cancel_all_goals()
+        self.agent_.end_effector_planner_ac_.wait_for_result()
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
         self.agent_.end_effector_planner_ac_.send_goal(goal)
 
@@ -218,6 +214,8 @@ class ExplorationStrategy1State(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -227,6 +225,8 @@ class ExplorationStrategy1State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -277,6 +277,9 @@ class ExplorationStrategy1State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
+                self.agent_.end_effector_planner_ac_.cancel_all_goals()
+                self.agent_.end_effector_planner_ac_.wait_for_result()
+                self.end_exploration()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
@@ -303,8 +306,8 @@ class ExplorationStrategy1State(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = -1
         self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
@@ -325,6 +328,8 @@ class ExplorationStrategy2State(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -334,6 +339,8 @@ class ExplorationStrategy2State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -384,6 +391,9 @@ class ExplorationStrategy2State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
+                self.agent_.end_effector_planner_ac_.cancel_all_goals()
+                self.agent_.end_effector_planner_ac_.wait_for_result()
+                self.end_exploration()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
@@ -410,8 +420,8 @@ class ExplorationStrategy2State(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = -1
         self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
@@ -432,6 +442,8 @@ class ExplorationStrategy3State(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -441,6 +453,8 @@ class ExplorationStrategy3State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -505,6 +519,9 @@ class ExplorationStrategy3State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
+                self.agent_.end_effector_planner_ac_.cancel_all_goals()
+                self.agent_.end_effector_planner_ac_.wait_for_result()
+                self.end_exploration()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
@@ -531,8 +548,8 @@ class ExplorationStrategy3State(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = -1
         self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
@@ -553,6 +570,8 @@ class ExplorationStrategy4State(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -562,6 +581,8 @@ class ExplorationStrategy4State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -597,12 +618,14 @@ class ExplorationStrategy4State(state.State):
             self.agent_.strategy4_previous_victims_ = \
                 self.agent_.valid_victims_
             self.agent_.strategy4_previous_qrs_ = self.agent_.qrs_
-            self.agent_.strategy4_previous_area_ = self.agent_.area_explored_
+            self.agent_.strategy4_previous_area_ = \
+                self.agent_.yellow_arena_area_explored_
             self.agent_.strategy4_previous_resets_ = self.agent_.robot_resets_
-            self.agent_.strategy4_previous_restarts_ = self.agent_.robot_restarts_
+            self.agent_.strategy4_previous_restarts_ = \
+                self.agent_.robot_restarts_
             self.agent_.strategy4_current_cost_ = current_cost
             self.agent_.minutes_passed_ = \
-                ((rospy.get_rostime().secs - self.agent_.initial_time_) / 60) * 60
+                rospy.get_rostime().secs - self.agent_.initial_time_
 
         if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
             if self.agent_.strategy4_current_cost_ < \
@@ -625,6 +648,9 @@ class ExplorationStrategy4State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
+                self.agent_.end_effector_planner_ac_.cancel_all_goals()
+                self.agent_.end_effector_planner_ac_.wait_for_result()
+                self.end_exploration()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
@@ -651,8 +677,8 @@ class ExplorationStrategy4State(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = -1
         self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
@@ -673,6 +699,8 @@ class ExplorationStrategy5State(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -682,6 +710,8 @@ class ExplorationStrategy5State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -784,6 +814,9 @@ class ExplorationStrategy5State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
+                self.agent_.end_effector_planner_ac_.cancel_all_goals()
+                self.agent_.end_effector_planner_ac_.wait_for_result()
+                self.end_exploration()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
@@ -810,8 +843,8 @@ class ExplorationStrategy5State(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = -1
         self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
@@ -832,6 +865,8 @@ class OldExplorationState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -841,6 +876,8 @@ class OldExplorationState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.end_exploration()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -887,14 +924,14 @@ class OldExplorationState(state.State):
                                                  done_cb=self.done_cb)
 
     def end_exploration(self):
-        self.agent_.current_exploration_mode_ = 0
         self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
 
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
-        self.agent_.current_exploration_mode_ = 0
+        self.agent_.current_exploration_mode_ = -1
 
 
 class TrackEndEffectorPlannerState(state.State):
@@ -921,6 +958,7 @@ class TrackEndEffectorPlannerState(state.State):
 
     def track_end_effector_planner(self):
         self.agent_.end_effector_planner_ac_.cancel_all_goals()
+        self.agent_.end_effector_planner_ac_.wait_for_result()
         goal = MoveEndEffectorGoal()
         goal.command = MoveEndEffectorGoal.TRACK
         goal.point_of_interest = \
@@ -941,6 +979,8 @@ class IdentificationMoveToVictimState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -971,7 +1011,10 @@ class IdentificationCheckForVictimsState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -980,7 +1023,10 @@ class IdentificationCheckForVictimsState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -992,6 +1038,7 @@ class IdentificationCheckForVictimsState(state.State):
         if self.agent_.end_effector_planner_ac_.get_state() == \
                 actionlib.GoalStatus.ABORTED:
             self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
             new_victims_cost = self.cost_functions_[0].execute()
             max_victim_cost = 0
             for i in range(0, len(new_victims_cost)):
@@ -1001,6 +1048,7 @@ class IdentificationCheckForVictimsState(state.State):
 
             if max_victim_cost > 0:
                 self.agent_.move_base_ac_.cancel_all_goals()
+                self.agent_.move_base_ac_.wait_for_result()
                 self.agent_.target_victim_ = max_victim
                 return self.next_states_[3]
 
@@ -1017,6 +1065,7 @@ class IdentificationCheckForVictimsState(state.State):
         updated_victim = self.cost_functions_[1].execute()
         if updated_victim == 1:
             self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
             return self.next_states_[3]
 
         if self.agent_.move_base_ac_.get_state() == \
@@ -1059,6 +1108,7 @@ class IdentificationCheckForVictimsState(state.State):
 
             if max_victim_cost > 0:
                 self.agent_.move_base_ac_.cancel_all_goals()
+                self.agent_.move_base_ac_.wait_for_result()
                 self.agent_.target_victim_ = max_victim
                 return self.next_states_[3]
 
@@ -1088,6 +1138,8 @@ class DataFusionHoldState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -1097,6 +1149,8 @@ class DataFusionHoldState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -1178,6 +1232,8 @@ class ValidationState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -1186,6 +1242,8 @@ class ValidationState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -1250,6 +1308,201 @@ class ValidationState(state.State):
         self.agent_.data_fusion_validate_victim_ac_.wait_for_result()
 
 
+class YellowBlackArenaSaveRobotPoseState(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "yellow_black_arena_save_robot_pose_state"
+
+    def execute(self):
+        self.agent_.current_exploration_mode_ = DoExplorationGoal.TYPE_FAST
+        goal = DoExplorationGoal(exploration_type=DoExplorationGoal.TYPE_FAST)
+        self.agent_.do_exploration_ac_.send_goal(goal,
+                                                 feedback_cb=self.feedback_cb,
+                                                 done_cb=self.done_cb)
+        rospy.sleep(2.)
+        self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
+
+    def make_transition(self):
+        if self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.end_exploration()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[0]
+        return self.next_states_[1]
+
+    def end_exploration(self):
+        self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
+
+    def feedback_cb(self, feedback):
+        self.agent_.save_robot_pose_ = feedback.base_position
+
+    def done_cb(self, status, result):
+        self.agent_.current_exploration_mode_ = -1
+
+
+class YellowBlackArenaExplorationStrategy1State(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "yellow_black_arena_exploration_strategy1_state"
+
+    def execute(self):
+        pass
+
+    def make_transition(self):
+        if self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.end_exploration()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[0]
+        elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.end_exploration()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[1]
+
+        if self.agent_.yellow_black_arena_area_explored_ < \
+                self.agent_.max_yellow_black_area_*0.75:
+            if self.agent_.current_exploration_mode_ != \
+                    DoExplorationGoal.TYPE_FAST:
+                self.start_exploration(DoExplorationGoal.TYPE_FAST)
+        else:
+            if self.agent_.current_exploration_mode_ != \
+                    DoExplorationGoal.TYPE_DEEP:
+                self.start_exploration(DoExplorationGoal.TYPE_DEEP)
+        return self.next_states_[2]
+
+    def start_exploration(self, exploration_mode):
+        if self.agent_.current_exploration_mode_ != -1:
+            self.end_exploration()
+
+        rospy.Rate(2).sleep()
+        self.agent_.current_exploration_mode_ = exploration_mode
+        goal = DoExplorationGoal(exploration_type=exploration_mode)
+        self.agent_.do_exploration_ac_.send_goal(goal,
+                                                 feedback_cb=self.feedback_cb,
+                                                 done_cb=self.done_cb)
+
+    def end_exploration(self):
+        self.agent_.do_exploration_ac_.cancel_all_goals()
+        self.agent_.do_exploration_ac_.wait_for_result()
+
+    def feedback_cb(self, feedback):
+        self.agent_.current_robot_pose_ = feedback.base_position
+
+    def done_cb(self, status, result):
+        self.agent_.current_exploration_mode_ = -1
+
+
+class YellowBlackArenaTurnBackMoveBaseState(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "yellow_black_arena_turn_back_move_base_state"
+
+    def execute(self):
+        goal = MoveBaseGoal(target_pose=self.agent_.save_robot_pose_)
+        self.agent_.move_base_ac_.send_goal(goal, feedback_cb=self.feedback_cb)
+
+    def make_transition(self):
+        if self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[0]
+        return self.next_states_[1]
+
+    def feedback_cb(self, feedback):
+        self.agent_.current_robot_pose_ = feedback.base_position
+
+
+class YellowBlackArenaTurnBackCheckState(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "yellow_black_arena_turn_back_check_state"
+
+    def execute(self):
+        pass
+
+    def make_transition(self):
+        if self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[0]
+        elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.move_base_ac_.cancel_all_goals()
+            self.agent_.move_base_ac_.wait_for_result()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[1]
+
+        if self.agent_.move_base_ac_.get_state() == \
+                actionlib.GoalStatus.SUCCEEDED:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.transition_to_state(robotModeMsg.
+                                            MODE_TELEOPERATED_LOCOMOTION)
+            self.agent_.new_robot_state_cond_.wait()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[0]
+        elif self.agent_.move_base_ac_.get_state() == \
+                actionlib.GoalStatus.ABORTED:
+            return self.next_states_[3]
+        return self.next_states_[2]
+
+
 class TeleoperationState(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
@@ -1260,13 +1513,7 @@ class TeleoperationState(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_START_AUTONOMOUS:
-            for victim in self.agent_.new_victims_:
-                goal = DeleteVictimGoal(victimId=victim_.id)
-                self.agent_.delete_victim_ac_.send_goal(goal)
-                self.agent_.delete_victim_ac_.wait_for_result()
-
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -1274,6 +1521,29 @@ class TeleoperationState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[1]
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_START_AUTONOMOUS:
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+
+            for victim in self.agent_.new_victims_:
+                goal = DeleteVictimGoal(victimId=victim_.id)
+                self.agent_.delete_victim_ac_.send_goal(goal)
+                self.agent_.delete_victim_ac_.wait_for_result()
+
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+            self.agent_.new_robot_state_cond_.wait()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[2]
         return self.next_states_[0]
 
 
@@ -1299,6 +1569,15 @@ class StopButtonState(state.State):
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_START_AUTONOMOUS:
             self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+            self.agent_.new_robot_state_cond_.wait()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.release()

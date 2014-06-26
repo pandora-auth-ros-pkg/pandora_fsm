@@ -139,7 +139,7 @@ class TestAgent(unittest.TestCase):
             global_vars.com.qr_notification_pub_.publish(msg)
             rospy.Rate(10).sleep()
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 400
-        global_vars.test_agent.area_explored_ = 10
+        global_vars.test_agent.yellow_arena_area_explored_ = 10
         rospy.sleep(2.)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                          DoExplorationGoal.TYPE_NORMAL)
