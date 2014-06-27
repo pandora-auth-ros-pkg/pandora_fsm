@@ -42,7 +42,7 @@ import global_vars
 
 from state_manager_communications.msg import robotModeMsg
 from geometry_msgs.msg import Point
-from std_msgs.msg import Int32
+from std_msgs.msg import Float32
 from pandora_fsm.robocup_agent.robocup_states import DataFusionHoldState, \
     ExplorationStrategy4State, IdentificationCheckForVictimsState, \
     TeleoperationState
@@ -151,7 +151,8 @@ class TestAgent(unittest.TestCase):
             global_vars.com.qr_notification_pub_.publish(msg)
             rospy.Rate(10).sleep()
         global_vars.test_agent.initial_time_ = rospy.get_rostime().secs - 400
-        global_vars.test_agent.yellow_arena_area_explored_ = 10
+        msg = Float32(data=10)
+        global_vars.com.area_covered_pub_.publish(msg)
         rospy.sleep(2.)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_,
                          DoExplorationGoal.TYPE_NORMAL)

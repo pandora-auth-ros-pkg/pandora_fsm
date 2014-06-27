@@ -50,7 +50,7 @@ from math import sqrt, pow
 
 from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
@@ -103,6 +103,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         rospy.Subscriber(agent_topics.robocup_score_topic, Int32, self.score_cb)
         rospy.Subscriber(agent_topics.qr_notification_topic, QrNotificationMsg,
                          self.qr_notification_cb)
+        rospy.Subscriber(agent_topics.area_covered_topic, Float32,
+                         self.area_covered_cb)
         rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
                          self.world_model_cb)
 
@@ -377,6 +379,14 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def score_cb(self, msg):
         self.current_score_ = msg.data
+
+    def area_covered_cb(self, msg):
+        if self.current_state_.name_ != \
+                "yellow_black_arena_save_robot_pose_state":
+            self.yellow_arena_area_explored_ = msg.data
+        else:
+            self.yellow_black_arena_area_explored_ = \
+                msg.data - self.yellow_arena_area_explored_
 
     def world_model_cb(self, msg):
         self.new_victims_ = msg.victims

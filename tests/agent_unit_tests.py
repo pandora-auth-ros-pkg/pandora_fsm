@@ -41,7 +41,7 @@ import global_vars
 
 from state_manager_communications.msg import robotModeMsg
 from geometry_msgs.msg import PoseStamped, Point
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 from pandora_fsm.robocup_agent.robocup_cost_functions import \
     ExplorationModeCostFunction, ExplorationModeCostFunction2, \
     ExplorationModeCostFunction3, ExplorationModeCostFunction4, \
@@ -101,13 +101,20 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.strategy5_fast_limit_ = \
             global_vars.test_agent.strategy5_deep_limit_ * 1.4
 
+    def test_area_covered(self):
+        rospy.loginfo('test_area_covered')
+        msg = Float32(data=10)
+        global_vars.com.area_covered_pub_.publish(msg)
+        rospy.Rate(10).sleep()
+        self.assertEqual(global_vars.test_agent.yellow_arena_area_explored_, 10)
+
     def test_arena_type(self):
         rospy.loginfo('test_arena_type')
         msg = ArenaTypeMsg(arena_type=ArenaTypeMsg.TYPE_ORANGE)
         global_vars.com.arena_type_pub_.publish(msg)
         rospy.Rate(10).sleep()
-        self.assertEqual(global_vars.test_agent.
-                         current_arena_, ArenaTypeMsg.TYPE_ORANGE)
+        self.assertEqual(global_vars.test_agent.current_arena_,
+                         ArenaTypeMsg.TYPE_ORANGE)
 
     def test_calculate_distance_2d(self):
         rospy.loginfo('test_calculate_distance_2d')
@@ -589,7 +596,7 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(next_state, "teleoperation_state")
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
-#~
+
     def test_identification_state_aborted_victim_find_new_victim(self):
         rospy.loginfo('test_identification_state_\
                       aborted_victim_find_new_victim')

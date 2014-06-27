@@ -36,6 +36,7 @@
 delete_victim_topic = '/data_fusion/delete_victim'
 qr_notification_topic = '/data_fusion/qr_notification'
 robocup_score_topic = '/data_fusion/robocup_score'
+area_covered_topic = '/data_fusion/sensor_coverage/area_covered'
 data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
 world_model_topic = '/data_fusion/world_model'
 do_exploration_topic = '/navigation/do_exploration'

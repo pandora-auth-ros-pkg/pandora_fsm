@@ -43,7 +43,7 @@ import global_vars
 from actionlib import SimpleActionServer, SimpleActionClient
 from state_manager_communications.msg import robotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Int32
+from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
     MoveEndEffectorResult
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIResult
@@ -54,11 +54,11 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseFeedback, MoveBaseResult
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationAction, \
     DoExplorationFeedback, DoExplorationResult
 from pandora_fsm.robocup_agent.agent_topics import arena_type_topic, \
-    robocup_score_topic, qr_notification_topic, robot_reset_topic, \
-    robot_restart_topic, world_model_topic, do_exploration_topic, \
-    gui_validation_topic, data_fusion_validate_victim_topic, move_base_topic, \
-    delete_victim_topic, move_end_effector_planner_topic, \
-    state_changer_action_topic
+    robocup_score_topic, area_covered_topic, qr_notification_topic, \
+    robot_reset_topic, robot_restart_topic, world_model_topic, \
+    do_exploration_topic, gui_validation_topic, \
+    data_fusion_validate_victim_topic, move_base_topic, delete_victim_topic, \
+    move_end_effector_planner_topic, state_changer_action_topic
 
 
 class TestStateClient(state_manager.state_client.StateClient):
@@ -90,6 +90,7 @@ class Communications():
         self.robocup_score_pub_ = rospy.Publisher(robocup_score_topic, Int32)
         self.qr_notification_pub_ = rospy.Publisher(qr_notification_topic,
                                                     QrNotificationMsg)
+        self.area_covered_pub_ = rospy.Publisher(area_covered_topic, Float32)
         self.victims_pub_ = rospy.Publisher(world_model_topic, WorldModelMsg)
 
         self.do_exploration_as_ = SimpleActionServer(do_exploration_topic,
