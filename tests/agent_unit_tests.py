@@ -146,6 +146,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.3
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -154,6 +158,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         next_state = global_vars.test_agent.\
@@ -176,6 +184,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.3
         victims_to_go.victims.append(victim)
         victim = VictimInfoMsg()
@@ -183,6 +195,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 9
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -191,6 +207,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         next_state = global_vars.test_agent.\
@@ -236,6 +256,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.9
         victim.sensors.append('FACE')
         victim.sensors.append('THERMAL')
@@ -246,6 +270,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         next_state = global_vars.test_agent.\
@@ -396,6 +424,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 3
         victim.victimPose.pose.position.y = 4
         victim.victimPose.pose.position.z = 3
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         victim = VictimInfoMsg()
@@ -403,6 +435,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -504,6 +540,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 3
         victim.victimPose.pose.position.y = 4
         victim.victimPose.pose.position.z = 3
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.aborted_victims_.append([victim, 1])
@@ -512,6 +552,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -545,7 +589,7 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(next_state, "teleoperation_state")
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
-
+#~
     def test_identification_state_aborted_victim_find_new_victim(self):
         rospy.loginfo('test_identification_state_\
                       aborted_victim_find_new_victim')
@@ -561,6 +605,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 9
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -569,6 +617,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         global_vars.test_agent.\
@@ -596,6 +648,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         global_vars.test_agent.\
@@ -633,6 +689,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -641,6 +701,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         global_vars.test_agent.\
@@ -681,14 +745,22 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
         victim = VictimInfoMsg()
         victim.id = 8
         victim.victimPose.pose.position.x = 2
-        victim.victimPose.pose.position.y = 6
-        victim.victimPose.pose.position.z = 3.3
+        victim.victimPose.pose.position.y = 6.1
+        victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         next_state = global_vars.test_agent.\
@@ -911,6 +983,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 1
         victim.victimPose.pose.position.y = 2
         victim.victimPose.pose.position.z = 5.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.5
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -918,8 +994,12 @@ class TestAgent(unittest.TestCase):
         victim = VictimInfoMsg()
         victim.id = 3
         victim.victimPose.pose.position.x = 1
-        victim.victimPose.pose.position.y = 2
-        victim.victimPose.pose.position.z = 5.3
+        victim.victimPose.pose.position.y = 2.1
+        victim.victimPose.pose.position.z = 5.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.5
         global_vars.test_agent.target_victim_ = victim
         cost_function = UpdateVictimCostFunction(global_vars.test_agent)
@@ -943,6 +1023,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.3
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -951,6 +1035,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         next_state = global_vars.test_agent.\
@@ -971,6 +1059,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.3
         victims_to_go.victims.append(victim)
         victim = VictimInfoMsg()
@@ -978,6 +1070,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 9
         victim.victimPose.pose.position.z = 3.2
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
@@ -986,6 +1082,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.x = 2
         victim.victimPose.pose.position.y = 6
         victim.victimPose.pose.position.z = 3.5
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.2
         global_vars.test_agent.target_victim_ = victim
         next_state = global_vars.test_agent.\

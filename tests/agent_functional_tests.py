@@ -75,6 +75,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = \
             global_vars.com.robot_pose_.pose.position.y - 0.5
         victim.victimPose.pose.position.z = 0.4
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
@@ -98,6 +102,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = \
             global_vars.test_agent.target_victim_.victimPose.pose.position.y
         victim.victimPose.pose.position.z = 0.4
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
@@ -118,6 +126,10 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.position.y = \
             global_vars.test_agent.target_victim_.victimPose.pose.position.y
         victim.victimPose.pose.position.z = 0.4
+        victim.victimPose.pose.orientation.x = 0.1
+        victim.victimPose.pose.orientation.y = 0.5
+        victim.victimPose.pose.orientation.z = 1
+        victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
         victim.probability = 0.8
         victim.sensors.append('FACE')

@@ -39,6 +39,7 @@ import rospy
 import actionlib
 import state
 
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from state_manager_communications.msg import robotModeMsg
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 from pandora_rqt_gui.msg import ValidateVictimGUIGoal
@@ -91,7 +92,6 @@ class TestAndParkEndEffectorPlannerState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -185,7 +185,6 @@ class ScanEndEffectorPlannerState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -946,7 +945,6 @@ class TrackEndEffectorPlannerState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -981,7 +979,6 @@ class IdentificationMoveToVictimState(state.State):
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.agent_.end_effector_planner_ac_.cancel_all_goals()
             self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -992,7 +989,24 @@ class IdentificationMoveToVictimState(state.State):
         return self.next_states_[1]
 
     def move_to_victim(self):
-        goal = MoveBaseGoal(target_pose=self.agent_.target_victim_.victimPose)
+        victim = self.agent_.target_victim_.victimPose
+        orientation = [victim.pose.orientation.x, victim.pose.orientation.y,
+                       victim.pose.orientation.z, victim.pose.orientation.w]
+        euler = euler_from_quaternion(orientation)
+        x = euler[0]
+        y = euler[1]
+        z = euler[2]
+        z = z + 180
+
+        transformed_orientation = quaternion_from_euler(x, y, z)
+        victim.pose.orientation.x = transformed_orientation[0]
+        victim.pose.orientation.y = transformed_orientation[1]
+        victim.pose.orientation.z = transformed_orientation[2]
+        victim.pose.orientation.w = transformed_orientation[3]
+
+        victim.pose.position.z = 0
+
+        goal = MoveBaseGoal(target_pose=victim)
         self.agent_.move_base_ac_.send_goal(goal, feedback_cb=self.feedback_cb)
 
     def feedback_cb(self, feedback):

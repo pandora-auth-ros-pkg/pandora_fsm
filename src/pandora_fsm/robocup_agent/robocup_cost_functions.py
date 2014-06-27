@@ -196,14 +196,10 @@ class UpdateVictimCostFunction(cost_function.CostFunction):
     def execute(self):
         for victim in self.agent_.new_victims_:
             if victim.id == self.agent_.target_victim_.id:
-                if fabs(self.agent_.target_victim_.probability -
-                        victim.probability) > 0.001 or \
-                    self.agent_.target_victim_.victimPose.pose.position.x != \
+                if self.agent_.target_victim_.victimPose.pose.position.x != \
                         victim.victimPose.pose.position.x or \
                     self.agent_.target_victim_.victimPose.pose.position.y != \
-                        victim.victimPose.pose.position.y or \
-                    self.agent_.target_victim_.victimPose.pose.position.z != \
-                        victim.victimPose.pose.position.z:
+                        victim.victimPose.pose.position.y:
                     self.agent_.target_victim_ = victim
                     return 1
                 return 0
