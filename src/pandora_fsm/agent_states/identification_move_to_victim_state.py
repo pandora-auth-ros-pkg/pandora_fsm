@@ -38,6 +38,7 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from math import pi
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 from state_manager_communications.msg import robotModeMsg
@@ -69,15 +70,12 @@ class IdentificationMoveToVictimState(state.State):
 
     def move_to_victim(self):
         victim = self.agent_.target_victim_.victimPose
-        orientation = [victim.pose.orientation.x, victim.pose.orientation.y,
-                       victim.pose.orientation.z, victim.pose.orientation.w]
-        euler = euler_from_quaternion(orientation)
-        x = euler[0]
-        y = euler[1]
-        z = euler[2]
-        z = z + 180
+        roll, pitch, yaw = euler_from_quaternion([victim.pose.orientation.x,
+                                                 victim.pose.orientation.y,
+                                                 victim.pose.orientation.z,
+                                                 victim.pose.orientation.w])
 
-        transformed_orientation = quaternion_from_euler(x, y, z)
+        transformed_orientation = quaternion_from_euler(roll, pitch, yaw + pi)
         victim.pose.orientation.x = transformed_orientation[0]
         victim.pose.orientation.y = transformed_orientation[1]
         victim.pose.orientation.z = transformed_orientation[2]
