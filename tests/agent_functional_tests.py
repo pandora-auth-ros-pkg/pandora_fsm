@@ -82,6 +82,7 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.z = 1
         victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
+        victim.victimPose.victimFrameId = "dummy_frame"
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
         global_vars.com.victims_pub_.publish(victims_to_go)
@@ -110,6 +111,7 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.z = 1
         victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
+        victim.victimPose.victimFrameId = "dummy_frame"
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
         global_vars.com.victims_pub_.publish(victims_to_go)
@@ -134,6 +136,7 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.z = 1
         victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
+        victim.victimPose.victimFrameId = "dummy_frame"
         victim.probability = 0.8
         victim.sensors.append('FACE')
         victim.sensors.append('THERMAL')
