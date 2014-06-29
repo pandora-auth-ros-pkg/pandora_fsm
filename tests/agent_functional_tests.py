@@ -82,7 +82,7 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.z = 1
         victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
-        victim.victimPose.victimFrameId = "dummy_frame"
+        victim.victimFrameId = "dummy_frame"
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
         global_vars.com.victims_pub_.publish(victims_to_go)
@@ -111,7 +111,7 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.z = 1
         victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
-        victim.victimPose.victimFrameId = "dummy_frame"
+        victim.victimFrameId = "dummy_frame"
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
         global_vars.com.victims_pub_.publish(victims_to_go)
@@ -136,7 +136,7 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.z = 1
         victim.victimPose.pose.orientation.w = 0.9
         victim.victimPose.header.frame_id = "dummy_frame"
-        victim.victimPose.victimFrameId = "dummy_frame"
+        victim.victimFrameId = "dummy_frame"
         victim.probability = 0.8
         victim.sensors.append('FACE')
         victim.sensors.append('THERMAL')
@@ -169,6 +169,8 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.transition_to_state(robotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
         rospy.sleep(1.)
+        global_vars.com.move_end_effector_succeeded_ = True
+        rospy.sleep(2.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               teleoperation_state.TeleoperationState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
