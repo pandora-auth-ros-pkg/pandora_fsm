@@ -40,6 +40,7 @@ import state
 
 from state_manager_communications.msg import robotModeMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class ExplorationStrategy5State(state.State):
@@ -54,9 +55,12 @@ class ExplorationStrategy5State(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.end_exploration()
             self.agent_.end_effector_planner_ac_.cancel_all_goals()
             self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+            self.agent_.end_effector_planner_ac_.send_goal(goal)
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -65,9 +69,12 @@ class ExplorationStrategy5State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.end_exploration()
             self.agent_.end_effector_planner_ac_.cancel_all_goals()
             self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+            self.agent_.end_effector_planner_ac_.send_goal(goal)
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()

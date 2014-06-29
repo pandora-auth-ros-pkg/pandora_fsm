@@ -40,6 +40,7 @@ import state
 
 from state_manager_communications.msg import robotModeMsg
 from pandora_data_fusion_msgs.msg import ValidateVictimGoal
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class DataFusionHoldState(state.State):
@@ -57,6 +58,9 @@ class DataFusionHoldState(state.State):
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
             self.agent_.end_effector_planner_ac_.cancel_all_goals()
             self.agent_.end_effector_planner_ac_.wait_for_result()
+            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+            self.agent_.end_effector_planner_ac_.send_goal(goal)
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -67,6 +71,9 @@ class DataFusionHoldState(state.State):
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
             self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
+            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+            self.agent_.end_effector_planner_ac_.send_goal(goal)
             self.agent_.end_effector_planner_ac_.wait_for_result()
             self.counter_ = 0
             self.agent_.new_robot_state_cond_.acquire()
