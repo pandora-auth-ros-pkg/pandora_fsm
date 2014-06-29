@@ -67,4 +67,5 @@ class ScanEndEffectorPlannerState(state.State):
         self.agent_.end_effector_planner_ac_.cancel_all_goals()
         self.agent_.end_effector_planner_ac_.wait_for_result()
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
+        rospy.loginfo(goal)
         self.agent_.end_effector_planner_ac_.send_goal(goal)

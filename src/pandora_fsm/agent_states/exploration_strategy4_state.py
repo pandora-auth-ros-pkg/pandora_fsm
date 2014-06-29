@@ -156,6 +156,7 @@ class ExplorationStrategy4State(state.State):
         rospy.Rate(2).sleep()
         self.agent_.current_exploration_mode_ = exploration_mode
         goal = DoExplorationGoal(exploration_type=exploration_mode)
+        rospy.loginfo(goal)
         self.agent_.do_exploration_ac_.send_goal(goal,
                                                  feedback_cb=self.feedback_cb,
                                                  done_cb=self.done_cb)
