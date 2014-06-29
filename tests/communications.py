@@ -36,14 +36,15 @@
 import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
-import state_manager
 import dynamic_reconfigure.client
 import global_vars
 
 from actionlib import SimpleActionServer, SimpleActionClient
+from pandora_fsm.robocup_agent import agent_topics
+
 from state_manager_communications.msg import robotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Int32, Empty
+from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
     MoveEndEffectorResult
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIResult
@@ -53,19 +54,6 @@ from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
 from move_base_msgs.msg import MoveBaseAction, MoveBaseFeedback, MoveBaseResult
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationAction, \
     DoExplorationFeedback, DoExplorationResult
-from pandora_fsm.robocup_agent.agent_topics import arena_type_topic, \
-    robocup_score_topic, qr_notification_topic, robot_reset_topic, \
-    robot_restart_topic, world_model_topic, do_exploration_topic, \
-    gui_validation_topic, data_fusion_validate_victim_topic, move_base_topic, \
-    delete_victim_topic, move_end_effector_planner_topic, \
-    state_changer_action_topic
-
-
-class TestStateClient(state_manager.state_client.StateClient):
-
-    def __init__(self):
-        state_manager.state_client.StateClient.__init__(self)
-        self.client_initialize()
 
 
 class Communications():
@@ -84,49 +72,56 @@ class Communications():
                 dynamic_reconfigure.client.Client("test_agent")
         else:
             self.state_changer_ac_ = \
-                SimpleActionClient(state_changer_action_topic, RobotModeAction)
+                SimpleActionClient(agent_topics.state_changer_action_topic,
+                                   RobotModeAction)
 
-        self.arena_type_pub_ = rospy.Publisher(arena_type_topic, ArenaTypeMsg)
-        self.robocup_score_pub_ = rospy.Publisher(robocup_score_topic, Int32)
-        self.qr_notification_pub_ = rospy.Publisher(qr_notification_topic,
-                                                    QrNotificationMsg)
-        self.robot_reset_pub_ = rospy.Publisher(robot_reset_topic, Empty)
-        self.robot_restart_pub_ = rospy.Publisher(robot_restart_topic, Empty)
-        self.victims_pub_ = rospy.Publisher(world_model_topic, WorldModelMsg)
-
-        self.do_exploration_as_ = SimpleActionServer(do_exploration_topic,
-                                                     DoExplorationAction,
-                                                     execute_cb=
-                                                     self.do_exploration_cb,
-                                                     auto_start=False)
+        self.arena_type_pub_ = rospy.Publisher(agent_topics.arena_type_topic,
+                                               ArenaTypeMsg)
+        self.robocup_score_pub_ = \
+            rospy.Publisher(agent_topics.robocup_score_topic, Int32)
+        self.qr_notification_pub_ = \
+            rospy.Publisher(agent_topics.qr_notification_topic,
+                            QrNotificationMsg)
+        self.area_covered_pub_ = \
+            rospy.Publisher(agent_topics.area_covered_topic, Float32)
+        self.victims_pub_ = rospy.Publisher(agent_topics.world_model_topic,
+                                            WorldModelMsg)
+        self.do_exploration_as_ = \
+            SimpleActionServer(agent_topics.do_exploration_topic,
+                               DoExplorationAction,
+                               self.do_exploration_cb,
+                               auto_start=False)
         self.do_exploration_as_.start()
 
-        self.move_base_as_ = SimpleActionServer(move_base_topic,
+        self.move_base_as_ = SimpleActionServer(agent_topics.move_base_topic,
                                                 MoveBaseAction,
                                                 self.move_base_cb,
                                                 auto_start=False)
         self.move_base_as_.start()
 
-        self.delete_victim_as_ = SimpleActionServer(delete_victim_topic,
-                                                    DeleteVictimAction,
-                                                    self.delete_victim_cb,
-                                                    auto_start=False)
+        self.delete_victim_as_ = \
+            SimpleActionServer(agent_topics.delete_victim_topic,
+                               DeleteVictimAction,
+                               self.delete_victim_cb,
+                               auto_start=False)
         self.delete_victim_as_.start()
 
         self.gui_validate_victim_as_ = \
-            SimpleActionServer(gui_validation_topic, ValidateVictimGUIAction,
-                               self.gui_validate_victim_cb, auto_start=False)
+            SimpleActionServer(agent_topics.gui_validation_topic,
+                               ValidateVictimGUIAction,
+                               self.gui_validate_victim_cb,
+                               auto_start=False)
         self.gui_validate_victim_as_.start()
 
         self.data_fusion_validate_victim_as_ = \
-            SimpleActionServer(data_fusion_validate_victim_topic,
+            SimpleActionServer(agent_topics.data_fusion_validate_victim_topic,
                                ValidateVictimAction,
                                self.data_fusion_validate_victim_cb,
                                auto_start=False)
         self.data_fusion_validate_victim_as_.start()
 
         self.end_effector_planner_as_ = \
-            SimpleActionServer(move_end_effector_planner_topic,
+            SimpleActionServer(agent_topics.move_end_effector_planner_topic,
                                MoveEndEffectorAction,
                                self.end_effector_planner_cb,
                                auto_start=False)

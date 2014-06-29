@@ -36,29 +36,21 @@
 import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
-import actionlib
-import threading
 import state_manager
 import dynamic_reconfigure.server
 import agent
 import agent_topics
-import robocup_cost_functions
 
+from threading import Condition
+from actionlib import SimpleActionClient
+from pandora_fsm import agent_states
+from pandora_fsm import agent_cost_functions
 from pandora_fsm.cfg import FSMParamsConfig
 from math import sqrt, pow
 
-from robocup_states import WaitingToStartState, \
-    TestAndParkEndEffectorPlannerState, RobotStartState, \
-    ScanEndEffectorPlannerState, ExplorationStrategy1State, \
-    ExplorationStrategy2State, ExplorationStrategy3State, \
-    ExplorationStrategy4State, ExplorationStrategy5State, OldExplorationState, \
-    TrackEndEffectorPlannerState, IdentificationMoveToVictimState, \
-    IdentificationCheckForVictimsState, DataFusionHoldState, ValidationState, \
-    TeleoperationState, StopButtonState
-
 from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
-from std_msgs.msg import Int32, Empty
+from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
@@ -74,7 +66,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         state_manager.state_client.StateClient.__init__(self)
 
         self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
-        self.area_explored_ = 0
+        self.yellow_arena_area_explored_ = 0
+        self.yellow_black_arena_area_explored_ = 0
         self.current_score_ = 0
         self.valid_victims_ = 0
         self.qrs_ = 0
@@ -85,14 +78,9 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.new_victims_ = []
         self.target_victim_ = VictimInfoMsg()
 
-        self.robot_resets_ = 0
-        self.robot_restarts_ = 0
-
-        self.new_robot_state_cond_ = threading.Condition()
-        self.current_robot_state_cond_ = threading.Condition()
+        self.new_robot_state_cond_ = Condition()
+        self.current_robot_state_cond_ = Condition()
         self.current_robot_state_ = robotModeMsg.MODE_OFF
-
-        self.previous_state_ = "waiting_to_start_state"
 
         dynamic_reconfigure.server.Server(FSMParamsConfig, self.reconfigure)
 
@@ -115,57 +103,50 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         rospy.Subscriber(agent_topics.robocup_score_topic, Int32, self.score_cb)
         rospy.Subscriber(agent_topics.qr_notification_topic, QrNotificationMsg,
                          self.qr_notification_cb)
-        rospy.Subscriber(agent_topics.robot_reset_topic, Empty,
-                         self.robot_reset_cb)
-        rospy.Subscriber(agent_topics.robot_restart_topic, Empty,
-                         self.robot_restart_cb)
+        rospy.Subscriber(agent_topics.area_covered_topic, Float32,
+                         self.area_covered_cb)
         rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
                          self.world_model_cb)
 
         self.do_exploration_ac_ = \
-            actionlib.SimpleActionClient(agent_topics.do_exploration_topic,
-                                         DoExplorationAction)
+            SimpleActionClient(agent_topics.do_exploration_topic,
+                               DoExplorationAction)
         #~ self.do_exploration_ac_.wait_for_server()
 
-        self.move_base_ac_ = \
-            actionlib.SimpleActionClient(agent_topics.move_base_topic,
-                                         MoveBaseAction)
+        self.move_base_ac_ = SimpleActionClient(agent_topics.move_base_topic,
+                                                MoveBaseAction)
         #~ self.move_base_ac_.wait_for_server()
 
         self.delete_victim_ac_ = \
-            actionlib.SimpleActionClient(agent_topics.delete_victim_topic,
-                                         DeleteVictimAction)
+            SimpleActionClient(agent_topics.delete_victim_topic,
+                               DeleteVictimAction)
         #~ self.delete_victim_ac_.wait_for_server()
 
         self.gui_validate_victim_ac_ = \
-            actionlib.SimpleActionClient(agent_topics.gui_validation_topic,
-                                         ValidateVictimGUIAction)
+            SimpleActionClient(agent_topics.gui_validation_topic,
+                               ValidateVictimGUIAction)
         #~ self.gui_validate_victim_ac_.wait_for_server()
 
         self.data_fusion_validate_victim_ac_ = \
-            actionlib.SimpleActionClient(agent_topics.
-                                         data_fusion_validate_victim_topic,
-                                         ValidateVictimAction)
+            SimpleActionClient(agent_topics.data_fusion_validate_victim_topic,
+                               ValidateVictimAction)
         #~ self.data_fusion_validate_victim_ac_.wait_for_server()
 
         self.end_effector_planner_ac_ = \
-            actionlib.SimpleActionClient(agent_topics.
-                                         move_end_effector_planner_topic,
-                                         MoveEndEffectorAction)
+            SimpleActionClient(agent_topics.move_end_effector_planner_topic,
+                               MoveEndEffectorAction)
         #~ self.end_effector_planner_ac_.wait_for_server()
 
         self.client_initialize()
 
     def main(self):
+        rospy.loginfo("Agent started")
         while not rospy.is_shutdown():
             self.current_state_.execute()
             new_state = self.current_state_.make_transition()
             if new_state != self.current_state_.name_:
-                self.previous_state_ = self.current_state_.name_
-                if new_state == "stop_button_state":
-                    self.define_states()
-                rospy.loginfo("Agent's state is changing from %s to %s",
-                              self.previous_state_, new_state)
+                rospy.loginfo("Agent is transitioning from state %s to %s",
+                              self.current_state_.name_, new_state)
 
             self.current_state_ = self.all_states_[new_state]
             rospy.Rate(10).sleep()
@@ -173,130 +154,206 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
     def define_states(self):
         self.all_states_ = \
             {"waiting_to_start_state":
-                WaitingToStartState(self,
-                                    ["teleoperation_state",
-                                     "waiting_to_start_state",
-                                     "test_and_park_end_effector_planner_state"]),
+                agent_states.waiting_to_start_state.WaitingToStartState(
+                    self,
+                    ["teleoperation_state",
+                     "waiting_to_start_state",
+                     "test_and_park_end_effector_planner_state"]
+                ),
                 "test_and_park_end_effector_planner_state":
-                TestAndParkEndEffectorPlannerState(self,
-                                                   ["teleoperation_state",
-                                                    "robot_start_state",
-                                                    "waiting_to_start_state"]),
+                agent_states.test_and_park_end_effector_planner_state.
+                TestAndParkEndEffectorPlannerState(
+                    self,
+                    ["teleoperation_state",
+                     "robot_start_state",
+                     "waiting_to_start_state"]
+                ),
                 "robot_start_state":
-                RobotStartState(self,
-                                ["teleoperation_state",
-                                 "stop_button_state",
-                                 "robot_start_state",
-                                 "scan_end_effector_planner_state"]),
+                agent_states.robot_start_state.RobotStartState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "robot_start_state",
+                     "scan_end_effector_planner_state"]
+                ),
                 "scan_end_effector_planner_state":
-                ScanEndEffectorPlannerState(self,
-                                            ["teleoperation_state",
-                                             self.exploration_strategy_]),
+                agent_states.scan_end_effector_planner_state.
+                ScanEndEffectorPlannerState(
+                    self,
+                    ["teleoperation_state",
+                     self.exploration_strategy_]
+                ),
                 "exploration_strategy1_state":
-                ExplorationStrategy1State(self,
-                                          ["teleoperation_state",
-                                           "stop_button_state",
-                                           self.exploration_strategy_,
-                                           "track_end_effector_planner_state"],
-                                          [robocup_cost_functions.
-                                           FindNewVictimToGoCostFunction(self),
-                                           robocup_cost_functions.
-                                           ExplorationModeCostFunction(self)]),
+                agent_states.exploration_strategy1_state.
+                ExplorationStrategy1State(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     self.exploration_strategy_,
+                     "track_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self),
+                     agent_cost_functions.exploration_mode_cost_function.
+                     ExplorationModeCostFunction(self)]
+                ),
                 "exploration_strategy2_state":
-                ExplorationStrategy2State(self,
-                                          ["teleoperation_state",
-                                           "stop_button_state",
-                                           self.exploration_strategy_,
-                                           "track_end_effector_planner_state"],
-                                          [robocup_cost_functions.
-                                           FindNewVictimToGoCostFunction(self),
-                                           robocup_cost_functions.
-                                           ExplorationModeCostFunction2(self)]),
+                agent_states.exploration_strategy2_state.
+                ExplorationStrategy2State(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     self.exploration_strategy_,
+                     "track_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self),
+                     agent_cost_functions.exploration_mode2_cost_function.
+                     ExplorationMode2CostFunction(self)]
+                ),
                 "exploration_strategy3_state":
-                ExplorationStrategy3State(self,
-                                          ["teleoperation_state",
-                                           "stop_button_state",
-                                           self.exploration_strategy_,
-                                           "track_end_effector_planner_state"],
-                                          [robocup_cost_functions.
-                                           FindNewVictimToGoCostFunction(self),
-                                           robocup_cost_functions.
-                                           ExplorationModeCostFunction3(self)]),
+                agent_states.exploration_strategy3_state.
+                ExplorationStrategy3State(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     self.exploration_strategy_,
+                     "track_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self),
+                     agent_cost_functions.exploration_mode3_cost_function.
+                     ExplorationMode3CostFunction(self)]
+                ),
                 "exploration_strategy4_state":
-                ExplorationStrategy4State(self,
-                                          ["teleoperation_state",
-                                           "stop_button_state",
-                                           self.exploration_strategy_,
-                                           "track_end_effector_planner_state"],
-                                          [robocup_cost_functions.
-                                           FindNewVictimToGoCostFunction(self),
-                                           robocup_cost_functions.
-                                           ExplorationModeCostFunction4(self)]),
+                agent_states.exploration_strategy4_state.
+                ExplorationStrategy4State(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     self.exploration_strategy_,
+                     "track_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self),
+                     agent_cost_functions.exploration_mode4_cost_function.
+                     ExplorationMode4CostFunction(self)]
+                ),
                 "exploration_strategy5_state":
-                ExplorationStrategy5State(self,
-                                          ["teleoperation_state",
-                                           "stop_button_state",
-                                           self.exploration_strategy_,
-                                           "track_end_effector_planner_state"],
-                                          [robocup_cost_functions.
-                                           FindNewVictimToGoCostFunction(self),
-                                           robocup_cost_functions.
-                                           ExplorationModeCostFunction3(self)]),
+                agent_states.exploration_strategy5_state.
+                ExplorationStrategy5State(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     self.exploration_strategy_,
+                     "track_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self),
+                     agent_cost_functions.exploration_mode3_cost_function.
+                     ExplorationMode3CostFunction(self)]
+                ),
                 "old_exploration_state":
-                OldExplorationState(self,
-                                    ["teleoperation_state",
-                                     "stop_button_state",
-                                     self.exploration_strategy_,
-                                     "track_end_effector_planner_state"],
-                                    [robocup_cost_functions.
-                                     FindNewVictimToGoCostFunction(self)]),
+                agent_states.old_exploration_state.OldExplorationState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     self.exploration_strategy_,
+                     "track_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self)]
+                ),
                 "track_end_effector_planner_state":
-                TrackEndEffectorPlannerState(self,
-                                             ["teleoperation_state",
-                                              "identification_move_to_victim_state"]),
+                agent_states.track_end_effector_planner_state.
+                TrackEndEffectorPlannerState(
+                    self,
+                    ["teleoperation_state",
+                     "identification_move_to_victim_state"]
+                ),
                 "identification_move_to_victim_state":
-                IdentificationMoveToVictimState(self,
-                                                ["teleoperation_state",
-                                                 "identification_check_for_victims_state"]),
+                agent_states.identification_move_to_victim_state.
+                IdentificationMoveToVictimState(
+                    self,
+                    ["teleoperation_state",
+                     "identification_check_for_victims_state"]
+                ),
                 "identification_check_for_victims_state":
-                IdentificationCheckForVictimsState(self,
-                                                   ["teleoperation_state",
-                                                    "stop_button_state",
-                                                    "identification_check_for_victims_state",
-                                                    "track_end_effector_planner_state",
-                                                    "data_fusion_hold_state",
-                                                    "scan_end_effector_planner_state"],
-                                                   [robocup_cost_functions.
-                                                    FindNewVictimToGoCostFunction(self),
-                                                    robocup_cost_functions.
-                                                    UpdateVictimCostFunction(self)]),
+                agent_states.identification_check_for_victims_state.
+                IdentificationCheckForVictimsState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "identification_check_for_victims_state",
+                     "track_end_effector_planner_state",
+                     "data_fusion_hold_state",
+                     "scan_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self),
+                     agent_cost_functions.update_victim_cost_function.
+                     UpdateVictimCostFunction(self)]
+                ),
                 "data_fusion_hold_state":
-                DataFusionHoldState(self,
-                                    ["teleoperation_state",
-                                     "stop_button_state",
-                                     "data_fusion_hold_state",
-                                     "validation_state",
-                                     "track_end_effector_planner_state",
-                                     "scan_end_effector_planner_state"],
-                                    [robocup_cost_functions.
-                                     FindNewVictimToGoCostFunction(self)]),
+                agent_states.data_fusion_hold_state.DataFusionHoldState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "data_fusion_hold_state",
+                     "validation_state",
+                     "track_end_effector_planner_state",
+                     "scan_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self)]
+                ),
                 "validation_state":
-                ValidationState(self,
-                                ["teleoperation_state",
-                                 "stop_button_state",
-                                 "track_end_effector_planner_state",
-                                 "scan_end_effector_planner_state"],
-                                [robocup_cost_functions.
-                                 FindNewVictimToGoCostFunction(self)]),
+                agent_states.validation_state.ValidationState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "track_end_effector_planner_state",
+                     "scan_end_effector_planner_state"],
+                    [agent_cost_functions.find_new_victim_to_go_cost_function.
+                     FindNewVictimToGoCostFunction(self)]
+                ),
+                "yellow_black_arena_save_robot_pose_state":
+                agent_states.yellow_black_arena_save_robot_pose_state.
+                YellowBlackArenaSaveRobotPoseState(
+                    self,
+                    ["teleoperation_state",
+                     "yellow_black_arena_exploration_strategy1_state"]
+                ),
+                "yellow_black_arena_exploration_strategy1_state":
+                agent_states.yellow_black_arena_exploration_strategy1_state.
+                YellowBlackArenaExplorationStrategy1State(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "yellow_black_arena_exploration_strategy1_state"]
+                ),
+                "yellow_black_arena_turn_back_move_base_state":
+                agent_states.yellow_black_arena_turn_back_move_base_state.
+                YellowBlackArenaTurnBackMoveBaseState(
+                    self,
+                    ["teleoperation_state",
+                     "yellow_black_arena_turn_back_check_state"]
+                ),
+                "yellow_black_arena_turn_back_check_state":
+                agent_states.yellow_black_arena_turn_back_check_state.
+                YellowBlackArenaTurnBackCheckState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "yellow_black_arena_turn_back_check_state",
+                     "yellow_black_arena_turn_back_move_base_state"]
+                ),
                 "teleoperation_state":
-                TeleoperationState(self,
-                                   ["teleoperation_state",
-                                    "robot_start_state"]),
+                agent_states.teleoperation_state.TeleoperationState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "scan_end_effector_planner_state"]
+                ),
                 "stop_button_state":
-                StopButtonState(self,
-                                ["teleoperation_state",
-                                 "stop_button_state",
-                                 self.previous_state_])}
+                agent_states.stop_button_state.StopButtonState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "scan_end_effector_planner_state"]
+                )}
 
     def calculate_distance_2d(self, object1, object2):
         dist = sqrt(pow(object1.x - object2.x, 2) +
@@ -331,45 +388,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
     def qr_notification_cb(self, msg):
         self.qrs_ += 1
 
-    def robot_reset_cb(self, msg):
-        self.current_arena_ = ArenaTypeMsg.TYPE_YELLOW
-        self.area_explored_ = 0
-        self.current_score_ = 0
-        self.valid_victims_ = 0
-        self.qrs_ = 0
-        self.current_robot_pose_ = PoseStamped()
-        self.current_exploration_mode_ = -1
-        self.aborted_victims_ = []
-        self.new_victims_ = []
-        self.target_victim_ = VictimInfoMsg()
-
-        self.robot_restarts_ = 0
-
-        self.strategy3_deep_limit_ = self.configs_["strategy3DeepLimit"]
-        self.strategy3_fast_limit_ = self.strategy3_deep_limit_ * 1.4
-
-        self.strategy4_previous_victims_ = 0
-        self.strategy4_previous_qrs_ = 0
-        self.strategy4_previous_area_ = 0
-        self.strategy4_previous_resets_ = 0
-        self.strategy4_previous_restarts_ = 0
-        self.strategy4_current_cost_ = 0
-
-        self.strategy5_deep_limit_ = self.configs_["strategy5DeepLimit"]
-        self.strategy5_fast_limit_ = self.strategy5_deep_limit_ * 1.4
-
-        self.current_robot_state_ = robotModeMsg.MODE_OFF
-
-        self.previous_state_ = "waiting_to_start_state"
-        self.current_state_ = self.all_states_["waiting_to_start_state"]
-
-        self.robot_resets_ += 1
-
-    def robot_restart_cb(self, msg):
-        self.robot_restarts_ += 1
-
     def score_cb(self, msg):
         self.current_score_ = msg.data
+
+    def area_covered_cb(self, msg):
+        if self.current_state_.name_ != \
+                "yellow_black_arena_save_robot_pose_state":
+            self.yellow_arena_area_explored_ = msg.data
+        else:
+            self.yellow_black_arena_area_explored_ = \
+                msg.data - self.yellow_arena_area_explored_
 
     def world_model_cb(self, msg):
         self.new_victims_ = msg.victims
@@ -378,11 +406,14 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.max_time_ = config["maxTime"]
         self.max_victims_ = config["arenaVictims"]
         self.max_qrs_ = config["maxQRs"]
-        self.max_area_ = config["arenaArea"]
+        self.max_yellow_area_ = config["yellowArenaArea"]
+        self.max_yellow_black_area_ = config["yellowBlackArenaArea"]
         self.initial_time_ = rospy.get_rostime().secs - config["timePassed"]
         self.minutes_passed_ = config["timePassed"]
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
+        self.robot_resets_ = config["robotResets"]
+        self.robot_restarts_ = config["robotRestarts"]
         if config["explorationStrategy"] == 0:
             self.exploration_strategy_ = "old_exploration_state"
         elif config["explorationStrategy"] == 1:
@@ -395,12 +426,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
             self.exploration_strategy_ = "exploration_strategy4_state"
         elif config["explorationStrategy"] == 5:
             self.exploration_strategy_ = "exploration_strategy5_state"
+        elif config["explorationStrategy"] == 6:
+            self.exploration_strategy_ = \
+                "yellow_black_arena_save_robot_pose_state"
+        elif config["explorationStrategy"] == 7:
+            self.exploration_strategy_ = "yellow_black_arena_turn_back_state"
         self.strategy3_deep_limit_ = config["strategy3DeepLimit"]
         self.strategy4_deep_limit_ = config["strategy4DeepLimit"]
         self.strategy4_fast_limit_ = config["strategy4FastLimit"]
         self.strategy5_deep_limit_ = config["strategy5DeepLimit"]
         self.define_states()
-        self.configs_ = config
         return config
 
 

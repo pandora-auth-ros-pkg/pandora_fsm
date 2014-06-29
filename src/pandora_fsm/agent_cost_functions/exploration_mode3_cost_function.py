@@ -33,18 +33,31 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-delete_victim_topic = '/data_fusion/delete_victim'
-qr_notification_topic = '/data_fusion/qr_notification'
-robocup_score_topic = '/data_fusion/robocup_score'
-area_covered_topic = '/data_fusion/sensor_coverage/area_covered'
-data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
-world_model_topic = '/data_fusion/world_model'
-do_exploration_topic = '/do_exploration'
-arena_type_topic = '/navigation/arena_type'
-move_base_topic = '/move_base'
-gui_validation_topic = '/gui/validate_victim'
-robot_reset_topic = '/gui/robot_reset'
-robot_restart_topic = '/gui/robot_restart'
-move_end_effector_planner_topic = '/control/move_end_effector_planner_action'
-state_changer_action_topic = '/robot/state/change'
-state_monitor_topic = '/robot/state/clients'
+import roslib
+roslib.load_manifest('pandora_fsm')
+import rospy
+import cost_function
+
+
+class ExplorationMode3CostFunction(cost_function.CostFunction):
+
+    def __init__(self, agent):
+        cost_function.CostFunction.__init__(self, agent)
+        self.w1_ = 1.8 - 0.3*self.agent_.max_victims_
+        self.w2_ = 0.24 - 0.008*self.agent_.max_qrs_
+        self.w3_ = 0.06 - 0.001333333*self.agent_.max_yellow_area_
+        self.w4_ = 0.15
+        self.w5_ = 0.05
+        self.sum_weights_ = self.w1_ + self.w2_ + self.w3_ + self.w4_ + self.w5_
+
+    def execute(self):
+        cost = self.agent_.valid_victims_ * self.w1_
+        cost += self.agent_.qrs_ * self.w2_
+        cost += self.agent_.yellow_arena_area_explored_ * self.w3_
+        cost += self.agent_.robot_resets_ * self.w4_
+        cost += self.agent_.robot_restarts_ * self.w5_
+        cost /= self.sum_weights_
+
+        # < 1.4 DEEP
+        # < 2.8 NORMAL
+        return cost

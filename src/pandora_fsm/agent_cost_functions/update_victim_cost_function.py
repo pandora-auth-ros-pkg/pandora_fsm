@@ -33,18 +33,21 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-delete_victim_topic = '/data_fusion/delete_victim'
-qr_notification_topic = '/data_fusion/qr_notification'
-robocup_score_topic = '/data_fusion/robocup_score'
-area_covered_topic = '/data_fusion/sensor_coverage/area_covered'
-data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
-world_model_topic = '/data_fusion/world_model'
-do_exploration_topic = '/do_exploration'
-arena_type_topic = '/navigation/arena_type'
-move_base_topic = '/move_base'
-gui_validation_topic = '/gui/validate_victim'
-robot_reset_topic = '/gui/robot_reset'
-robot_restart_topic = '/gui/robot_restart'
-move_end_effector_planner_topic = '/control/move_end_effector_planner_action'
-state_changer_action_topic = '/robot/state/change'
-state_monitor_topic = '/robot/state/clients'
+import roslib
+roslib.load_manifest('pandora_fsm')
+import rospy
+import cost_function
+
+
+class UpdateVictimCostFunction(cost_function.CostFunction):
+
+    def execute(self):
+        for victim in self.agent_.new_victims_:
+            if victim.id == self.agent_.target_victim_.id:
+                if self.agent_.target_victim_.victimPose.pose.position.x != \
+                        victim.victimPose.pose.position.x or \
+                    self.agent_.target_victim_.victimPose.pose.position.y != \
+                        victim.victimPose.pose.position.y:
+                    self.agent_.target_victim_ = victim
+                    return 1
+                return 0
