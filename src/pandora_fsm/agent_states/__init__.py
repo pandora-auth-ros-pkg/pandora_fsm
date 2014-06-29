@@ -33,18 +33,27 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-delete_victim_topic = '/data_fusion/delete_victim'
-qr_notification_topic = '/data_fusion/qr_notification'
-robocup_score_topic = '/data_fusion/robocup_score'
-area_covered_topic = '/data_fusion/sensor_coverage/area_covered'
-data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
-world_model_topic = '/data_fusion/world_model'
-do_exploration_topic = '/do_exploration'
-arena_type_topic = '/navigation/arena_type'
-move_base_topic = '/move_base'
-gui_validation_topic = '/gui/validate_victim'
-robot_reset_topic = '/gui/robot_reset'
-robot_restart_topic = '/gui/robot_restart'
-move_end_effector_planner_topic = '/control/move_end_effector_planner_action'
-state_changer_action_topic = '/robot/state/change'
-state_monitor_topic = '/robot/state/clients'
+import roslib
+roslib.load_manifest('pandora_fsm')
+
+import data_fusion_hold_state
+import exploration_strategy1_state
+import exploration_strategy2_state
+import exploration_strategy3_state
+import exploration_strategy4_state
+import exploration_strategy5_state
+import identification_check_for_victims_state
+import identification_move_to_victim_state
+import old_exploration_state
+import robot_start_state
+import scan_end_effector_planner_state
+import stop_button_state
+import teleoperation_state
+import test_and_park_end_effector_planner_state
+import track_end_effector_planner_state
+import validation_state
+import waiting_to_start_state
+import yellow_black_arena_exploration_strategy1_state
+import yellow_black_arena_save_robot_pose_state
+import yellow_black_arena_turn_back_check_state
+import yellow_black_arena_turn_back_move_base_state

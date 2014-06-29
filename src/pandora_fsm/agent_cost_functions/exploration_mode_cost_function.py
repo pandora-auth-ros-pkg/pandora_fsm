@@ -33,18 +33,37 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-delete_victim_topic = '/data_fusion/delete_victim'
-qr_notification_topic = '/data_fusion/qr_notification'
-robocup_score_topic = '/data_fusion/robocup_score'
-area_covered_topic = '/data_fusion/sensor_coverage/area_covered'
-data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
-world_model_topic = '/data_fusion/world_model'
-do_exploration_topic = '/do_exploration'
-arena_type_topic = '/navigation/arena_type'
-move_base_topic = '/move_base'
-gui_validation_topic = '/gui/validate_victim'
-robot_reset_topic = '/gui/robot_reset'
-robot_restart_topic = '/gui/robot_restart'
-move_end_effector_planner_topic = '/control/move_end_effector_planner_action'
-state_changer_action_topic = '/robot/state/change'
-state_monitor_topic = '/robot/state/clients'
+import roslib
+roslib.load_manifest('pandora_fsm')
+import rospy
+import cost_function
+
+from math import exp, log
+
+
+class ExplorationModeCostFunction(cost_function.CostFunction):
+
+    def execute(self):
+        time = float(rospy.get_rostime().secs - self.agent_.initial_time_)
+
+        cost = self.agent_.valid_victims_ * \
+            exp(4.2 - 0.3*self.agent_.max_victims_ +
+                0.000111111*self.agent_.max_time_ -
+                time/(2640 - 420*self.agent_.max_victims_ +
+                      0.133333333*self.agent_.max_time_))
+
+        cost += self.agent_.qrs_ * \
+            exp(1.9 - 0.04*self.agent_.max_qrs_ +
+                0.000444444*self.agent_.max_time_ -
+                time/(300 - 24*self.agent_.max_qrs_ +
+                      0.6*self.agent_.max_time_))
+
+        cost += self.agent_.robot_resets_ * \
+            exp(1.8 - 0.000444444*self.agent_.max_time_ +
+                time/(600 + 0.6*self.agent_.max_time_))
+
+        cost += self.agent_.robot_restarts_ * \
+            (1 + exp(2.8 - 0.053333333*self.agent_.max_time_ -
+                     time/(2 + 0.006666667*self.agent_.max_time_)))
+
+        return cost

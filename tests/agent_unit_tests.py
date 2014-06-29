@@ -39,13 +39,11 @@ import rospy
 import unittest
 import global_vars
 
+from pandora_fsm import agent_cost_functions
+
 from state_manager_communications.msg import robotModeMsg
 from geometry_msgs.msg import PoseStamped, Point
 from std_msgs.msg import Int32, Float32
-from pandora_fsm.robocup_agent.robocup_cost_functions import \
-    ExplorationModeCostFunction, ExplorationModeCostFunction2, \
-    ExplorationModeCostFunction3, ExplorationModeCostFunction4, \
-    FindNewVictimToGoCostFunction, UpdateVictimCostFunction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
@@ -295,7 +293,8 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 1
-        cost_function = ExplorationModeCostFunction(global_vars.test_agent)
+        cost_function = agent_cost_functions.exploration_mode_cost_function.\
+            ExplorationModeCostFunction(global_vars.test_agent)
         cost = cost_function.execute()
         self.assertEqual(cost, 31.28940531542159)
 
@@ -307,7 +306,8 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 1
-        cost_function = ExplorationModeCostFunction2(global_vars.test_agent)
+        cost_function = agent_cost_functions.exploration_mode2_cost_function.\
+            ExplorationMode2CostFunction(global_vars.test_agent)
         cost = cost_function.execute()
         self.assertEqual(cost, 1.6729607187862237)
 
@@ -319,7 +319,8 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 1
-        cost_function = ExplorationModeCostFunction3(global_vars.test_agent)
+        cost_function = agent_cost_functions.exploration_mode3_cost_function.\
+            ExplorationMode3CostFunction(global_vars.test_agent)
         cost = cost_function.execute()
         self.assertEqual(cost, 1.9759825853101574)
 
@@ -331,7 +332,8 @@ class TestAgent(unittest.TestCase):
         global_vars.test_agent.qrs_ = 10
         global_vars.test_agent.robot_resets_ = 0
         global_vars.test_agent.robot_restarts_ = 1
-        cost_function = ExplorationModeCostFunction4(global_vars.test_agent)
+        cost_function = agent_cost_functions.exploration_mode4_cost_function.\
+            ExplorationMode4CostFunction(global_vars.test_agent)
         cost = cost_function.execute()
         self.assertEqual(cost, -0.06116320402034687)
 
@@ -567,7 +569,9 @@ class TestAgent(unittest.TestCase):
         victims_to_go.victims.append(victim)
         global_vars.test_agent.new_victims_ = victims_to_go.victims
         rospy.Rate(10).sleep()
-        cost_function = FindNewVictimToGoCostFunction(global_vars.test_agent)
+        cost_function = \
+            agent_cost_functions.find_new_victim_to_go_cost_function.\
+            FindNewVictimToGoCostFunction(global_vars.test_agent)
         cost = cost_function.execute()
         self.assertEqual(cost[0], -1.6046863561492728)
         self.assertEqual(cost[1], 5.283009433971698)
@@ -1009,7 +1013,8 @@ class TestAgent(unittest.TestCase):
         victim.victimPose.pose.orientation.w = 0.9
         victim.probability = 0.5
         global_vars.test_agent.target_victim_ = victim
-        cost_function = UpdateVictimCostFunction(global_vars.test_agent)
+        cost_function = agent_cost_functions.update_victim_cost_function.\
+            UpdateVictimCostFunction(global_vars.test_agent)
         cost = cost_function.execute()
         self.assertEqual(cost, 1)
 

@@ -33,18 +33,38 @@
 #
 # Author: Voulgarakis George <turbolapingr@gmail.com>
 
-delete_victim_topic = '/data_fusion/delete_victim'
-qr_notification_topic = '/data_fusion/qr_notification'
-robocup_score_topic = '/data_fusion/robocup_score'
-area_covered_topic = '/data_fusion/sensor_coverage/area_covered'
-data_fusion_validate_victim_topic = '/data_fusion/validate_victim'
-world_model_topic = '/data_fusion/world_model'
-do_exploration_topic = '/do_exploration'
-arena_type_topic = '/navigation/arena_type'
-move_base_topic = '/move_base'
-gui_validation_topic = '/gui/validate_victim'
-robot_reset_topic = '/gui/robot_reset'
-robot_restart_topic = '/gui/robot_restart'
-move_end_effector_planner_topic = '/control/move_end_effector_planner_action'
-state_changer_action_topic = '/robot/state/change'
-state_monitor_topic = '/robot/state/clients'
+import roslib
+roslib.load_manifest('pandora_fsm')
+import rospy
+import state
+
+from state_manager_communications.msg import robotModeMsg
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
+
+
+class ScanEndEffectorPlannerState(state.State):
+
+    def __init__(self, agent, next_states, cost_functions=None):
+        state.State.__init__(self, agent, next_states, cost_functions)
+        self.name_ = "scan_end_effector_planner_state"
+
+    def execute(self):
+        self.scan_end_effector_planner()
+
+    def make_transition(self):
+        if self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[0]
+        return self.next_states_[1]
+
+    def scan_end_effector_planner(self):
+        self.agent_.end_effector_planner_ac_.cancel_all_goals()
+        self.agent_.end_effector_planner_ac_.wait_for_result()
+        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
+        self.agent_.end_effector_planner_ac_.send_goal(goal)

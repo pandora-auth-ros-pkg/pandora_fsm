@@ -37,15 +37,16 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
 import unittest
-import threading
 import global_vars
+
+from threading import Thread
+from pandora_fsm.agent_states import data_fusion_hold_state, \
+    exploration_strategy4_state, identification_check_for_victims_state, \
+    teleoperation_state
 
 from state_manager_communications.msg import robotModeMsg
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32
-from pandora_fsm.robocup_agent.robocup_states import DataFusionHoldState, \
-    ExplorationStrategy4State, IdentificationCheckForVictimsState, \
-    TeleoperationState
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
@@ -60,6 +61,7 @@ class TestAgent(unittest.TestCase):
                                                    MODE_START_AUTONOMOUS)
         rospy.sleep(22.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
+                              exploration_strategy4_state.
                               ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_EXPLORATION)
@@ -86,6 +88,7 @@ class TestAgent(unittest.TestCase):
 
         rospy.sleep(3.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
+                              identification_check_for_victims_state.
                               IdentificationCheckForVictimsState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_IDENTIFICATION)
@@ -112,7 +115,7 @@ class TestAgent(unittest.TestCase):
         global_vars.com.victims_pub_.publish(victims_to_go)
         rospy.sleep(11.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
-                              DataFusionHoldState)
+                              data_fusion_hold_state.DataFusionHoldState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_DF_HOLD)
 
@@ -139,6 +142,7 @@ class TestAgent(unittest.TestCase):
         rospy.sleep(19.)
         self.assertEqual(global_vars.test_agent.valid_victims_, 1)
         self.assertIsInstance(global_vars.test_agent.current_state_,
+                              exploration_strategy4_state.
                               ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_EXPLORATION)
@@ -163,7 +167,7 @@ class TestAgent(unittest.TestCase):
                                                    MODE_TELEOPERATED_LOCOMOTION)
         rospy.sleep(1.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
-                              TeleoperationState)
+                              teleoperation_state.TeleoperationState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
 
@@ -173,7 +177,7 @@ if __name__ == '__main__':
     rospy.sleep(1.)
 
     #start the agent in a new thread
-    agent_thread = threading.Thread(target=global_vars.test_agent.main)
+    agent_thread = Thread(target=global_vars.test_agent.main)
     agent_thread.start()
 
     #test ROBOT_START state
@@ -204,9 +208,9 @@ if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=1).run(exploration_normal)
 
     #test TELEOPERATION state
-    teleoperation_state = unittest.TestSuite()
-    teleoperation_state.addTest(TestAgent('test_teleoperation_state'))
-    unittest.TextTestRunner(verbosity=1).run(teleoperation_state)
+    teleoperation = unittest.TestSuite()
+    teleoperation.addTest(TestAgent('test_teleoperation_state'))
+    unittest.TextTestRunner(verbosity=1).run(teleoperation)
 
     global_vars.com.delete_action_servers()
     rospy.signal_shutdown('Functional tests finished')

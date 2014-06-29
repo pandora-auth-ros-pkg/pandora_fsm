@@ -69,7 +69,7 @@ class ExplorationModeCostFunction(cost_function.CostFunction):
         return cost
 
 
-class ExplorationModeCostFunction2(cost_function.CostFunction):
+class ExplorationMode2CostFunction(cost_function.CostFunction):
 
     def __init__(self, agent):
         cost_function.CostFunction.__init__(self, agent)
@@ -97,7 +97,7 @@ class ExplorationModeCostFunction2(cost_function.CostFunction):
         return cost
 
 
-class ExplorationModeCostFunction3(cost_function.CostFunction):
+class ExplorationMode3CostFunction(cost_function.CostFunction):
 
     def __init__(self, agent):
         cost_function.CostFunction.__init__(self, agent)
@@ -121,7 +121,7 @@ class ExplorationModeCostFunction3(cost_function.CostFunction):
         return cost
 
 
-class ExplorationModeCostFunction4(cost_function.CostFunction):
+class ExplorationMode4CostFunction(cost_function.CostFunction):
 
     def __init__(self, agent):
         cost_function.CostFunction.__init__(self, agent)
