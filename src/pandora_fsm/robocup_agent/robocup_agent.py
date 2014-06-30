@@ -412,6 +412,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.minutes_passed_ = config["timePassed"]
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
+        self.updated_victim_threshold_ = config["updatedVictimThreshold"]
         self.robot_resets_ = config["robotResets"]
         self.robot_restarts_ = config["robotRestarts"]
         if config["explorationStrategy"] == 0:

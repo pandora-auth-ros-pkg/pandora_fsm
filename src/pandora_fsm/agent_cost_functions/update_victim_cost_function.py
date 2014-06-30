@@ -38,16 +38,22 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import cost_function
 
+from math import fabs
+
 
 class UpdateVictimCostFunction(cost_function.CostFunction):
 
     def execute(self):
         for victim in self.agent_.new_victims_:
             if victim.id == self.agent_.target_victim_.id:
-                if self.agent_.target_victim_.victimPose.pose.position.x != \
-                        victim.victimPose.pose.position.x or \
-                    self.agent_.target_victim_.victimPose.pose.position.y != \
-                        victim.victimPose.pose.position.y:
+                if fabs(self.agent_.target_victim_.
+                        victimPose.pose.position.x -
+                        victim.victimPose.pose.position.x) > \
+                        self.agent_.updated_victim_threshold_ or \
+                    fabs(self.agent_.target_victim_.
+                         victimPose.pose.position.y -
+                         victim.victimPose.pose.position.y) > \
+                        self.agent_.updated_victim_threshold_:
                     self.agent_.target_victim_ = victim
                     return 1
                 return 0

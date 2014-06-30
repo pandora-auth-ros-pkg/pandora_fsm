@@ -85,7 +85,8 @@ class TestAgent(unittest.TestCase):
                                   "maxTime": 1200,
                                   "timePassed": 0,
                                   "validVictimProbability": 0.5,
-                                  "abortedVictimsDistance": 0.05,
+                                  "abortedVictimsDistance": 0.5,
+                                  "updatedVictimThreshold": 0.05,
                                   "robotResets": 0,
                                   "robotRestarts": 0,
                                   "explorationStrategy": 4,
@@ -798,6 +799,7 @@ class TestAgent(unittest.TestCase):
                                   "timePassed": 0,
                                   "validVictimProbability": 0.7,
                                   "abortedVictimsDistance": 0.1,
+                                  "updatedVictimThreshold": 0.1,
                                   "robotResets": 1,
                                   "robotRestarts": 3,
                                   "explorationStrategy": 1,
@@ -813,6 +815,7 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(global_vars.test_agent.max_time_, 1790)
         self.assertEqual(global_vars.test_agent.valid_victim_probability_, 0.7)
         self.assertEqual(global_vars.test_agent.aborted_victims_distance_, 0.1)
+        self.assertEqual(global_vars.test_agent.updated_victim_threshold_, 0.1)
         self.assertEqual(global_vars.test_agent.robot_resets_, 1)
         self.assertEqual(global_vars.test_agent.robot_restarts_, 3)
         self.assertEqual(global_vars.test_agent.exploration_strategy_,
