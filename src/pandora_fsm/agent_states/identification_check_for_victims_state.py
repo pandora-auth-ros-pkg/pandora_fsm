@@ -121,6 +121,8 @@ class IdentificationCheckForVictimsState(state.State):
             return self.next_states_[3]
 
         if self.agent_.move_base_ac_.get_state() == GoalStatus.SUCCEEDED:
+            self.agent_.end_effector_planner_ac_.cancel_all_goals()
+            self.agent_.end_effector_planner_ac_.wait_for_result()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.transition_to_state(robotModeMsg.MODE_DF_HOLD)
             self.agent_.new_robot_state_cond_.wait()
