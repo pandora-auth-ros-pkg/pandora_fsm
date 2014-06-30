@@ -38,6 +38,9 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from math import pi
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+
 from state_manager_communications.msg import robotModeMsg
 from pandora_navigation_msgs.msg import DoExplorationGoal
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
