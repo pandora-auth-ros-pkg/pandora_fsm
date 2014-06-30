@@ -83,6 +83,25 @@ class YellowBlackArenaSaveRobotPoseState(state.State):
 
     def feedback_cb(self, feedback):
         self.agent_.save_robot_pose_ = feedback.base_position
+        roll, pitch, yaw = \
+            euler_from_quaternion([self.agent_.save_robot_pose_.
+                                   pose.orientation.x,
+                                   self.agent_.save_robot_pose_.
+                                   pose.orientation.y,
+                                   self.agent_.save_robot_pose_.
+                                   pose.orientation.z,
+                                   self.agent_.save_robot_pose_.
+                                   pose.orientation.w])
+
+        transformed_orientation = quaternion_from_euler(roll, pitch, yaw + pi)
+        self.agent_.save_robot_pose_.pose.orientation.x = \
+            transformed_orientation[0]
+        self.agent_.save_robot_pose_.pose.orientation.y = \
+            transformed_orientation[1]
+        self.agent_.save_robot_pose_.pose.orientation.z = \
+            transformed_orientation[2]
+        self.agent_.save_robot_pose_.pose.orientation.w = \
+            transformed_orientation[3]
 
     def done_cb(self, status, result):
         self.agent_.current_exploration_mode_ = -1

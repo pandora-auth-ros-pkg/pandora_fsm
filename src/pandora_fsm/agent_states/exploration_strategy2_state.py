@@ -124,9 +124,12 @@ class ExplorationStrategy2State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
+                self.end_exploration()
                 self.agent_.end_effector_planner_ac_.cancel_all_goals()
                 self.agent_.end_effector_planner_ac_.wait_for_result()
-                self.end_exploration()
+                goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+                self.agent_.end_effector_planner_ac_.send_goal(goal)
+                self.agent_.end_effector_planner_ac_.wait_for_result()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
