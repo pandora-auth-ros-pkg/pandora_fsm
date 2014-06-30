@@ -430,7 +430,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
             self.exploration_strategy_ = \
                 "yellow_black_arena_save_robot_pose_state"
         elif config["explorationStrategy"] == 7:
-            self.exploration_strategy_ = "yellow_black_arena_turn_back_state"
+            self.exploration_strategy_ = \
+                "yellow_black_arena_turn_back_move_base_state"
         self.strategy3_deep_limit_ = config["strategy3DeepLimit"]
         self.strategy4_deep_limit_ = config["strategy4DeepLimit"]
         self.strategy4_fast_limit_ = config["strategy4FastLimit"]

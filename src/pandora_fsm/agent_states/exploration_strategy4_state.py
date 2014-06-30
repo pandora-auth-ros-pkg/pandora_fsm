@@ -119,12 +119,12 @@ class ExplorationStrategy4State(state.State):
                 rospy.get_rostime().secs - self.agent_.initial_time_
 
         if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
-            if self.agent_.strategy4_current_cost_ < \
+            if self.agent_.strategy4_current_cost_ <= \
                     self.agent_.strategy4_deep_limit_:
                 if self.agent_.current_exploration_mode_ != \
                         DoExplorationGoal.TYPE_DEEP:
                     self.start_exploration(DoExplorationGoal.TYPE_DEEP)
-            elif self.agent_.strategy4_current_cost_ < \
+            elif self.agent_.strategy4_current_cost_ <= \
                     self.agent_.strategy4_fast_limit_:
                 if self.agent_.current_exploration_mode_ != \
                         DoExplorationGoal.TYPE_NORMAL:
