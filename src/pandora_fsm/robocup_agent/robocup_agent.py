@@ -280,12 +280,19 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                      "stop_button_state",
                      "identification_check_for_victims_state",
                      "track_end_effector_planner_state",
-                     "data_fusion_hold_state",
+                     "lax_track_end_effector_planner_state",
                      "scan_end_effector_planner_state"],
                     [agent_cost_functions.find_new_victim_to_go_cost_function.
                      FindNewVictimToGoCostFunction(self),
                      agent_cost_functions.update_victim_cost_function.
                      UpdateVictimCostFunction(self)]
+                ),
+                "lax_track_end_effector_planner_state":
+                agent_states.lax_track_end_effector_planner_state.
+                LaxTrackEndEffectorPlannerState(
+                    self,
+                    ["teleoperation_state",
+                     "data_fusion_hold_state"]
                 ),
                 "data_fusion_hold_state":
                 agent_states.data_fusion_hold_state.DataFusionHoldState(
