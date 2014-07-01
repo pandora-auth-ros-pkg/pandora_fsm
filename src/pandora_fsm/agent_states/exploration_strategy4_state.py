@@ -163,7 +163,8 @@ class ExplorationStrategy4State(state.State):
         if self.agent_.current_exploration_mode_ != -1:
             self.end_exploration()
 
-        rospy.Rate(2).sleep()
+        #~ rospy.Rate(2).sleep()
+        rospy.sleep(2.)
         self.agent_.current_exploration_mode_ = exploration_mode
         goal = DoExplorationGoal(exploration_type=exploration_mode)
         rospy.loginfo(goal)
