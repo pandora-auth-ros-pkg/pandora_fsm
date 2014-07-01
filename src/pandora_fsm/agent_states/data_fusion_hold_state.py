@@ -126,6 +126,11 @@ class DataFusionHoldState(state.State):
                             self.agent_.current_robot_state_cond_.wait()
                             self.agent_.current_robot_state_cond_.release()
                             return self.next_states_[4]
+                        self.agent_.end_effector_planner_ac_.cancel_all_goals()
+                        self.agent_.end_effector_planner_ac_.wait_for_result()
+                        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+                        self.agent_.end_effector_planner_ac_.send_goal(goal)
+                        self.agent_.end_effector_planner_ac_.wait_for_result()
                         self.agent_.new_robot_state_cond_.acquire()
                         self.agent_.transition_to_state(robotModeMsg.
                                                         MODE_EXPLORATION)

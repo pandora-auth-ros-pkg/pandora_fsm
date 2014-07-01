@@ -66,6 +66,14 @@ class TrackEndEffectorPlannerState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
+        self.agent_.new_robot_state_cond_.acquire()
+        self.agent_.transition_to_state(robotModeMsg.MODE_DF_HOLD)
+        self.agent_.new_robot_state_cond_.wait()
+        self.agent_.new_robot_state_cond_.notify()
+        self.agent_.current_robot_state_cond_.acquire()
+        self.agent_.new_robot_state_cond_.release()
+        self.agent_.current_robot_state_cond_.wait()
+        self.agent_.current_robot_state_cond_.release()
         return self.next_states_[1]
 
     def track_end_effector_planner(self):
@@ -77,3 +85,4 @@ class TrackEndEffectorPlannerState(state.State):
         goal.center_point = "kinect_frame"
         rospy.loginfo(goal)
         self.agent_.end_effector_planner_ac_.send_goal(goal)
+        rospy.sleep(2.)
