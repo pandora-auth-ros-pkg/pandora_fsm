@@ -180,4 +180,5 @@ class ExplorationStrategy4State(state.State):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
+        rospy.loginfo("navigation sent aborted")
         self.agent_.current_exploration_mode_ = -1

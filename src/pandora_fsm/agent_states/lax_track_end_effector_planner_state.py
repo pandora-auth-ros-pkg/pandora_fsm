@@ -85,3 +85,4 @@ class LaxTrackEndEffectorPlannerState(state.State):
         goal.center_point = "kinect_frame"
         rospy.loginfo(goal)
         self.agent_.end_effector_planner_ac_.send_goal(goal)
+        rospy.sleep(2.)
