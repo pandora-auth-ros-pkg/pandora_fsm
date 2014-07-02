@@ -99,7 +99,7 @@ class ValidationState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[2]
         self.agent_.new_robot_state_cond_.acquire()
-        self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+        self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION_RESCUE)
         self.agent_.new_robot_state_cond_.wait()
         self.agent_.new_robot_state_cond_.notify()
         self.agent_.current_robot_state_cond_.acquire()
