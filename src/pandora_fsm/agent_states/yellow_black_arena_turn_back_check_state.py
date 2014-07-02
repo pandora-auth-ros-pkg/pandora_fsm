@@ -92,5 +92,7 @@ class YellowBlackArenaTurnBackCheckState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.move_base_ac_.get_state() == GoalStatus.ABORTED:
+            rospy.loginfo("move base sent aborted")
+            rospy.loginfo(self.agent_.move_base_ac_.get_goal_status_text())
             return self.next_states_[3]
         return self.next_states_[2]

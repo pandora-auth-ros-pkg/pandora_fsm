@@ -113,6 +113,7 @@ class IdentificationCheckForVictimsState(state.State):
             return self.next_states_[4]
         elif self.agent_.move_base_ac_.get_state() == GoalStatus.ABORTED:
             rospy.loginfo("move base sent aborted")
+            rospy.loginfo(self.agent_.move_base_ac_.get_goal_status_text())
             if self.agent_.calculate_distance_2d(self.agent_.target_victim_.victimPose.pose.position,
                     self.agent_.current_robot_pose_.pose.position) < \
                     self.agent_.aborted_victim_sensor_hold_:
