@@ -39,34 +39,34 @@ import rospy
 import state
 
 from state_manager_communications.msg import robotModeMsg
-from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
-class ScanEndEffectorPlannerState(state.State):
+class YellowBlackArenaTeleoperationState(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
-        self.name_ = "scan_end_effector_planner_state"
+        self.name_ = "yellow_black_arena_teleoperation_state"
 
     def execute(self):
-        self.scan_end_effector_planner()
+        pass
 
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.preempt_end_effector_planner()
-            self.agent_.park_end_effector_planner()
+                robotModeMsg.MODE_START_AUTONOMOUS:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.release()
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
-            return self.next_states_[0]
-        return self.next_states_[1]
 
-    def scan_end_effector_planner(self):
-        self.agent_.preempt_end_effector_planner()
-        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
-        rospy.loginfo(goal)
-        self.agent_.end_effector_planner_ac_.send_goal(goal)
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+            self.agent_.new_robot_state_cond_.wait()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[1]
+        return self.next_states_[0]

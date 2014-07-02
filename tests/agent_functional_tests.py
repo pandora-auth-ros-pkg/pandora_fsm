@@ -115,7 +115,7 @@ class TestAgent(unittest.TestCase):
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
         global_vars.com.victims_pub_.publish(victims_to_go)
-        rospy.sleep(11.)
+        rospy.sleep(16.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               data_fusion_hold_state.DataFusionHoldState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,

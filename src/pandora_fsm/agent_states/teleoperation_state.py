@@ -52,15 +52,7 @@ class TeleoperationState(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
-            return self.next_states_[1]
-        elif self.agent_.current_robot_state_ == \
+        if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_START_AUTONOMOUS:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
@@ -82,5 +74,5 @@ class TeleoperationState(state.State):
             self.agent_.new_robot_state_cond_.release()
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
-            return self.next_states_[2]
+            return self.next_states_[1]
         return self.next_states_[0]

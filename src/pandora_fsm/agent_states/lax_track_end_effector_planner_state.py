@@ -54,11 +54,8 @@ class LaxTrackEndEffectorPlannerState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-            self.agent_.end_effector_planner_ac_.send_goal(goal)
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -77,12 +74,10 @@ class LaxTrackEndEffectorPlannerState(state.State):
         return self.next_states_[1]
 
     def lax_track_end_effector_planner(self):
-        self.agent_.end_effector_planner_ac_.cancel_all_goals()
-        self.agent_.end_effector_planner_ac_.wait_for_result()
+        self.agent_.preempt_end_effector_planner()
         goal = MoveEndEffectorGoal()
         goal.command = MoveEndEffectorGoal.LAX_TRACK
         goal.point_of_interest = self.agent_.target_victim_.victimFrameId
         goal.center_point = "kinect_frame"
         rospy.loginfo(goal)
         self.agent_.end_effector_planner_ac_.send_goal(goal)
-        rospy.sleep(6.)

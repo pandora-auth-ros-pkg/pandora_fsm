@@ -56,13 +56,9 @@ class YellowBlackArenaTurnBackCheckState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.move_base_ac_.cancel_all_goals()
-            self.agent_.move_base_ac_.wait_for_result()
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-            self.agent_.end_effector_planner_ac_.send_goal(goal)
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_move_base()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -71,13 +67,9 @@ class YellowBlackArenaTurnBackCheckState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.move_base_ac_.cancel_all_goals()
-            self.agent_.move_base_ac_.wait_for_result()
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-            self.agent_.end_effector_planner_ac_.send_goal(goal)
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_move_base()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -87,11 +79,8 @@ class YellowBlackArenaTurnBackCheckState(state.State):
             return self.next_states_[1]
 
         if self.agent_.move_base_ac_.get_state() == GoalStatus.SUCCEEDED:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-            self.agent_.end_effector_planner_ac_.send_goal(goal)
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.transition_to_state(robotModeMsg.
                                             MODE_TELEOPERATED_LOCOMOTION)

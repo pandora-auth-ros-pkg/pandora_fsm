@@ -51,7 +51,8 @@ from math import sqrt, pow
 from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
 from std_msgs.msg import Int32, Float32
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
+from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
+    MoveEndEffectorGoal
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg, ValidateVictimAction, DeleteVictimAction
@@ -327,9 +328,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                 agent_states.yellow_black_arena_exploration_strategy1_state.
                 YellowBlackArenaExplorationStrategy1State(
                     self,
-                    ["teleoperation_state",
+                    ["yellow_black_arena_teleoperation_state",
                      "stop_button_state",
                      "yellow_black_arena_exploration_strategy1_state"]
+                ),
+                "yellow_black_arena_teleoperation_state":
+                agent_states.yellow_black_arena_teleoperation.
+                YellowBlackArenaTeleoperationState(
+                    self,
+                    ["yellow_black_arena_teleoperation_state",
+                     "yellow_black_arena_turn_back_move_base_state"]
                 ),
                 "yellow_black_arena_turn_back_move_base_state":
                 agent_states.yellow_black_arena_turn_back_move_base_state.
@@ -351,7 +359,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                 agent_states.teleoperation_state.TeleoperationState(
                     self,
                     ["teleoperation_state",
-                     "stop_button_state",
                      "scan_end_effector_planner_state"]
                 ),
                 "stop_button_state":
@@ -372,6 +379,23 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                     pow(object1.y - object2.y, 2) +
                     pow(object1.z - object2.z, 2))
         return dist
+
+    def end_exploration(self):
+        self.do_exploration_ac_.cancel_all_goals()
+        self.do_exploration_ac_.wait_for_result()
+
+    def preempt_move_base(self):
+        self.move_base_ac_.cancel_all_goals()
+        self.move_base_ac_.wait_for_result()
+
+    def preempt_end_effector_planner(self):
+        self.end_effector_planner_ac_.cancel_all_goals()
+        self.end_effector_planner_ac_.wait_for_result()
+
+    def park_end_effector_planner(self):
+        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+        self.end_effector_planner_ac_.send_goal(goal)
+        self.end_effector_planner_ac_.wait_for_result()
 
     def start_transition(self, state):
         rospy.loginfo("[%s] Starting Transition to state %i", self._name, state)
@@ -420,24 +444,26 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
         self.updated_victim_threshold_ = config["updatedVictimThreshold"]
+        self.aborted_victim_sensor_hold_ = config["abortedVictimSensorHold"]
         self.robot_resets_ = config["robotResets"]
         self.robot_restarts_ = config["robotRestarts"]
-        if config["explorationStrategy"] == 0:
-            self.exploration_strategy_ = "old_exploration_state"
-        elif config["explorationStrategy"] == 1:
-            self.exploration_strategy_ = "exploration_strategy1_state"
-        elif config["explorationStrategy"] == 2:
-            self.exploration_strategy_ = "exploration_strategy2_state"
-        elif config["explorationStrategy"] == 3:
-            self.exploration_strategy_ = "exploration_strategy3_state"
-        elif config["explorationStrategy"] == 4:
-            self.exploration_strategy_ = "exploration_strategy4_state"
-        elif config["explorationStrategy"] == 5:
-            self.exploration_strategy_ = "exploration_strategy5_state"
-        elif config["explorationStrategy"] == 6:
+        if config["arenaType"] == 0:
+            if config["explorationStrategy"] == 0:
+                self.exploration_strategy_ = "old_exploration_state"
+            elif config["explorationStrategy"] == 1:
+                self.exploration_strategy_ = "exploration_strategy1_state"
+            elif config["explorationStrategy"] == 2:
+                self.exploration_strategy_ = "exploration_strategy2_state"
+            elif config["explorationStrategy"] == 3:
+                self.exploration_strategy_ = "exploration_strategy3_state"
+            elif config["explorationStrategy"] == 4:
+                self.exploration_strategy_ = "exploration_strategy4_state"
+            elif config["explorationStrategy"] == 5:
+                self.exploration_strategy_ = "exploration_strategy5_state"
+        elif config["arenaType"] == 1:
             self.exploration_strategy_ = \
                 "yellow_black_arena_save_robot_pose_state"
-        elif config["explorationStrategy"] == 7:
+        elif config["arenaType"] == 2:
             self.exploration_strategy_ = \
                 "yellow_black_arena_turn_back_move_base_state"
         self.strategy3_deep_limit_ = config["strategy3DeepLimit"]

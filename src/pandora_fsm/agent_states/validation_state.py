@@ -58,11 +58,8 @@ class ValidationState(state.State):
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-            self.agent_.end_effector_planner_ac_.send_goal(goal)
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -71,11 +68,8 @@ class ValidationState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-            self.agent_.end_effector_planner_ac_.send_goal(goal)
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
