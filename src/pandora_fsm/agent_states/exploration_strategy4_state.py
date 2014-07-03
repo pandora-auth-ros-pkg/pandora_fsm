@@ -112,6 +112,7 @@ class ExplorationStrategy4State(state.State):
             self.agent_.minutes_passed_ = \
                 rospy.get_rostime().secs - self.agent_.initial_time_
 
+        rospy.loginfo(self.agent_.strategy4_current_cost_)
         if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
             if self.agent_.strategy4_current_cost_ <= \
                     self.agent_.strategy4_deep_limit_:
