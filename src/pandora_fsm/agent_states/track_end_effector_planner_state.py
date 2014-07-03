@@ -38,6 +38,8 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
+
 from state_manager_communications.msg import robotModeMsg
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
@@ -52,8 +54,21 @@ class TrackEndEffectorPlannerState(state.State):
         self.track_end_effector_planner()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()

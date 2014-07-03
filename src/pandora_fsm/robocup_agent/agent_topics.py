@@ -48,4 +48,5 @@ robot_restart_topic = '/gui/robot_restart'
 move_end_effector_planner_topic = '/control/move_end_effector_planner_action'
 state_changer_action_topic = '/robot/state/change'
 state_monitor_topic = '/robot/state/clients'
-linear_movement_topic = '/control/linear_movement_action'
+linear_movement_action_feedback_topic = \
+    '/control/linear_movement_action/feedback'

@@ -38,6 +38,7 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
 from math import pi
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
@@ -56,8 +57,21 @@ class IdentificationMoveToVictimState(state.State):
         self.move_to_victim()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.preempt_move_base()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()

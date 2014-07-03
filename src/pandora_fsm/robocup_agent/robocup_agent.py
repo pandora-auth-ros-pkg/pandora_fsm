@@ -109,8 +109,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                          self.area_covered_cb)
         rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
                          self.world_model_cb)
-        rospy.Subscriber("/control/linear_movement_action/feedback", MoveLinearActionFeedback,
-                         self.linear_feedback_cb)
+        rospy.Subscriber(agent_topics.linear_movement_action_feedback_topic,
+                         MoveLinearActionFeedback, self.linear_feedback_cb)
 
         self.do_exploration_ac_ = \
             SimpleActionClient(agent_topics.do_exploration_topic,
@@ -305,14 +305,14 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                     ["teleoperation_state",
                      "stop_button_state",
                      "lax_track_wait_until_converged_state",
-                     "data_fusion_hold_state"]
+                     "sensor_hold_state"]
                 ),
-                "data_fusion_hold_state":
-                agent_states.data_fusion_hold_state.DataFusionHoldState(
+                "sensor_hold_state":
+                agent_states.sensor_hold_state.SensorHoldState(
                     self,
                     ["teleoperation_state",
                      "stop_button_state",
-                     "data_fusion_hold_state",
+                     "sensor_hold_state",
                      "validation_state",
                      "track_end_effector_planner_state",
                      "scan_end_effector_planner_state"],
@@ -366,6 +366,22 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                      "stop_button_state",
                      "yellow_black_arena_turn_back_check_state",
                      "yellow_black_arena_turn_back_move_base_state"]
+                ),
+                "mapping_mission_send_goal_state":
+                agent_states.mapping_mission_send_goal_state.
+                MappingMissionSendGoalState(
+                    self,
+                    ["teleoperation_state",
+                     "mapping_mission_check_state"]
+                ),
+                "mapping_mission_check_state":
+                agent_states.mapping_mission_check_state.
+                MappingMissionCheckState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "mapping_mission_check_state",
+                     "mapping_mission_send_goal_state"]
                 ),
                 "teleoperation_state":
                 agent_states.teleoperation_state.TeleoperationState(
@@ -481,8 +497,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
             self.exploration_strategy_ = \
                 "yellow_black_arena_save_robot_pose_state"
         elif config["arenaType"] == 2:
-            self.exploration_strategy_ = \
-                "yellow_black_arena_turn_back_move_base_state"
+            self.exploration_strategy_ = "mapping_mission_send_goal_state"
         self.strategy3_deep_limit_ = config["strategy3DeepLimit"]
         self.strategy4_deep_limit_ = config["strategy4DeepLimit"]
         self.strategy4_fast_limit_ = config["strategy4FastLimit"]
@@ -499,7 +514,7 @@ def main():
 
     agent.main()
 
-    rospy.loginfo('agent terminated')
+    rospy.loginfo('Agent terminated')
 
 if __name__ == '__main__':
     main()

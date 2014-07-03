@@ -36,7 +36,6 @@
 import roslib
 roslib.load_manifest('pandora_fsm')
 
-import data_fusion_hold_state
 import exploration_strategy1_state
 import exploration_strategy2_state
 import exploration_strategy3_state
@@ -46,9 +45,12 @@ import identification_check_for_victims_state
 import identification_move_to_victim_state
 import lax_track_end_effector_planner_state
 import lax_track_wait_until_converged_state
+import mapping_mission_check_state
+import mapping_mission_send_goal_state
 import old_exploration_state
 import robot_start_state
 import scan_end_effector_planner_state
+import sensor_hold_state
 import stop_button_state
 import teleoperation_state
 import test_and_park_end_effector_planner_state
