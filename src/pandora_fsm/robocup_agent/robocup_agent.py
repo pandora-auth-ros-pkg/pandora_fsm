@@ -112,31 +112,31 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.do_exploration_ac_ = \
             SimpleActionClient(agent_topics.do_exploration_topic,
                                DoExplorationAction)
-        self.do_exploration_ac_.wait_for_server()
+        #~ self.do_exploration_ac_.wait_for_server()
 
         self.move_base_ac_ = SimpleActionClient(agent_topics.move_base_topic,
                                                 MoveBaseAction)
-        self.move_base_ac_.wait_for_server()
+        #~ self.move_base_ac_.wait_for_server()
 
         self.delete_victim_ac_ = \
             SimpleActionClient(agent_topics.delete_victim_topic,
                                DeleteVictimAction)
-        self.delete_victim_ac_.wait_for_server()
+        #~ self.delete_victim_ac_.wait_for_server()
 
         self.gui_validate_victim_ac_ = \
             SimpleActionClient(agent_topics.gui_validation_topic,
                                ValidateVictimGUIAction)
-        self.gui_validate_victim_ac_.wait_for_server()
+        #~ self.gui_validate_victim_ac_.wait_for_server()
 
         self.data_fusion_validate_victim_ac_ = \
             SimpleActionClient(agent_topics.data_fusion_validate_victim_topic,
                                ValidateVictimAction)
-        self.data_fusion_validate_victim_ac_.wait_for_server()
+        #~ self.data_fusion_validate_victim_ac_.wait_for_server()
 
         self.end_effector_planner_ac_ = \
             SimpleActionClient(agent_topics.move_end_effector_planner_topic,
                                MoveEndEffectorAction)
-        self.end_effector_planner_ac_.wait_for_server()
+        #~ self.end_effector_planner_ac_.wait_for_server()
 
         self.client_initialize()
 
