@@ -381,6 +381,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         return dist
 
     def end_exploration(self):
+        self.current_exploration_mode_ = -1
         self.do_exploration_ac_.cancel_all_goals()
         #~ self.do_exploration_ac_.wait_for_result()
 
