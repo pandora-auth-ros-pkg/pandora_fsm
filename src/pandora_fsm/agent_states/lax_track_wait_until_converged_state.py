@@ -42,14 +42,14 @@ from state_manager_communications.msg import robotModeMsg
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
-class LaxTrackEndEffectorPlannerState(state.State):
+class LaxTrackWaitUntilConvergedState(state.State):
 
     def __init__(self, agent, next_states, cost_functions=None):
         state.State.__init__(self, agent, next_states, cost_functions)
-        self.name_ = "lax_track_end_effector_planner_state"
+        self.name_ = "lax_track_wait_until_converged_state"
 
     def execute(self):
-        self.lax_track_end_effector_planner()
+        pass
 
     def make_transition(self):
         if self.agent_.current_robot_state_ == \
@@ -63,13 +63,27 @@ class LaxTrackEndEffectorPlannerState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
-        return self.next_states_[1]
+        elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+            self.agent_.preempt_move_base()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[1]
+        
+        if self.agent_.linear_feedback_:
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.transition_to_state(robotModeMsg.MODE_SENSOR_HOLD)
+            self.agent_.new_robot_state_cond_.wait()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            return self.next_states_[3]
 
-    def lax_track_end_effector_planner(self):
-        self.agent_.preempt_end_effector_planner()
-        goal = MoveEndEffectorGoal()
-        goal.command = MoveEndEffectorGoal.LAX_TRACK
-        goal.point_of_interest = self.agent_.target_victim_.victimFrameId
-        goal.center_point = "kinect_frame"
-        rospy.loginfo(goal)
-        self.agent_.end_effector_planner_ac_.send_goal(goal)
+        return self.next_states_[2]

@@ -52,7 +52,7 @@ from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
 from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
-    MoveEndEffectorGoal
+    MoveEndEffectorGoal, MoveLinearFeedback, MoveLinearActionFeedback
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg, ValidateVictimAction, DeleteVictimAction
@@ -74,6 +74,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.qrs_ = 0
         self.current_robot_pose_ = PoseStamped()
         self.current_exploration_mode_ = -1
+        self.linear_feedback_ = MoveLinearFeedback()
 
         self.aborted_victims_ = []
         self.new_victims_ = []
@@ -108,6 +109,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                          self.area_covered_cb)
         rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
                          self.world_model_cb)
+        rospy.Subscriber("/control/linear_movement_action/feedback", MoveLinearActionFeedback,
+                         self.linear_feedback_cb)
 
         self.do_exploration_ac_ = \
             SimpleActionClient(agent_topics.do_exploration_topic,
@@ -293,6 +296,15 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                 LaxTrackEndEffectorPlannerState(
                     self,
                     ["teleoperation_state",
+                     "lax_track_wait_until_converged_state"]
+                ),
+                "lax_track_wait_until_converged_state":
+                agent_states.lax_track_wait_until_converged_state.
+                LaxTrackWaitUntilConvergedState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "lax_track_wait_until_converged_state",
                      "data_fusion_hold_state"]
                 ),
                 "data_fusion_hold_state":
@@ -333,7 +345,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                      "yellow_black_arena_exploration_strategy1_state"]
                 ),
                 "yellow_black_arena_teleoperation_state":
-                agent_states.yellow_black_arena_teleoperation.
+                agent_states.yellow_black_arena_teleoperation_state.
                 YellowBlackArenaTeleoperationState(
                     self,
                     ["yellow_black_arena_teleoperation_state",
@@ -433,6 +445,10 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def world_model_cb(self, msg):
         self.new_victims_ = msg.victims
+
+    def linear_feedback_cb(self, feedback):
+        self.linear_feedback_ = feedback.feedback.linear_command_converged
+        rospy.loginfo(feedback.feedback.linear_command_converged)
 
     def reconfigure(self, config, level):
         self.max_time_ = config["maxTime"]

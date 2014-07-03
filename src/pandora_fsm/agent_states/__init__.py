@@ -45,6 +45,7 @@ import exploration_strategy5_state
 import identification_check_for_victims_state
 import identification_move_to_victim_state
 import lax_track_end_effector_planner_state
+import lax_track_wait_until_converged_state
 import old_exploration_state
 import robot_start_state
 import scan_end_effector_planner_state
@@ -56,6 +57,6 @@ import validation_state
 import waiting_to_start_state
 import yellow_black_arena_exploration_strategy1_state
 import yellow_black_arena_save_robot_pose_state
-import yellow_black_arena_teleoperation
+import yellow_black_arena_teleoperation_state
 import yellow_black_arena_turn_back_check_state
 import yellow_black_arena_turn_back_move_base_state
