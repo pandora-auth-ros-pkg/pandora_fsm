@@ -382,15 +382,15 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def end_exploration(self):
         self.do_exploration_ac_.cancel_all_goals()
-        self.do_exploration_ac_.wait_for_result()
+        #~ self.do_exploration_ac_.wait_for_result()
 
     def preempt_move_base(self):
         self.move_base_ac_.cancel_all_goals()
-        self.move_base_ac_.wait_for_result()
+        #~ self.move_base_ac_.wait_for_result()
 
     def preempt_end_effector_planner(self):
         self.end_effector_planner_ac_.cancel_all_goals()
-        self.end_effector_planner_ac_.wait_for_result()
+        #~ self.end_effector_planner_ac_.wait_for_result()
 
     def park_end_effector_planner(self):
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
