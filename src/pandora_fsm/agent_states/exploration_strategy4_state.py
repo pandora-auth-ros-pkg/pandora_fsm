@@ -115,7 +115,7 @@ class ExplorationStrategy4State(state.State):
         if rospy.get_rostime().secs - self.agent_.initial_time_ - \
                 self.agent_.time_passed_ >= 1:
             current_cost = self.cost_functions_[1].execute()
-            rospy.loginfo(self.agent_.strategy4_current_cost_)
+            rospy.loginfo(current_cost)
             self.agent_.strategy4_previous_victims_ = \
                 self.agent_.valid_victims_
             self.agent_.strategy4_previous_qrs_ = self.agent_.qrs_
