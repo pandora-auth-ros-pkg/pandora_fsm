@@ -72,7 +72,7 @@ class ExplorationMode4CostFunction(cost_function.CostFunction):
         cost += float(self.agent_.robot_restarts_ -
                       self.agent_.strategy4_previous_restarts_) * self.w5_
 
-        cost += float(self.agent_.time_passed_ - rospy.get_rostime().secs - \
+        cost += float(self.agent_.time_passed_ - rospy.get_rostime().secs + \
             self.agent_.initial_time_) / self.agent_.max_time_ * self.w6_
 
         cost /= float(self.sum_weights_)
