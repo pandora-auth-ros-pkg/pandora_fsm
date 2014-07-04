@@ -115,13 +115,13 @@ class ExplorationStrategy5State(state.State):
         current_cost = self.cost_functions_[1].execute()
 
         if rospy.get_rostime().secs - self.agent_.initial_time_ - \
-                self.agent_.minutes_passed_ >= 60:
+                self.agent_.time_passed_ >= 60:
 
             if self.agent_.valid_victims_ == 0:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.135 - 0.003*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -133,8 +133,8 @@ class ExplorationStrategy5State(state.State):
                     self.agent_.max_time_/2:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.09 - 0.002*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -146,8 +146,8 @@ class ExplorationStrategy5State(state.State):
                     self.agent_.max_time_/2:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.06 - 0.001333333*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -157,8 +157,8 @@ class ExplorationStrategy5State(state.State):
             else:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.06 - 0.001333333*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_

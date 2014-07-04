@@ -115,12 +115,12 @@ class ExplorationStrategy3State(state.State):
         current_cost = self.cost_functions_[1].execute()
 
         if rospy.get_rostime().secs - self.agent_.initial_time_ - \
-                self.agent_.minutes_passed_ >= 60:
+                self.agent_.time_passed_ >= 60:
 
             for i in range((rospy.get_rostime().secs -
                             self.agent_.initial_time_ -
-                            self.agent_.minutes_passed_) / 60):
-                self.agent_.minutes_passed_ += 60
+                            self.agent_.time_passed_) / 60):
+                self.agent_.time_passed_ += 60
                 self.agent_.strategy3_deep_limit_ = \
                     (1 + 0.135 - 0.003*self.agent_.max_time_/60) * \
                     self.agent_.strategy3_deep_limit_

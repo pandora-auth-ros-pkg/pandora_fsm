@@ -464,7 +464,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def linear_feedback_cb(self, feedback):
         self.linear_feedback_ = feedback.feedback.linear_command_converged
-        rospy.loginfo(feedback.feedback.linear_command_converged)
 
     def reconfigure(self, config, level):
         self.max_time_ = config["maxTime"]
@@ -473,7 +472,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.max_yellow_area_ = config["yellowArenaArea"]
         self.max_yellow_black_area_ = config["yellowBlackArenaArea"]
         self.initial_time_ = rospy.get_rostime().secs - config["timePassed"]
-        self.minutes_passed_ = config["timePassed"]
+        self.time_passed_ = config["timePassed"]
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
         self.updated_victim_threshold_ = config["updatedVictimThreshold"]

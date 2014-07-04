@@ -113,9 +113,9 @@ class ExplorationStrategy4State(state.State):
             return self.next_states_[3]
 
         if rospy.get_rostime().secs - self.agent_.initial_time_ - \
-                self.agent_.minutes_passed_ >= 60:
-            rospy.loginfo(self.agent_.strategy4_current_cost_)
+                self.agent_.time_passed_ >= 1:
             current_cost = self.cost_functions_[1].execute()
+            rospy.loginfo(self.agent_.strategy4_current_cost_)
             self.agent_.strategy4_previous_victims_ = \
                 self.agent_.valid_victims_
             self.agent_.strategy4_previous_qrs_ = self.agent_.qrs_
@@ -125,7 +125,7 @@ class ExplorationStrategy4State(state.State):
             self.agent_.strategy4_previous_restarts_ = \
                 self.agent_.robot_restarts_
             self.agent_.strategy4_current_cost_ = current_cost
-            self.agent_.minutes_passed_ = \
+            self.agent_.time_passed_ = \
                 rospy.get_rostime().secs - self.agent_.initial_time_
 
         if self.agent_.current_arena_ == ArenaTypeMsg.TYPE_YELLOW:
