@@ -38,8 +38,13 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
+from math import pi
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+
 from state_manager_communications.msg import robotModeMsg
 from pandora_navigation_msgs.msg import DoExplorationGoal
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class YellowBlackArenaSaveRobotPoseState(state.State):
@@ -55,15 +60,27 @@ class YellowBlackArenaSaveRobotPoseState(state.State):
                                                  feedback_cb=self.feedback_cb,
                                                  done_cb=self.done_cb)
         rospy.sleep(2.)
-        self.agent_.do_exploration_ac_.cancel_all_goals()
-        self.agent_.do_exploration_ac_.wait_for_result()
+        self.agent_.end_exploration()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -73,12 +90,27 @@ class YellowBlackArenaSaveRobotPoseState(state.State):
             return self.next_states_[0]
         return self.next_states_[1]
 
-    def end_exploration(self):
-        self.agent_.do_exploration_ac_.cancel_all_goals()
-        self.agent_.do_exploration_ac_.wait_for_result()
-
     def feedback_cb(self, feedback):
         self.agent_.save_robot_pose_ = feedback.base_position
+        roll, pitch, yaw = \
+            euler_from_quaternion([self.agent_.save_robot_pose_.
+                                   pose.orientation.x,
+                                   self.agent_.save_robot_pose_.
+                                   pose.orientation.y,
+                                   self.agent_.save_robot_pose_.
+                                   pose.orientation.z,
+                                   self.agent_.save_robot_pose_.
+                                   pose.orientation.w])
+
+        transformed_orientation = quaternion_from_euler(roll, pitch, yaw + pi)
+        self.agent_.save_robot_pose_.pose.orientation.x = \
+            transformed_orientation[0]
+        self.agent_.save_robot_pose_.pose.orientation.y = \
+            transformed_orientation[1]
+        self.agent_.save_robot_pose_.pose.orientation.z = \
+            transformed_orientation[2]
+        self.agent_.save_robot_pose_.pose.orientation.w = \
+            transformed_orientation[3]
 
     def done_cb(self, status, result):
         self.agent_.current_exploration_mode_ = -1

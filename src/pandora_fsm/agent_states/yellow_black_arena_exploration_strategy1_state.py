@@ -38,8 +38,11 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
+
 from state_manager_communications.msg import robotModeMsg
 from pandora_navigation_msgs.msg import DoExplorationGoal
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class YellowBlackArenaExplorationStrategy1State(state.State):
@@ -52,11 +55,24 @@ class YellowBlackArenaExplorationStrategy1State(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -65,9 +81,9 @@ class YellowBlackArenaExplorationStrategy1State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -89,7 +105,7 @@ class YellowBlackArenaExplorationStrategy1State(state.State):
 
     def start_exploration(self, exploration_mode):
         if self.agent_.current_exploration_mode_ != -1:
-            self.end_exploration()
+            self.agent_.end_exploration()
 
         rospy.Rate(2).sleep()
         self.agent_.current_exploration_mode_ = exploration_mode
@@ -98,12 +114,10 @@ class YellowBlackArenaExplorationStrategy1State(state.State):
                                                  feedback_cb=self.feedback_cb,
                                                  done_cb=self.done_cb)
 
-    def end_exploration(self):
-        self.agent_.do_exploration_ac_.cancel_all_goals()
-        self.agent_.do_exploration_ac_.wait_for_result()
-
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
+        rospy.loginfo("navigation sent aborted")
+        rospy.loginfo(self.agent_.do_exploration_ac_.get_goal_status_text())
         self.agent_.current_exploration_mode_ = -1

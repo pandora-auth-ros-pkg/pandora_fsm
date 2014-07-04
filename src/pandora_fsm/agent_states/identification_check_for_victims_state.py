@@ -38,10 +38,12 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
 from actionlib import GoalStatus
 
 from state_manager_communications.msg import robotModeMsg
 from pandora_data_fusion_msgs.msg import DeleteVictimGoal
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class IdentificationCheckForVictimsState(state.State):
@@ -54,12 +56,24 @@ class IdentificationCheckForVictimsState(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.agent_.move_base_ac_.cancel_all_goals()
-            self.agent_.move_base_ac_.wait_for_result()
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+            self.agent_.preempt_move_base()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -68,10 +82,9 @@ class IdentificationCheckForVictimsState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.agent_.move_base_ac_.cancel_all_goals()
-            self.agent_.move_base_ac_.wait_for_result()
+            self.agent_.preempt_move_base()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -82,8 +95,8 @@ class IdentificationCheckForVictimsState(state.State):
 
         if self.agent_.end_effector_planner_ac_.get_state() == \
                 GoalStatus.ABORTED:
-            self.agent_.move_base_ac_.cancel_all_goals()
-            self.agent_.move_base_ac_.wait_for_result()
+            rospy.loginfo("end effector sent aborted")
+            self.agent_.preempt_move_base()
             new_victims_cost = self.cost_functions_[0].execute()
             max_victim_cost = 0
             for i in range(0, len(new_victims_cost)):
@@ -92,13 +105,12 @@ class IdentificationCheckForVictimsState(state.State):
                     max_victim = self.agent_.new_victims_[i]
 
             if max_victim_cost > 0:
-                self.agent_.move_base_ac_.cancel_all_goals()
-                self.agent_.move_base_ac_.wait_for_result()
                 self.agent_.target_victim_ = max_victim
                 return self.next_states_[3]
 
             self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+            self.agent_.transition_to_state(robotModeMsg.
+                                            MODE_EXPLORATION_RESCUE)
             self.agent_.new_robot_state_cond_.wait()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -109,21 +121,21 @@ class IdentificationCheckForVictimsState(state.State):
 
         updated_victim = self.cost_functions_[1].execute()
         if updated_victim == 1:
-            self.agent_.move_base_ac_.cancel_all_goals()
-            self.agent_.move_base_ac_.wait_for_result()
+            self.agent_.preempt_move_base()
             return self.next_states_[3]
 
         if self.agent_.move_base_ac_.get_state() == GoalStatus.SUCCEEDED:
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.MODE_DF_HOLD)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[4]
         elif self.agent_.move_base_ac_.get_state() == GoalStatus.ABORTED:
+            rospy.loginfo("move base sent aborted")
+            rospy.loginfo(self.agent_.move_base_ac_.get_goal_status_text())
+            if self.agent_.calculate_distance_2d(self.agent_.target_victim_.
+                                                 victimPose.pose.position,
+                                                 self.agent_.
+                                                 current_robot_pose_.pose.
+                                                 position) < \
+                    self.agent_.aborted_victim_sensor_hold_:
+                return self.next_states_[4]
             goal = DeleteVictimGoal(victimId=self.agent_.target_victim_.id)
             self.agent_.delete_victim_ac_.send_goal(goal)
             self.agent_.delete_victim_ac_.wait_for_result()
@@ -150,13 +162,15 @@ class IdentificationCheckForVictimsState(state.State):
                     max_victim = self.agent_.new_victims_[i]
 
             if max_victim_cost > 0:
-                self.agent_.move_base_ac_.cancel_all_goals()
-                self.agent_.move_base_ac_.wait_for_result()
+                self.agent_.preempt_move_base()
                 self.agent_.target_victim_ = max_victim
                 return self.next_states_[3]
 
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+            self.agent_.transition_to_state(robotModeMsg.
+                                            MODE_EXPLORATION_RESCUE)
             self.agent_.new_robot_state_cond_.wait()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()

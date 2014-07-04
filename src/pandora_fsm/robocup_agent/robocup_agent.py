@@ -51,7 +51,8 @@ from math import sqrt, pow
 from geometry_msgs.msg import PoseStamped
 from state_manager_communications.msg import robotModeMsg
 from std_msgs.msg import Int32, Float32
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
+from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
+    MoveEndEffectorGoal, MoveLinearFeedback, MoveLinearActionFeedback
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
     QrNotificationMsg, ValidateVictimAction, DeleteVictimAction
@@ -73,6 +74,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.qrs_ = 0
         self.current_robot_pose_ = PoseStamped()
         self.current_exploration_mode_ = -1
+        self.linear_feedback_ = MoveLinearFeedback()
 
         self.aborted_victims_ = []
         self.new_victims_ = []
@@ -107,6 +109,8 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                          self.area_covered_cb)
         rospy.Subscriber(agent_topics.world_model_topic, WorldModelMsg,
                          self.world_model_cb)
+        rospy.Subscriber(agent_topics.linear_movement_action_feedback_topic,
+                         MoveLinearActionFeedback, self.linear_feedback_cb)
 
         self.do_exploration_ac_ = \
             SimpleActionClient(agent_topics.do_exploration_topic,
@@ -280,19 +284,35 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                      "stop_button_state",
                      "identification_check_for_victims_state",
                      "track_end_effector_planner_state",
-                     "data_fusion_hold_state",
+                     "lax_track_end_effector_planner_state",
                      "scan_end_effector_planner_state"],
                     [agent_cost_functions.find_new_victim_to_go_cost_function.
                      FindNewVictimToGoCostFunction(self),
                      agent_cost_functions.update_victim_cost_function.
                      UpdateVictimCostFunction(self)]
                 ),
-                "data_fusion_hold_state":
-                agent_states.data_fusion_hold_state.DataFusionHoldState(
+                "lax_track_end_effector_planner_state":
+                agent_states.lax_track_end_effector_planner_state.
+                LaxTrackEndEffectorPlannerState(
+                    self,
+                    ["teleoperation_state",
+                     "lax_track_wait_until_converged_state"]
+                ),
+                "lax_track_wait_until_converged_state":
+                agent_states.lax_track_wait_until_converged_state.
+                LaxTrackWaitUntilConvergedState(
                     self,
                     ["teleoperation_state",
                      "stop_button_state",
-                     "data_fusion_hold_state",
+                     "lax_track_wait_until_converged_state",
+                     "sensor_hold_state"]
+                ),
+                "sensor_hold_state":
+                agent_states.sensor_hold_state.SensorHoldState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "sensor_hold_state",
                      "validation_state",
                      "track_end_effector_planner_state",
                      "scan_end_effector_planner_state"],
@@ -320,9 +340,16 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                 agent_states.yellow_black_arena_exploration_strategy1_state.
                 YellowBlackArenaExplorationStrategy1State(
                     self,
-                    ["teleoperation_state",
+                    ["yellow_black_arena_teleoperation_state",
                      "stop_button_state",
                      "yellow_black_arena_exploration_strategy1_state"]
+                ),
+                "yellow_black_arena_teleoperation_state":
+                agent_states.yellow_black_arena_teleoperation_state.
+                YellowBlackArenaTeleoperationState(
+                    self,
+                    ["yellow_black_arena_teleoperation_state",
+                     "yellow_black_arena_turn_back_move_base_state"]
                 ),
                 "yellow_black_arena_turn_back_move_base_state":
                 agent_states.yellow_black_arena_turn_back_move_base_state.
@@ -340,11 +367,26 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                      "yellow_black_arena_turn_back_check_state",
                      "yellow_black_arena_turn_back_move_base_state"]
                 ),
+                "mapping_mission_send_goal_state":
+                agent_states.mapping_mission_send_goal_state.
+                MappingMissionSendGoalState(
+                    self,
+                    ["teleoperation_state",
+                     "mapping_mission_check_state"]
+                ),
+                "mapping_mission_check_state":
+                agent_states.mapping_mission_check_state.
+                MappingMissionCheckState(
+                    self,
+                    ["teleoperation_state",
+                     "stop_button_state",
+                     "mapping_mission_check_state",
+                     "mapping_mission_send_goal_state"]
+                ),
                 "teleoperation_state":
                 agent_states.teleoperation_state.TeleoperationState(
                     self,
                     ["teleoperation_state",
-                     "stop_button_state",
                      "scan_end_effector_planner_state"]
                 ),
                 "stop_button_state":
@@ -365,6 +407,24 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
                     pow(object1.y - object2.y, 2) +
                     pow(object1.z - object2.z, 2))
         return dist
+
+    def end_exploration(self):
+        self.current_exploration_mode_ = -1
+        self.do_exploration_ac_.cancel_all_goals()
+        #~ self.do_exploration_ac_.wait_for_result()
+
+    def preempt_move_base(self):
+        self.move_base_ac_.cancel_all_goals()
+        #~ self.move_base_ac_.wait_for_result()
+
+    def preempt_end_effector_planner(self):
+        self.end_effector_planner_ac_.cancel_all_goals()
+        #~ self.end_effector_planner_ac_.wait_for_result()
+
+    def park_end_effector_planner(self):
+        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+        self.end_effector_planner_ac_.send_goal(goal)
+        self.end_effector_planner_ac_.wait_for_result()
 
     def start_transition(self, state):
         rospy.loginfo("[%s] Starting Transition to state %i", self._name, state)
@@ -402,6 +462,9 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
     def world_model_cb(self, msg):
         self.new_victims_ = msg.victims
 
+    def linear_feedback_cb(self, feedback):
+        self.linear_feedback_ = feedback.feedback.linear_command_converged
+
     def reconfigure(self, config, level):
         self.max_time_ = config["maxTime"]
         self.max_victims_ = config["arenaVictims"]
@@ -409,28 +472,31 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
         self.max_yellow_area_ = config["yellowArenaArea"]
         self.max_yellow_black_area_ = config["yellowBlackArenaArea"]
         self.initial_time_ = rospy.get_rostime().secs - config["timePassed"]
-        self.minutes_passed_ = config["timePassed"]
+        self.time_passed_ = config["timePassed"]
         self.valid_victim_probability_ = config["validVictimProbability"]
         self.aborted_victims_distance_ = config["abortedVictimsDistance"]
+        self.updated_victim_threshold_ = config["updatedVictimThreshold"]
+        self.aborted_victim_sensor_hold_ = config["abortedVictimSensorHold"]
         self.robot_resets_ = config["robotResets"]
         self.robot_restarts_ = config["robotRestarts"]
-        if config["explorationStrategy"] == 0:
-            self.exploration_strategy_ = "old_exploration_state"
-        elif config["explorationStrategy"] == 1:
-            self.exploration_strategy_ = "exploration_strategy1_state"
-        elif config["explorationStrategy"] == 2:
-            self.exploration_strategy_ = "exploration_strategy2_state"
-        elif config["explorationStrategy"] == 3:
-            self.exploration_strategy_ = "exploration_strategy3_state"
-        elif config["explorationStrategy"] == 4:
-            self.exploration_strategy_ = "exploration_strategy4_state"
-        elif config["explorationStrategy"] == 5:
-            self.exploration_strategy_ = "exploration_strategy5_state"
-        elif config["explorationStrategy"] == 6:
+        if config["arenaType"] == 0:
+            if config["explorationStrategy"] == 0:
+                self.exploration_strategy_ = "old_exploration_state"
+            elif config["explorationStrategy"] == 1:
+                self.exploration_strategy_ = "exploration_strategy1_state"
+            elif config["explorationStrategy"] == 2:
+                self.exploration_strategy_ = "exploration_strategy2_state"
+            elif config["explorationStrategy"] == 3:
+                self.exploration_strategy_ = "exploration_strategy3_state"
+            elif config["explorationStrategy"] == 4:
+                self.exploration_strategy_ = "exploration_strategy4_state"
+            elif config["explorationStrategy"] == 5:
+                self.exploration_strategy_ = "exploration_strategy5_state"
+        elif config["arenaType"] == 1:
             self.exploration_strategy_ = \
                 "yellow_black_arena_save_robot_pose_state"
-        elif config["explorationStrategy"] == 7:
-            self.exploration_strategy_ = "yellow_black_arena_turn_back_state"
+        elif config["arenaType"] == 2:
+            self.exploration_strategy_ = "mapping_mission_send_goal_state"
         self.strategy3_deep_limit_ = config["strategy3DeepLimit"]
         self.strategy4_deep_limit_ = config["strategy4DeepLimit"]
         self.strategy4_fast_limit_ = config["strategy4FastLimit"]
@@ -447,7 +513,7 @@ def main():
 
     agent.main()
 
-    rospy.loginfo('agent terminated')
+    rospy.loginfo('Agent terminated')
 
 if __name__ == '__main__':
     main()

@@ -85,7 +85,9 @@ class TestAgent(unittest.TestCase):
                                   "maxTime": 1200,
                                   "timePassed": 0,
                                   "validVictimProbability": 0.5,
-                                  "abortedVictimsDistance": 0.05,
+                                  "abortedVictimsDistance": 0.5,
+                                  "updatedVictimThreshold": 0.05,
+                                  "abortedVictimSensorHold": 0.6,
                                   "robotResets": 0,
                                   "robotRestarts": 0,
                                   "explorationStrategy": 4,
@@ -727,9 +729,7 @@ class TestAgent(unittest.TestCase):
             all_states_["identification_check_for_victims_state"].\
             make_transition()
         rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "data_fusion_hold_state")
-        self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_DF_HOLD)
+        self.assertEqual(next_state, "lax_track_end_effector_planner_state")
 
     def test_identification_state_teleoperation(self):
         rospy.loginfo('test_identification_state_teleoperation')
@@ -780,6 +780,30 @@ class TestAgent(unittest.TestCase):
         rospy.Rate(10).sleep()
         self.assertEqual(next_state, "track_end_effector_planner_state")
 
+    def test_lax_track_end_effector_planner_state_data_fusion_hold(self):
+        rospy.loginfo('test_lax_track_end_effector_planner_state_\
+                      data_fusion_hold')
+        global_vars.test_agent.current_robot_state_ = \
+            robotModeMsg.MODE_IDENTIFICATION
+        next_state = global_vars.test_agent.\
+            all_states_["lax_track_end_effector_planner_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, 'data_fusion_hold_state')
+
+    def test_lax_track_end_effector_planner_state_teleoperation(self):
+        rospy.loginfo('test_lax_track_end_effector_planner_state_teleoperation')
+        global_vars.test_agent.transition_to_state(robotModeMsg.
+                                                   MODE_TELEOPERATED_LOCOMOTION)
+        rospy.Rate(10).sleep()
+        next_state = global_vars.test_agent.\
+            all_states_["lax_track_end_effector_planner_state"].\
+            make_transition()
+        rospy.Rate(10).sleep()
+        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(global_vars.test_agent.current_robot_state_,
+                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+
     def test_qr_notification(self):
         rospy.loginfo('test_qr_notification')
         msg = QrNotificationMsg()
@@ -798,9 +822,12 @@ class TestAgent(unittest.TestCase):
                                   "timePassed": 0,
                                   "validVictimProbability": 0.7,
                                   "abortedVictimsDistance": 0.1,
+                                  "updatedVictimThreshold": 0.1,
+                                  "abortedVictimSensorHold": 0.8,
                                   "robotResets": 1,
                                   "robotRestarts": 3,
                                   "explorationStrategy": 1,
+                                  "arenaType": 1,
                                   "strategy3DeepLimit": 0.9,
                                   "strategy4DeepLimit": 0.1,
                                   "strategy4FastLimit": 0.2,
@@ -813,10 +840,13 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(global_vars.test_agent.max_time_, 1790)
         self.assertEqual(global_vars.test_agent.valid_victim_probability_, 0.7)
         self.assertEqual(global_vars.test_agent.aborted_victims_distance_, 0.1)
+        self.assertEqual(global_vars.test_agent.updated_victim_threshold_, 0.1)
+        self.assertEqual(global_vars.test_agent.
+                         aborted_victim_sensor_hold_, 0.8)
         self.assertEqual(global_vars.test_agent.robot_resets_, 1)
         self.assertEqual(global_vars.test_agent.robot_restarts_, 3)
         self.assertEqual(global_vars.test_agent.exploration_strategy_,
-                         "exploration_strategy1_state")
+                         "yellow_black_arena_save_robot_pose_state")
         self.assertEqual(global_vars.test_agent.strategy3_deep_limit_, 0.9)
         self.assertEqual(global_vars.test_agent.strategy4_deep_limit_, 0.1)
         self.assertEqual(global_vars.test_agent.strategy4_fast_limit_, 0.2)
@@ -905,19 +935,6 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(next_state, "scan_end_effector_planner_state")
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_EXPLORATION)
-
-    def test_teleoperation_state_stop_button(self):
-        rospy.loginfo('test_teleoperation_state_stop_button')
-        global_vars.test_agent.current_robot_state_ = \
-            robotModeMsg.MODE_TELEOPERATED_LOCOMOTION
-        global_vars.test_agent.transition_to_state(robotModeMsg.MODE_OFF)
-        rospy.Rate(10).sleep()
-        next_state = global_vars.test_agent.\
-            all_states_["teleoperation_state"].make_transition()
-        rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "stop_button_state")
-        self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_OFF)
 
     def test_test_and_park_end_effector_planner_state_robot_start(self):
         rospy.loginfo('test_test_and_park_end_effector_planner_state_\
@@ -1216,7 +1233,7 @@ class TestAgent(unittest.TestCase):
             all_states_["yellow_black_arena_exploration_strategy1_state"].\
             make_transition()
         rospy.Rate(10).sleep()
-        self.assertEqual(next_state, "teleoperation_state")
+        self.assertEqual(next_state, "yellow_black_arena_teleoperation_state")
         self.assertEqual(global_vars.test_agent.current_robot_state_,
                          robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
 

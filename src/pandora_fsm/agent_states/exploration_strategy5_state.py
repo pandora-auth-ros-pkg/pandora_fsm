@@ -38,8 +38,11 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
+
 from state_manager_communications.msg import robotModeMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class ExplorationStrategy5State(state.State):
@@ -52,11 +55,24 @@ class ExplorationStrategy5State(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -65,9 +81,9 @@ class ExplorationStrategy5State(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
-            self.end_exploration()
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -84,7 +100,7 @@ class ExplorationStrategy5State(state.State):
                 max_victim = self.agent_.new_victims_[i]
 
         if max_victim_cost > 0:
-            self.end_exploration()
+            self.agent_.end_exploration()
             self.agent_.target_victim_ = max_victim
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.transition_to_state(robotModeMsg.MODE_IDENTIFICATION)
@@ -99,13 +115,13 @@ class ExplorationStrategy5State(state.State):
         current_cost = self.cost_functions_[1].execute()
 
         if rospy.get_rostime().secs - self.agent_.initial_time_ - \
-                self.agent_.minutes_passed_ >= 60:
+                self.agent_.time_passed_ >= 60:
 
             if self.agent_.valid_victims_ == 0:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.135 - 0.003*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -117,8 +133,8 @@ class ExplorationStrategy5State(state.State):
                     self.agent_.max_time_/2:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.09 - 0.002*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -130,8 +146,8 @@ class ExplorationStrategy5State(state.State):
                     self.agent_.max_time_/2:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.06 - 0.001333333*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -141,8 +157,8 @@ class ExplorationStrategy5State(state.State):
             else:
                 for i in range((rospy.get_rostime().secs -
                                 self.agent_.initial_time_ -
-                                self.agent_.minutes_passed_) / 60):
-                    self.agent_.minutes_passed_ += 60
+                                self.agent_.time_passed_) / 60):
+                    self.agent_.time_passed_ += 60
                     self.agent_.strategy5_deep_limit_ = \
                         (1 + 0.06 - 0.001333333*self.agent_.max_time_/60) * \
                         self.agent_.strategy5_deep_limit_
@@ -169,9 +185,9 @@ class ExplorationStrategy5State(state.State):
                         DoExplorationGoal.TYPE_FAST:
                     self.start_exploration(DoExplorationGoal.TYPE_FAST)
             else:
-                self.agent_.end_effector_planner_ac_.cancel_all_goals()
-                self.agent_.end_effector_planner_ac_.wait_for_result()
-                self.end_exploration()
+                self.agent_.end_exploration()
+                self.agent_.preempt_end_effector_planner()
+                self.agent_.park_end_effector_planner()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
                     transition_to_state(robotModeMsg.
@@ -188,21 +204,19 @@ class ExplorationStrategy5State(state.State):
 
     def start_exploration(self, exploration_mode):
         if self.agent_.current_exploration_mode_ != -1:
-            self.end_exploration()
+            self.agent_.end_exploration()
 
-        rospy.Rate(2).sleep()
+        rospy.sleep(1.)
         self.agent_.current_exploration_mode_ = exploration_mode
         goal = DoExplorationGoal(exploration_type=exploration_mode)
         self.agent_.do_exploration_ac_.send_goal(goal,
                                                  feedback_cb=self.feedback_cb,
                                                  done_cb=self.done_cb)
 
-    def end_exploration(self):
-        self.agent_.do_exploration_ac_.cancel_all_goals()
-        self.agent_.do_exploration_ac_.wait_for_result()
-
     def feedback_cb(self, feedback):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
+        rospy.loginfo("navigation sent aborted")
+        rospy.loginfo(self.agent_.do_exploration_ac_.get_goal_status_text())
         self.agent_.current_exploration_mode_ = -1

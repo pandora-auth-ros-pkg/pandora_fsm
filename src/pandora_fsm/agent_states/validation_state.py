@@ -38,10 +38,13 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 import state
 
+from sys import exit
+
 from state_manager_communications.msg import robotModeMsg
 from pandora_data_fusion_msgs.msg import ValidateVictimGoal
 from pandora_rqt_gui.msg import ValidateVictimGUIGoal
 from pandora_navigation_msgs.msg import ArenaTypeMsg
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
 class ValidationState(state.State):
@@ -55,10 +58,23 @@ class ValidationState(state.State):
         self.validate_current_victim()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+            self.agent_.end_exploration()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
+            self.agent_.new_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.notify()
+            self.agent_.current_robot_state_cond_.acquire()
+            self.agent_.new_robot_state_cond_.release()
+            self.agent_.current_robot_state_cond_.wait()
+            self.agent_.current_robot_state_cond_.release()
+            exit(0)
+        elif self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+            self.agent_.current_robot_state_ == \
+                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -67,8 +83,8 @@ class ValidationState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
         elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
-            self.agent_.end_effector_planner_ac_.cancel_all_goals()
-            self.agent_.end_effector_planner_ac_.wait_for_result()
+            self.agent_.preempt_end_effector_planner()
+            self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -97,8 +113,10 @@ class ValidationState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[2]
+        self.agent_.preempt_end_effector_planner()
+        self.agent_.park_end_effector_planner()
         self.agent_.new_robot_state_cond_.acquire()
-        self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION)
+        self.agent_.transition_to_state(robotModeMsg.MODE_EXPLORATION_RESCUE)
         self.agent_.new_robot_state_cond_.wait()
         self.agent_.new_robot_state_cond_.notify()
         self.agent_.current_robot_state_cond_.acquire()
