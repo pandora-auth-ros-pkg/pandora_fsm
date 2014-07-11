@@ -102,15 +102,6 @@ class IdentificationCheckForVictimsState(state.State):
                 self.agent_.target_victim_ = max_victim
                 return self.next_states_[3]
 
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.
-                                            MODE_EXPLORATION_RESCUE)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[5]
 
         updated_victim = self.cost_functions_[1].execute()
@@ -162,15 +153,6 @@ class IdentificationCheckForVictimsState(state.State):
 
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.
-                                            MODE_EXPLORATION_RESCUE)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[5]
 
         return self.next_states_[2]

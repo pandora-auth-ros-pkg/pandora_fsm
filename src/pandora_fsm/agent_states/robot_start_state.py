@@ -83,15 +83,6 @@ class RobotStartState(state.State):
 
         if self.counter_ == 10:
             self.counter_ = 0
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.
-                                            MODE_EXPLORATION_RESCUE)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[3]
         return self.next_states_[2]
 
