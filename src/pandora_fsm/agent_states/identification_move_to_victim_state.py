@@ -94,7 +94,6 @@ class IdentificationMoveToVictimState(state.State):
         victim.pose.position.z = 0
 
         goal = MoveBaseGoal(target_pose=victim)
-        rospy.loginfo(goal)
         self.agent_.move_base_ac_.send_goal(goal, feedback_cb=self.feedback_cb)
 
     def feedback_cb(self, feedback):

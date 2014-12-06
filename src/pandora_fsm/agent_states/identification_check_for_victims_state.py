@@ -89,7 +89,6 @@ class IdentificationCheckForVictimsState(state.State):
 
         if self.agent_.end_effector_planner_ac_.get_state() == \
                 GoalStatus.ABORTED:
-            rospy.loginfo("end effector sent aborted")
             self.agent_.preempt_move_base()
             new_victims_cost = self.cost_functions_[0].execute()
             max_victim_cost = 0
@@ -112,8 +111,6 @@ class IdentificationCheckForVictimsState(state.State):
         if self.agent_.move_base_ac_.get_state() == GoalStatus.SUCCEEDED:
             return self.next_states_[4]
         elif self.agent_.move_base_ac_.get_state() == GoalStatus.ABORTED:
-            rospy.loginfo("move base sent aborted")
-            rospy.loginfo(self.agent_.move_base_ac_.get_goal_status_text())
             if self.agent_.calculate_distance_2d(self.agent_.target_victim_.
                                                  victimPose.pose.position,
                                                  self.agent_.

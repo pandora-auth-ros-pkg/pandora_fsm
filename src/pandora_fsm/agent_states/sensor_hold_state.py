@@ -91,10 +91,6 @@ class SensorHoldState(state.State):
             self.counter_ = 0
             for victim in self.agent_.new_victims_:
                 if victim.id == self.agent_.target_victim_.id:
-                    rospy.loginfo("target victim is:")
-                    rospy.loginfo(self.agent_.target_victim_)
-                    rospy.loginfo("victim with sensors is:")
-                    rospy.loginfo(victim)
                     face = False
                     for sensor in victim.sensors:
                         if sensor == 'FACE':

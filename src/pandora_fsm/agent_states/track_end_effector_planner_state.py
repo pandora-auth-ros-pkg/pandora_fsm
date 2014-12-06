@@ -80,5 +80,4 @@ class TrackEndEffectorPlannerState(state.State):
         goal.command = MoveEndEffectorGoal.TRACK
         goal.point_of_interest = self.agent_.target_victim_.victimFrameId
         goal.center_point = "kinect_frame"
-        rospy.loginfo(goal)
         self.agent_.end_effector_planner_ac_.send_goal(goal)
