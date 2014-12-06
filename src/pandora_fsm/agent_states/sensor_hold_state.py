@@ -60,12 +60,6 @@ class SensorHoldState(state.State):
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             exit(0)
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
@@ -97,10 +91,6 @@ class SensorHoldState(state.State):
             self.counter_ = 0
             for victim in self.agent_.new_victims_:
                 if victim.id == self.agent_.target_victim_.id:
-                    rospy.loginfo("target victim is:")
-                    rospy.loginfo(self.agent_.target_victim_)
-                    rospy.loginfo("victim with sensors is:")
-                    rospy.loginfo(victim)
                     face = False
                     for sensor in victim.sensors:
                         if sensor == 'FACE':
@@ -141,15 +131,6 @@ class SensorHoldState(state.State):
                             return self.next_states_[4]
                         self.agent_.preempt_end_effector_planner()
                         self.agent_.park_end_effector_planner()
-                        self.agent_.new_robot_state_cond_.acquire()
-                        self.agent_.transition_to_state(robotModeMsg.
-                                                        MODE_EXPLORATION_RESCUE)
-                        self.agent_.new_robot_state_cond_.wait()
-                        self.agent_.new_robot_state_cond_.notify()
-                        self.agent_.current_robot_state_cond_.acquire()
-                        self.agent_.new_robot_state_cond_.release()
-                        self.agent_.current_robot_state_cond_.wait()
-                        self.agent_.current_robot_state_cond_.release()
                         return self.next_states_[5]
         return self.next_states_[2]
 

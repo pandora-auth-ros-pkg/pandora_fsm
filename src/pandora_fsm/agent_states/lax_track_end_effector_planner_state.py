@@ -58,12 +58,6 @@ class LaxTrackEndEffectorPlannerState(state.State):
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             exit(0)
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
@@ -86,6 +80,5 @@ class LaxTrackEndEffectorPlannerState(state.State):
         goal.command = MoveEndEffectorGoal.LAX_TRACK
         goal.point_of_interest = self.agent_.target_victim_.victimFrameId
         goal.center_point = "kinect_frame"
-        rospy.loginfo(goal)
         self.agent_.linear_feedback_ = False
         self.agent_.end_effector_planner_ac_.send_goal(goal)

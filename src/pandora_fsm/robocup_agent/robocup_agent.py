@@ -464,7 +464,6 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
     def linear_feedback_cb(self, feedback):
         self.linear_feedback_ = feedback.feedback.linear_command_converged
-        rospy.loginfo(self.linear_feedback_)
 
     def reconfigure(self, config, level):
         self.max_time_ = config["maxTime"]

@@ -60,12 +60,6 @@ class IdentificationCheckForVictimsState(state.State):
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             exit(0)
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
@@ -95,7 +89,6 @@ class IdentificationCheckForVictimsState(state.State):
 
         if self.agent_.end_effector_planner_ac_.get_state() == \
                 GoalStatus.ABORTED:
-            rospy.loginfo("end effector sent aborted")
             self.agent_.preempt_move_base()
             new_victims_cost = self.cost_functions_[0].execute()
             max_victim_cost = 0
@@ -108,15 +101,6 @@ class IdentificationCheckForVictimsState(state.State):
                 self.agent_.target_victim_ = max_victim
                 return self.next_states_[3]
 
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.
-                                            MODE_EXPLORATION_RESCUE)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[5]
 
         updated_victim = self.cost_functions_[1].execute()
@@ -127,8 +111,6 @@ class IdentificationCheckForVictimsState(state.State):
         if self.agent_.move_base_ac_.get_state() == GoalStatus.SUCCEEDED:
             return self.next_states_[4]
         elif self.agent_.move_base_ac_.get_state() == GoalStatus.ABORTED:
-            rospy.loginfo("move base sent aborted")
-            rospy.loginfo(self.agent_.move_base_ac_.get_goal_status_text())
             if self.agent_.calculate_distance_2d(self.agent_.target_victim_.
                                                  victimPose.pose.position,
                                                  self.agent_.
@@ -168,15 +150,6 @@ class IdentificationCheckForVictimsState(state.State):
 
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.
-                                            MODE_EXPLORATION_RESCUE)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[5]
 
         return self.next_states_[2]

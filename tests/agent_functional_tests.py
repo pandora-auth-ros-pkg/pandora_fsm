@@ -40,8 +40,8 @@ import unittest
 import global_vars
 
 from threading import Thread
-from pandora_fsm.agent_states import data_fusion_hold_state, \
-    exploration_strategy4_state, identification_check_for_victims_state, \
+from pandora_fsm.agent_states import exploration_strategy4_state, \
+    identification_check_for_victims_state, sensor_hold_state, \
     teleoperation_state
 
 from state_manager_communications.msg import robotModeMsg
@@ -64,7 +64,7 @@ class TestAgent(unittest.TestCase):
                               exploration_strategy4_state.
                               ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_EXPLORATION)
+                         robotModeMsg.MODE_EXPLORATION_RESCUE)
 
     def test_exploration_state(self):
         rospy.sleep(10.)
@@ -115,11 +115,13 @@ class TestAgent(unittest.TestCase):
         victim.probability = 0.0
         victims_to_go.victims.append(victim)
         global_vars.com.victims_pub_.publish(victims_to_go)
-        rospy.sleep(16.)
+        rospy.sleep(12.)
+        global_vars.test_agent.linear_feedback_ = True
+        rospy.sleep(4.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
-                              data_fusion_hold_state.DataFusionHoldState)
+                              sensor_hold_state.SensorHoldState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_DF_HOLD)
+                         robotModeMsg.MODE_SENSOR_HOLD)
 
     def test_validation_state(self):
         rospy.loginfo('Publish target victim with increased probability')
@@ -148,7 +150,7 @@ class TestAgent(unittest.TestCase):
                               exploration_strategy4_state.
                               ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_EXPLORATION)
+                         robotModeMsg.MODE_EXPLORATION_RESCUE)
 
     def test_exploration_state_change_to_normal(self):
         rospy.loginfo('Change exploration type to normal')

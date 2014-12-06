@@ -58,12 +58,6 @@ class TeleoperationState(state.State):
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             exit(0)
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_START_AUTONOMOUS:
@@ -79,14 +73,5 @@ class TeleoperationState(state.State):
                 self.agent_.delete_victim_ac_.send_goal(goal)
                 self.agent_.delete_victim_ac_.wait_for_result()
 
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.
-                                            MODE_EXPLORATION_RESCUE)
-            self.agent_.new_robot_state_cond_.wait()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             return self.next_states_[1]
         return self.next_states_[0]

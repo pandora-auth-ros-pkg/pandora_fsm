@@ -59,12 +59,6 @@ class YellowBlackArenaExplorationStrategy1State(state.State):
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             exit(0)
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
@@ -118,6 +112,4 @@ class YellowBlackArenaExplorationStrategy1State(state.State):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
-        rospy.loginfo("navigation sent aborted")
-        rospy.loginfo(self.agent_.do_exploration_ac_.get_goal_status_text())
         self.agent_.current_exploration_mode_ = -1

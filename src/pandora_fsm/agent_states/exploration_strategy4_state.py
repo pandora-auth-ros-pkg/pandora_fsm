@@ -59,12 +59,6 @@ class ExplorationStrategy4State(state.State):
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
-            self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.notify()
-            self.agent_.current_robot_state_cond_.acquire()
-            self.agent_.new_robot_state_cond_.release()
-            self.agent_.current_robot_state_cond_.wait()
-            self.agent_.current_robot_state_cond_.release()
             exit(0)
         elif self.agent_.current_robot_state_ == \
                 robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
@@ -115,7 +109,6 @@ class ExplorationStrategy4State(state.State):
         if rospy.get_rostime().secs - self.agent_.initial_time_ - \
                 self.agent_.time_passed_ >= 1:
             current_cost = self.cost_functions_[1].execute()
-            rospy.loginfo(current_cost)
             self.agent_.strategy4_previous_victims_ = \
                 self.agent_.valid_victims_
             self.agent_.strategy4_previous_qrs_ = self.agent_.qrs_
@@ -173,7 +166,6 @@ class ExplorationStrategy4State(state.State):
         rospy.sleep(1.)
         self.agent_.current_exploration_mode_ = exploration_mode
         goal = DoExplorationGoal(exploration_type=exploration_mode)
-        rospy.loginfo(goal)
         self.agent_.do_exploration_ac_.send_goal(goal,
                                                  feedback_cb=self.feedback_cb,
                                                  done_cb=self.done_cb)
@@ -182,6 +174,4 @@ class ExplorationStrategy4State(state.State):
         self.agent_.current_robot_pose_ = feedback.base_position
 
     def done_cb(self, status, result):
-        rospy.loginfo("navigation sent aborted")
-        rospy.loginfo(self.agent_.do_exploration_ac_.get_goal_status_text())
         self.agent_.current_exploration_mode_ = -1
