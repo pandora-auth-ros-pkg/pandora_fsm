@@ -49,7 +49,7 @@ from pandora_fsm.cfg import FSMParamsConfig
 from math import sqrt, pow
 
 from geometry_msgs.msg import PoseStamped
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction, \
     MoveEndEffectorGoal, MoveLinearFeedback, MoveLinearActionFeedback
@@ -82,7 +82,7 @@ class RoboCupAgent(agent.Agent, state_manager.state_client.StateClient):
 
         self.new_robot_state_cond_ = Condition()
         self.current_robot_state_cond_ = Condition()
-        self.current_robot_state_ = robotModeMsg.MODE_OFF
+        self.current_robot_state_ = RobotModeMsg.MODE_OFF
 
         dynamic_reconfigure.server.Server(FSMParamsConfig, self.reconfigure)
 

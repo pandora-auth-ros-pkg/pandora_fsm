@@ -44,7 +44,7 @@ from pandora_fsm.agent_states import exploration_strategy4_state, \
     identification_check_for_victims_state, sensor_hold_state, \
     teleoperation_state
 
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, \
@@ -57,14 +57,14 @@ class TestAgent(unittest.TestCase):
     def test_robot_start_state(self):
         rospy.sleep(2.)
         rospy.loginfo('Simulate start button')
-        global_vars.test_agent.transition_to_state(robotModeMsg.
+        global_vars.test_agent.transition_to_state(RobotModeMsg.
                                                    MODE_START_AUTONOMOUS)
         rospy.sleep(22.)
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               exploration_strategy4_state.
                               ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_EXPLORATION_RESCUE)
+                         RobotModeMsg.MODE_EXPLORATION_RESCUE)
 
     def test_exploration_state(self):
         rospy.sleep(10.)
@@ -92,7 +92,7 @@ class TestAgent(unittest.TestCase):
                               identification_check_for_victims_state.
                               IdentificationCheckForVictimsState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_IDENTIFICATION)
+                         RobotModeMsg.MODE_IDENTIFICATION)
         self.assertEqual(global_vars.test_agent.current_exploration_mode_, -1)
 
     def test_identification_state(self):
@@ -121,7 +121,7 @@ class TestAgent(unittest.TestCase):
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               sensor_hold_state.SensorHoldState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_SENSOR_HOLD)
+                         RobotModeMsg.MODE_SENSOR_HOLD)
 
     def test_validation_state(self):
         rospy.loginfo('Publish target victim with increased probability')
@@ -150,7 +150,7 @@ class TestAgent(unittest.TestCase):
                               exploration_strategy4_state.
                               ExplorationStrategy4State)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_EXPLORATION_RESCUE)
+                         RobotModeMsg.MODE_EXPLORATION_RESCUE)
 
     def test_exploration_state_change_to_normal(self):
         rospy.loginfo('Change exploration type to normal')
@@ -168,7 +168,7 @@ class TestAgent(unittest.TestCase):
 
     def test_teleoperation_state(self):
         rospy.loginfo('Go to teleoperation')
-        global_vars.test_agent.transition_to_state(robotModeMsg.
+        global_vars.test_agent.transition_to_state(RobotModeMsg.
                                                    MODE_TELEOPERATED_LOCOMOTION)
         rospy.sleep(1.)
         global_vars.com.move_end_effector_succeeded_ = True
@@ -176,7 +176,7 @@ class TestAgent(unittest.TestCase):
         self.assertIsInstance(global_vars.test_agent.current_state_,
                               teleoperation_state.TeleoperationState)
         self.assertEqual(global_vars.test_agent.current_robot_state_,
-                         robotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
+                         RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION)
 
 if __name__ == '__main__':
     rospy.init_node('test_agent')

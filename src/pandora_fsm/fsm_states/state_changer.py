@@ -41,7 +41,7 @@ import rospy
 from smach import State
 from pandora_fsm.states.my_monitor_state import MyMonitorState
 from pandora_fsm.states.my_simple_action_state import MySimpleActionState
-from state_manager_communications.msg import robotModeMsg, RobotModeAction, \
+from state_manager_msgs.msg import RobotModeMsg, RobotModeAction, \
     RobotModeGoal
 from pandora_fsm.robocup_agent.agent_topics import state_monitor_topic, \
     state_changer_action_topic
@@ -50,7 +50,7 @@ from pandora_fsm.robocup_agent.agent_topics import state_monitor_topic, \
 class ChangeRobotModeState(MySimpleActionState):
 
     def __init__(self, state):
-        mode_msg = robotModeMsg(nodeName='fsm', mode=state)
+        mode_msg = RobotModeMsg(nodeName='fsm', mode=state)
         mode_goal = RobotModeGoal(modeMsg=mode_msg)
         MySimpleActionState.__init__(self, state_changer_action_topic,
                                      RobotModeAction, goal=mode_goal,
@@ -60,7 +60,7 @@ class ChangeRobotModeState(MySimpleActionState):
 class MonitorModeState(MyMonitorState):
 
     def __init__(self, mode):
-        MyMonitorState.__init__(self, state_monitor_topic, robotModeMsg,
+        MyMonitorState.__init__(self, state_monitor_topic, RobotModeMsg,
                                 self.monitor_cb, extra_outcomes=['valid'])
         self.mode_ = mode
 

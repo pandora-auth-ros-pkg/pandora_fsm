@@ -41,7 +41,7 @@ from smach import StateMachine, Concurrence
 from pandora_fsm.states.state_changer import ChangeRobotModeState
 from pandora_fsm.states.navigation import DoExplorationState
 from pandora_fsm.states.victims import NewVictimState
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 
 
 def exploration():
@@ -54,7 +54,7 @@ def exploration():
 
         StateMachine.add(
             'ROBOT_MODE_EXPLORATION',
-            ChangeRobotModeState(robotModeMsg.MODE_EXPLORATION),
+            ChangeRobotModeState(RobotModeMsg.MODE_EXPLORATION),
             transitions={
                 'succeeded': 'EXPLORATION_WITH_VICTIMS',
                 'preempted': 'preempted'

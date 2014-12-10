@@ -40,7 +40,7 @@ import state
 
 from sys import exit
 
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 
 
 class WaitingToStartState(state.State):
@@ -53,15 +53,15 @@ class WaitingToStartState(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+        if self.agent_.current_robot_state_ == RobotModeMsg.MODE_TERMINATING:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             exit(0)
         elif self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+                RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
             self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+                RobotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -69,7 +69,7 @@ class WaitingToStartState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
-        elif self.agent_.current_robot_state_ == robotModeMsg.MODE_SENSOR_TEST:
+        elif self.agent_.current_robot_state_ == RobotModeMsg.MODE_SENSOR_TEST:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -78,7 +78,7 @@ class WaitingToStartState(state.State):
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[1]
         elif self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_START_AUTONOMOUS:
+                RobotModeMsg.MODE_START_AUTONOMOUS:
             self.agent_.new_robot_state_cond_.acquire()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()

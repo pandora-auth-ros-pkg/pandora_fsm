@@ -48,7 +48,7 @@ from pandora_fsm.containers.exploration import exploration
 from pandora_fsm.containers.identification import identification
 from pandora_fsm.containers.robot_start import robot_start
 from pandora_fsm.containers.validation import validation
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from pandora_data_fusion_msgs.msg import VictimInfoMsg
 
 
@@ -131,7 +131,7 @@ def main():
     with cc:
         Concurrence.add('AUTONOMOUS', sm)
         Concurrence.add('TELEOPERATION',
-                        MonitorModeState(robotModeMsg.
+                        MonitorModeState(RobotModeMsg.
                                          MODE_TELEOPERATED_LOCOMOTION))
 
     sm_all = StateMachine(outcomes=['preempted'])
