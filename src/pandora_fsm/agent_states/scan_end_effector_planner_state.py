@@ -40,7 +40,7 @@ import state
 
 from sys import exit
 
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 
@@ -54,15 +54,15 @@ class ScanEndEffectorPlannerState(state.State):
         self.scan_end_effector_planner()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+        if self.agent_.current_robot_state_ == RobotModeMsg.MODE_TERMINATING:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             exit(0)
         elif self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+                RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
             self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+                RobotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             self.agent_.new_robot_state_cond_.acquire()
@@ -78,10 +78,10 @@ class ScanEndEffectorPlannerState(state.State):
                 "yellow_black_arena_save_robot_pose_state" or \
                 self.agent_.exploration_strategy_ == \
                 "mapping_mission_send_goal_state":
-            self.agent_.transition_to_state(robotModeMsg.
+            self.agent_.transition_to_state(RobotModeMsg.
                                             MODE_EXPLORATION_MAPPING)
         else:
-            self.agent_.transition_to_state(robotModeMsg.
+            self.agent_.transition_to_state(RobotModeMsg.
                                             MODE_EXPLORATION_RESCUE)
         self.agent_.new_robot_state_cond_.wait()
         self.agent_.new_robot_state_cond_.notify()

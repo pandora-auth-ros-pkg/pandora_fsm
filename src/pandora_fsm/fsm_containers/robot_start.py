@@ -38,7 +38,7 @@ roslib.load_manifest('pandora_fsm')
 
 from smach import StateMachine
 from pandora_fsm.states.state_changer import MonitorModeState, Timer
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 
 
 def robot_start():
@@ -49,7 +49,7 @@ def robot_start():
 
         StateMachine.add(
             'START_BUTTON',
-            MonitorModeState(robotModeMsg.MODE_START_AUTONOMOUS),
+            MonitorModeState(RobotModeMsg.MODE_START_AUTONOMOUS),
             transitions={
                 'valid': 'WAIT_FOR_SLAM',
                 'preempted': 'preempted'

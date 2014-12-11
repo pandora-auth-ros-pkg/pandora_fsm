@@ -40,7 +40,7 @@ import state
 
 from sys import exit
 
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from pandora_navigation_msgs.msg import ArenaTypeMsg, DoExplorationGoal
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
@@ -55,15 +55,15 @@ class ExplorationStrategy2State(state.State):
         pass
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+        if self.agent_.current_robot_state_ == RobotModeMsg.MODE_TERMINATING:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             exit(0)
         elif self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+                RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
             self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+                RobotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
@@ -74,7 +74,7 @@ class ExplorationStrategy2State(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
-        elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+        elif self.agent_.current_robot_state_ == RobotModeMsg.MODE_OFF:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
@@ -97,7 +97,7 @@ class ExplorationStrategy2State(state.State):
             self.agent_.end_exploration()
             self.agent_.target_victim_ = max_victim
             self.agent_.new_robot_state_cond_.acquire()
-            self.agent_.transition_to_state(robotModeMsg.MODE_IDENTIFICATION)
+            self.agent_.transition_to_state(RobotModeMsg.MODE_IDENTIFICATION)
             self.agent_.new_robot_state_cond_.wait()
             self.agent_.new_robot_state_cond_.notify()
             self.agent_.current_robot_state_cond_.acquire()
@@ -132,7 +132,7 @@ class ExplorationStrategy2State(state.State):
                 self.agent_.park_end_effector_planner()
                 self.agent_.new_robot_state_cond_.acquire()
                 self.agent_.\
-                    transition_to_state(robotModeMsg.
+                    transition_to_state(RobotModeMsg.
                                         MODE_TELEOPERATED_LOCOMOTION)
                 self.agent_.new_robot_state_cond_.wait()
                 self.agent_.new_robot_state_cond_.notify()

@@ -24,7 +24,7 @@
   <run_depend>pandora_data_fusion_msgs</run_depend>
   <run_depend>pandora_navigation_msgs</run_depend>
   <run_depend>state_manager</run_depend>
-  <run_depend>state_manager_communications</run_depend>
+  <run_depend>state_manager_msgs</run_depend>
   <run_depend>actionlib</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>pandora_rqt_gui</run_depend>

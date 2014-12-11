@@ -40,7 +40,7 @@ import unittest
 import communications
 
 from pandora_fsm.robocup_agent.robocup_agent import RoboCupAgent
-from state_manager_communications.msg import robotModeMsg, RobotModeGoal
+from state_manager_msgs.msg import RobotModeMsg, RobotModeGoal
 from pandora_data_fusion_msgs.msg import VictimInfoMsg
 
 
@@ -48,7 +48,7 @@ class TestFSM(unittest.TestCase):
 
     def test_fsm(self):
         rospy.sleep(2.)
-        msg = robotModeMsg()
+        msg = RobotModeMsg()
         msg.mode = msg.MODE_START_AUTONOMOUS
         msg.type = msg.TYPE_TRANSITION
         goal = RobotModeGoal(modeMsg=msg)
@@ -93,7 +93,7 @@ class TestFSM(unittest.TestCase):
         com.victims_pub_.publish(victims)
         rospy.sleep(10.)
 
-        msg = robotModeMsg()
+        msg = RobotModeMsg()
         msg.mode = msg.MODE_TELEOPERATED_LOCOMOTION
         msg.type = msg.TYPE_TRANSITION
         goal = RobotModeGoal(modeMsg=msg)

@@ -42,7 +42,7 @@ from sys import exit
 from math import pi
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from move_base_msgs.msg import MoveBaseGoal
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
@@ -57,15 +57,15 @@ class IdentificationMoveToVictimState(state.State):
         self.move_to_victim()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+        if self.agent_.current_robot_state_ == RobotModeMsg.MODE_TERMINATING:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             exit(0)
         elif self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+                RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
             self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+                RobotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.preempt_move_base()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()

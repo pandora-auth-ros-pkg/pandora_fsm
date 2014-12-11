@@ -40,7 +40,7 @@ import state
 
 from sys import exit
 
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 from pandora_data_fusion_msgs.msg import ValidateVictimGoal
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
@@ -56,15 +56,15 @@ class SensorHoldState(state.State):
         self.data_fusion_hold()
 
     def make_transition(self):
-        if self.agent_.current_robot_state_ == robotModeMsg.MODE_TERMINATING:
+        if self.agent_.current_robot_state_ == RobotModeMsg.MODE_TERMINATING:
             self.agent_.end_exploration()
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             exit(0)
         elif self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
+                RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION or \
             self.agent_.current_robot_state_ == \
-                robotModeMsg.MODE_SEMI_AUTONOMOUS:
+                RobotModeMsg.MODE_SEMI_AUTONOMOUS:
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             self.counter_ = 0
@@ -75,7 +75,7 @@ class SensorHoldState(state.State):
             self.agent_.current_robot_state_cond_.wait()
             self.agent_.current_robot_state_cond_.release()
             return self.next_states_[0]
-        elif self.agent_.current_robot_state_ == robotModeMsg.MODE_OFF:
+        elif self.agent_.current_robot_state_ == RobotModeMsg.MODE_OFF:
             self.agent_.preempt_end_effector_planner()
             self.agent_.park_end_effector_planner()
             self.counter_ = 0
@@ -120,7 +120,7 @@ class SensorHoldState(state.State):
                         if max_victim_cost > 0:
                             self.agent_.target_victim_ = max_victim
                             self.agent_.new_robot_state_cond_.acquire()
-                            self.agent_.transition_to_state(robotModeMsg.
+                            self.agent_.transition_to_state(RobotModeMsg.
                                                             MODE_IDENTIFICATION)
                             self.agent_.new_robot_state_cond_.wait()
                             self.agent_.new_robot_state_cond_.notify()

@@ -40,7 +40,7 @@ import rospy
 from smach import StateMachine, Concurrence
 from pandora_fsm.states.state_changer import ChangeRobotModeState, Timer
 from pandora_fsm.states.victims import VerifyVictimState, DeleteVictimState
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 
 
 def data_fusion_hold():
@@ -55,7 +55,7 @@ def data_fusion_hold():
 
         StateMachine.add(
             'ROBOT_MODE_DF_HOLD',
-            ChangeRobotModeState(robotModeMsg.MODE_DF_HOLD),
+            ChangeRobotModeState(RobotModeMsg.MODE_DF_HOLD),
             transitions={
                 'succeeded': 'WAIT_FOR_DF',
                 'preempted': 'preempted'

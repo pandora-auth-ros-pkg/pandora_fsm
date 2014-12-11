@@ -42,7 +42,7 @@ import global_vars
 from actionlib import SimpleActionServer, SimpleActionClient
 from pandora_fsm.robocup_agent import agent_topics
 
-from state_manager_communications.msg import robotModeMsg, RobotModeAction
+from state_manager_msgs.msg import RobotModeMsg, RobotModeAction
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Int32, Float32
 from pandora_end_effector_planner.msg import MoveEndEffectorAction, \

@@ -45,7 +45,7 @@ from smach import StateMachine, Concurrence
 from pandora_fsm.states.state_changer import MonitorModeState
 from pandora_fsm.states.navigation import DoExplorationState
 from pandora_fsm.containers.robot_start import robot_start
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 
 
 def main():
@@ -92,7 +92,7 @@ def main():
     with cc:
         Concurrence.add('AUTONOMOUS', sm)
         Concurrence.add('TELEOPERATION',
-                        MonitorModeState(robotModeMsg.
+                        MonitorModeState(RobotModeMsg.
                                          MODE_TELEOPERATED_LOCOMOTION))
 
     sm_all = StateMachine(outcomes=['preempted'])

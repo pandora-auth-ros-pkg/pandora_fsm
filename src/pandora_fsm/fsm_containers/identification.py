@@ -41,7 +41,7 @@ from smach import StateMachine, Concurrence
 from pandora_fsm.states.state_changer import ChangeRobotModeState
 from pandora_fsm.states.navigation import MoveBaseState
 from pandora_fsm.states.victims import UpdateVictimState
-from state_manager_communications.msg import robotModeMsg
+from state_manager_msgs.msg import RobotModeMsg
 
 
 def identification():
@@ -56,7 +56,7 @@ def identification():
 
         StateMachine.add(
             'ROBOT_MODE_IDENTIFICATION',
-            ChangeRobotModeState(robotModeMsg.MODE_IDENTIFICATION),
+            ChangeRobotModeState(RobotModeMsg.MODE_IDENTIFICATION),
             transitions={
                 'succeeded': 'GO_TO_VICTIM',
                 'preempted': 'preempted'
