@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <package>
   <name>pandora_fsm</name>
-  <version>0.0.0</version>
+  <version>0.1.0</version>
 
   <description>pandora_fsm</description>
 
-  <maintainer email="turbolapingr@gmail.com">Voulgarakis George</maintainer>
+  <maintainer email="tsirif@gmail.com">Tsirigotis Christos</maintainer>
+  <maintainer email="lykaplaymaker@gmail.com">Giannis Lykartsis</maintainer>
+  <maintainer email="jkppeppas@gmail.com">Kostas Peppas</maintainer>
+  <maintainer email="siderisk@auth.gr">Sideris Konstantinos</maintainer>
 
   <license>BSD</license>
 
   <url type="bugtracker">https://github.com/pandora-auth-ros-pkg/pandora_fsm/issues</url>
   <url type="repository">https://github.com/pandora-auth-ros-pkg/pandora_fsm</url>
-
-  <author>Chris Zalidis</author>
-  <author>Voulgarakis George</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 

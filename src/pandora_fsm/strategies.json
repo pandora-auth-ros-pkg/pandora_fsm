@@ -1,0 +1,117 @@
+
+{
+
+  "normal": {
+    "states": [
+      {
+        "name": "off",
+        "description": "The agent is sleeping",
+        "transitions": [
+          {
+            "to": "init",
+            "trigger": "wake_up"
+          }
+        ]
+      },
+      {
+        "name": "init",
+        "description": "The agent starts the system",
+        "tasks": [
+          "boot"
+        ],
+        "transitions": [
+          {
+            "to": "exploration",
+            "trigger": "booted"
+          }
+        ]
+      },
+      {
+        "name": "exploration",
+        "description": "The agent is exploring the area",
+        "tasks": [
+          "explore"
+        ],
+        "transitions": [
+          {
+            "to": "identification",
+            "trigger": "victim_found"
+          }
+        ]
+      },
+      {
+        "name": "identification",
+        "transitions": [
+          {
+            "to": "victim_deletion",
+            "trigger": "abort_victim"
+          },
+          {
+            "to": "closeup",
+            "trigger": "valid_victim"
+          }
+        ]
+      },
+      {
+        "name": "closeup",
+        "description": "The agents takes a closer look at the victim",
+        "tasks": [
+          "get_closer"
+        ],
+        "transitions": [
+          {
+            "to": "fusion_validation",
+            "trigger": "timeout"
+          },
+          {
+            "to": "operator_validation",
+            "trigger": "verification"
+          }
+        ]
+      },
+      {
+        "name": "victim_deletion",
+        "tasks": [
+          "delete_victim"
+        ],
+        "transitions": [
+          {
+            "to": "exploration",
+            "trigger": "victim_deleted"
+          }
+        ]
+      },
+      {
+        "name": "fusion_validation"
+      },
+      {
+        "name": "operator_validation"
+      },
+      {
+        "name": "end",
+        "description": "Job done!",
+        "tasks": [
+          "print_results"
+        ]
+      }
+    ]
+  },
+  "explorer": {
+    "states": [
+      {
+        "name": "off",
+        "description": "The agent is sleeping"
+      },
+      {
+        "name": "init",
+        "description": "The agent starts the system",
+        "tasks": [
+          "boot"
+        ]
+      }
+    ]
+  }
+
+
+
+}
