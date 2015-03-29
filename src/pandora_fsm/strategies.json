@@ -1,11 +1,12 @@
 
 {
-
   "normal": {
     "states": [
       {
         "name": "off",
         "description": "The agent is sleeping",
+        "tasks": [],
+        "clean": [],
         "transitions": [
           {
             "to": "init",
@@ -19,6 +20,7 @@
         "tasks": [
           "boot"
         ],
+        "clean": [],
         "transitions": [
           {
             "to": "exploration",
@@ -30,7 +32,12 @@
         "name": "exploration",
         "description": "The agent is exploring the area",
         "tasks": [
-          "explore"
+          "scan",
+          "explore",
+          "wait_for_victim"
+        ],
+        "clean": [
+          "stop_explorer"
         ],
         "transitions": [
           {
@@ -41,6 +48,15 @@
       },
       {
         "name": "identification",
+        "tasks": [
+          "preempt_explore",
+          "preempt_scan",
+          "move_base",
+          "point_sensors",
+          "wait"
+        ],
+        "clean": [
+        ],
         "transitions": [
           {
             "to": "victim_deletion",
@@ -56,7 +72,12 @@
         "name": "closeup",
         "description": "The agents takes a closer look at the victim",
         "tasks": [
-          "get_closer"
+          "get_closer",
+          "move_linear",
+          "start_timer",
+          "wait_for_verification"
+        ],
+        "clean": [
         ],
         "transitions": [
           {
@@ -72,7 +93,10 @@
       {
         "name": "victim_deletion",
         "tasks": [
+          "abort",
           "delete_victim"
+        ],
+        "clean": [
         ],
         "transitions": [
           {
@@ -82,21 +106,32 @@
         ]
       },
       {
-        "name": "fusion_validation"
+        "name": "fusion_validation",
+        "tasks": [
+        ],
+        "clean": [
+        ]
       },
       {
-        "name": "operator_validation"
+        "name": "operator_validation",
+        "tasks": [
+        ],
+        "clean": [
+        ]
       },
       {
         "name": "end",
         "description": "Job done!",
         "tasks": [
+          "preempt_scan",
           "print_results"
+        ],
+        "clean": [
         ]
       }
     ]
   },
-  "explorer": {
+  "exploration_mode": {
     "states": [
       {
         "name": "off",
