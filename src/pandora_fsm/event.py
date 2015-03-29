@@ -2,6 +2,7 @@ from collections import defaultdict
 
 
 class EventData(object):
+    """ Contains data to pass to a state. """
 
     def __init__(self, state, event, machine, model, *args, **kwargs):
         """
@@ -26,6 +27,10 @@ class EventData(object):
 
 
 class Event(object):
+    """ Events are essentially a list of callbacks attached to the model,
+        enabling us to move from one state to another. When an event is
+        triggered the corresponding transition is made.
+    """
 
     def __init__(self, name, machine):
         """
@@ -39,7 +44,7 @@ class Event(object):
         self.transitions = defaultdict(list)
 
     def add_transition(self, transition):
-        """ Add a transition to the list of potential transitions.
+        """ Adds a transition to the list of potential transitions.
 
         :param :transition The Transition instance to add to the list.
         """
@@ -59,13 +64,14 @@ class Event(object):
             raise MachineError(
                 "Can't trigger event %s from state %s!" % (self.name,
                                                            state_name))
-        event = EventData(self.machine.current_state, self,
-                          self.machine, self.machine.model, *args, **kwargs)
+
+        # Encapsulating arguments from higher levels into an EventData object.
+        event = EventData(self.machine.current_state, self, self.machine,
+                          self.machine.model, *args, **kwargs)
         for transition in self.transitions[state_name]:
             if transition.execute(event):
                 return True
         return False
-
 
 
 class MachineError(Exception):

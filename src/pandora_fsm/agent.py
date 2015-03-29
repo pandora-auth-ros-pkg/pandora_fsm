@@ -40,19 +40,95 @@ class Agent(object):
 
         strategy = data[self.strategy]['states']
 
+        # Setting up the FSM
+        self.machine = Machine(model=self)
+
         # Get all the states for the given strategy.
         self.states = [state['name'] for state in strategy]
+
+        # Set up states tasks.
+        for state in strategy:
+            self.machine.add_states(state['name'], on_enter=state['tasks'],
+                                    on_exit=state['clean'])
 
         # Create the transition table.
         self.transitions = []
         for state in strategy:
             if 'transitions' in state.keys():
                 for transition in state['transitions']:
-                    self.transitions.append([transition['trigger'],
-                                             state['name'],
-                                             transition['to']])
+                    self.machine.add_transition(transition['trigger'],
+                                           state['name'],
+                                           transition['to'])
 
-        # Setting up the FSM
-        self.machine = Machine(model=self, states=self.states,
-                               transitions=self.transitions,
-                               initial=self.states[0])
+        self.machine.set_state(self.states[0])
+
+    def boot(self):
+        """ Boots up the system. """
+
+        print 'System boot!'
+
+    def scan(self):
+        """ Scans the area """
+
+        print 'Scanning..'
+
+    def preempt_scan(self):
+        """ Preempts scan """
+
+        print 'Stopping scan...'
+
+    def move_base(self):
+        """ Moves base """
+
+        print 'Moving base...'
+
+    def point_sensors(self):
+        """ Point sensors """
+
+        print 'Pointing sensors...'
+
+    def wait(self):
+        """ Waiting for an event """
+
+        print 'Waiting...'
+
+    def preempt_explore(self):
+        """ Preempts exploration """
+
+        print 'Stopping exploration...'
+
+    def explore(self):
+        """ Exploring the area. """
+
+        print 'Exploring...'
+
+    def stop_explorer(self):
+        """ Leaving exploration mode. """
+
+        print 'Stopping explorer...'
+
+    def get_closer(self):
+        """ The agent goes closer to the victim. """
+
+        print 'Getting closer...'
+
+    def wake_up(self):
+        """ Brings up the agent """
+
+        print 'I am awake'
+
+    def callback(self, a, b):
+        """ dfd """
+        print 'callback'
+        self.victim_found()
+
+    def wait_for_victim(self):
+        """ Emulating victim alert """
+        import signal
+        import os
+        import time
+
+        signal.signal(signal.SIGALRM, self.callback)
+        signal.alarm(1)
+        time.sleep(2)
+        print 'Alarm started'

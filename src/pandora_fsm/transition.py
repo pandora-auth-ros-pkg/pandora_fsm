@@ -52,21 +52,36 @@ class Transition(object):
     def execute(self, event_data):
         """ Execute the transition.
 
-        :param :event An instance of class EventData.
+        :param :event_data An instance of class EventData.
         """
         machine = event_data.machine
+
+        # Check if all the conditions are met.
         for condition in self.conditions:
             if not condition.check(event_data.model):
                 return False
 
+        # Starting the transition.
+        # First run all the before callbacks.
         for func in self.before:
             machine.callback(getattr(event_data.model, func), event_data)
+
+        # Exit the current state and run the on_exit
+        # callback for the current state.
         machine.get_state(self.source).exit(event_data)
+
+        # Enter the next state.
         machine.set_state(self.dest)
         event_data.update()
+
+        # Run the on_enter callback for the next state.
         machine.get_state(self.dest).enter(event_data)
+
+        # Finally run all the after callbacks.
         for func in self.after:
             machine.callback(getattr(event_data.model, func), event_data)
+
+        # The transition completed.
         return True
 
     def add_callback(self, trigger, func):

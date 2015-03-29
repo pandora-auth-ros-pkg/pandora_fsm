@@ -11,8 +11,9 @@ from transition import Transition
 
 
 class Machine(object):
-    """ The Machine is high level abstraction that holds together the states,
-        the transitions, the events and the model.
+    """ The Machine is high level abstraction representing the FSM
+        that holds together the states, the transitions, the events
+        and the model.
     """
 
     def __init__(self, model=None, states=None, initial=None, transitions=None,
@@ -89,6 +90,9 @@ class Machine(object):
         if isinstance(state, basestring):
             state = self.get_state(state)
         self.current_state = state
+
+        # Creates a `state` attribute in the context class
+        # holding the name of the current state of the machine.
         self.model.state = self.current_state.name
 
     def add_state(self, *args, **kwargs):
@@ -114,17 +118,26 @@ class Machine(object):
                 state = State(state, on_enter=on_enter, on_exit=on_exit)
             elif isinstance(state, dict):
                 state = State(**state)
+
+            # The `states` lists holds all the available State instances.
             self.states[state.name] = state
-            setattr(self.model, 'is_%s' %
-                    state.name, partial(self.is_state, state.name))
+
+            # Creates an is_`state` method in the context class for this state,
+            # checking whether the context class is in the `state`.
+            setattr(self.model, 'is_%s' % state.name,
+                    partial(self.is_state, state.name))
             state_name = state.name
+
+            # Creates a on_enter_`state` and on_exit_`state` method for the
+            # context class.
             if self != self.model and hasattr(
                     self.model, 'on_enter_' + state_name):
                 state.add_callback('enter', 'on_enter_' + state_name)
             if self != self.model and hasattr(
                     self.model, 'on_exit_' + state_name):
                 state.add_callback('exit', 'on_exit_' + state_name)
-        # Add automatic transitions after all states have been created
+
+        # Add automatic transitions after all states have been created.
         if self.auto_transitions:
             for state in self.states.keys():
                 self.add_transition('to_%s' % state, '*', state)
@@ -136,15 +149,15 @@ class Machine(object):
         :param :trigger The name of the method that will trigger the
                         transition. This will be attached to the currently
                         specified model (e.g., passing trigger='advance' will
-                        create a new advance() method in the model that triggers
-                        the transition.)
+                        create a new advance() method in the model that
+                        triggers the transition.)
         :param :source The name of the source state--i.e., the state we are
                        transitioning away from.
         :param :dest The name of the destination State--i.e., the state
                      we are transitioning into.
         :param :conditions Condition(s) that must pass in order for the
-                           transition to take place. Either a list providing the
-                           name of a callable, or a list of callables.
+                           transition to take place. Either a list providing
+                           the name of a callable, or a list of callables.
                            For the transition to occur, ALL callables must
                            return True.
         :param :unless Condition(s) that must return False in order for the
@@ -158,6 +171,7 @@ class Machine(object):
             self.events[trigger] = Event(trigger, self)
             setattr(self.model, trigger, self.events[trigger].trigger)
 
+        # Use the wildcard `*` to use all the available states as the source.
         if isinstance(source, basestring):
             source = list(self.states.keys()) if source == '*' else [source]
 
@@ -169,21 +183,24 @@ class Machine(object):
     def add_ordered_transitions(self, states=None, trigger='next_state',
                                 loop=True, loop_includes_initial=True):
         """ Add a set of transitions that move linearly from state to state.
-        Args:
-            states (list): A list of state names defining the order of the
-                transitions. E.g., ['A', 'B', 'C'] will generate transitions
-                for A --> B, B --> C, and C --> A (if loop is True). If states
-                is None, all states in the current instance will be used.
-            trigger (string): The name of the trigger method that advances to
-                the next state in the sequence.
-            loop (boolean): Whether or not to add a transition from the last
-                state to the first state.
-            loop_includes_initial (boolean): If no initial state was defined in
+
+        :param :states A list of state names defining the order of the
+                       transitions. E.g., ['A', 'B', 'C'] will generate
+                       transitions for A --> B, B --> C,
+                       and C --> A (if loop is True). If states is None,
+                       all states in the current instance will be used.
+        :param :trigger The name of the trigger method that advances to
+                        the next state in the sequence.
+        :param :loop Whether or not to add a transition from the last
+                     state to the first state.
+        :param :loop_includes_initial If no initial state was defined in
                 the machine, setting this to True will cause the _initial state
                 placeholder to be included in the added transitions.
         """
         if states is None:
-            states = list(self.states.keys())  # need to listify for Python3
+
+            # need to listify for Python3
+            states = list(self.states.keys())
         if len(states) < 2:
             raise MachineError("Can't create ordered transitions on a Machine "
                                "with fewer than 2 states.")
@@ -196,12 +213,12 @@ class Machine(object):
 
     def callback(self, func, event_data):
         """ Trigger a callback function, possibly wrapping it in an EventData
-        instance.
-        Args:
-            func (callable): The callback function.
-            event_data (EventData): An EventData instance to pass to the
-                callback (if event sending is enabled) or to extract arguments
-                from (if event sending is disabled).
+            instance.
+
+        :param :func The callback function.
+        :param :event_data An EventData instance to pass to the callback
+                           (if event sending is enabled) or to extract
+                           arguments from (if event sending is disabled).
         """
         if self.send_event:
             func(event_data)
@@ -219,7 +236,6 @@ class Machine(object):
         elif name.startswith('on_enter') or name.startswith('on_exit'):
             state = self.get_state('_'.join(terms[2:]))
             return partial(state.add_callback, terms[1])
-
 
 
 class MachineError(Exception):
