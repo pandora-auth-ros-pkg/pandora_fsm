@@ -5,12 +5,36 @@ import time
 import json
 
 import rospy
-import actionlib
 import roslib
 roslib.load_manifest('pandora_fsm')
-from std_msgs.msg import String
-from pandora_fsm.msg import VerifyVictimAction, VerifyVictimGoal
 
+from actionlib import SimpleActionClient as Client
+
+from std_msgs.msg import String
+from std_msgs.msg import Int32
+from std_msgs.msg import Float32
+
+from pandora_navigation_msgs.msg import ArenaTypeMsg
+from pandora_navigation_msgs.msg import DoExplorationAction
+
+from pandora_data_fusion_msgs.msg import WorldModelMsg
+from pandora_data_fusion_msgs.msg import VictimInfoMsg
+from pandora_data_fusion_msgs.msg import QrNotificationMsg
+from pandora_data_fusion_msgs.msg import ValidateVictimAction
+from pandora_data_fusion_msgs.msg import DeleteVictimAction
+
+from move_base_msgs.msg import MoveBaseAction
+
+from pandora_rqt_gui.msg import ValidateVictimGUIAction
+from pandora_rqt_gui.msg import ValidateVictimGUIGoal
+
+from pandora_end_effector_planner.msg import MoveEndEffectorAction
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
+from pandora_end_effector_planner.msg import MoveLinearFeedback
+from pandora_end_effector_planner.msg import MoveLinearActionFeedback
+
+import topics
+from pandora_fsm.msg import VerifyVictimAction, VerifyVictimGoal
 from machine import Machine
 
 
@@ -18,7 +42,7 @@ class Agent(object):
     """ Agent implementation with a Finite State Machine. """
 
     def __init__(self, strategy='normal', name='Pandora',
-                       config='strategies.json'):
+                 config='strategies.json'):
         """ Initializes the agent.
 
         :param :name The name of the agent. Defaults to Pandora.
@@ -31,7 +55,32 @@ class Agent(object):
 
         self.config = config
 
-        rospy.init_node(self.name)
+        # Subscribers.
+        rospy.Subscriber(topics.arena_type, ArenaTypeMsg,
+                         self.arena_type_callback)
+        rospy.Subscriber(topics.robocup_score, Int32, self.score_callback)
+        rospy.Subscriber(topics.qr_notification, QrNotificationMsg,
+                         self.qr_notification_callback)
+        rospy.Subscriber(topics.area_covered, Float32,
+                         self.area_covered_callback)
+        rospy.Subscriber(topics.world_model, WorldModelMsg,
+                         self.world_model_callback)
+        rospy.Subscriber(topics.linear_movement_action_feedback,
+                         MoveLinearActionFeedback,
+                         self.linear_feedback_callback)
+
+        # Action clients.
+        self.explorer_client = Client(topics.do_exploration,
+                                      DoExplorationAction)
+        self.base_client = Client(topics.move_base, MoveBaseAction)
+        self.delete_victim_client = Client(topics.delete_victim,
+                                           DeleteVictimAction)
+        self.gui_validate_client = Client(topics.gui_validation,
+                                          ValidateVictimGUIAction)
+        self.fusion_validate_client = Client(topics.validate_victim,
+                                             ValidateVictimAction)
+        self.end_effector_client = Client(topics.move_end_effector_planner,
+                                          MoveEndEffectorAction)
 
         # Dummy variables
         self.victim = False
@@ -69,8 +118,8 @@ class Agent(object):
             if 'transitions' in state.keys():
                 for transition in state['transitions']:
                     self.machine.add_transition(transition['trigger'],
-                                           state['name'],
-                                           transition['to'])
+                                                state['name'],
+                                                transition['to'])
 
         self.machine.set_state(self.states[0])
 
@@ -143,7 +192,6 @@ class Agent(object):
         # If the timer expires on the closeup state
         # trigger the timeout event.
         if self.state == 'closeup':
-            #self.client.cancel_goal()
             self.is_timeout = True
             self.timeout()
             print self.state
@@ -185,9 +233,8 @@ class Agent(object):
         print 'Waiting for verification'
 
         # Send goal to gui and wait for response.
-        self.client = actionlib.SimpleActionClient('verify_victim',
-                                                   VerifyVictimAction)
-        goal = VerifyVictimGoal()
+        self.client = Client('verify_victim', ValidateVictimGUIAction)
+        goal = ValidateVictimGUIGoal()
         self.client.wait_for_server(rospy.Duration(2))
         self.client.send_goal(goal, done_cb=self.response_from_operator)
 
