@@ -3,9 +3,11 @@
 
 import unittest
 
-from machine import Machine
-from state import State
+import roslib
+roslib.load_manifest('pandora_fsm')
 
+from pandora_fsm.machine import Machine
+from pandora_fsm.state import State
 
 
 class Stuff(object):

@@ -8,16 +8,14 @@
     - A service with a true or false response.
 """
 
-import random
 from datetime import datetime
 
 import rospy
 import roslib
 roslib.load_manifest('pandora_fsm')
 import actionlib
-from std_msgs.msg import String, Int32
-from pandora_fsm.msg import VerifyVictimAction, VerifyVictimGoal, \
-                                                VerifyVictimResult
+from std_msgs.msg import String
+from pandora_fsm.msg import VerifyVictimAction, VerifyVictimResult
 
 
 def world_model():
@@ -54,8 +52,8 @@ if __name__ == '__main__':
     # Initializing the node.
     rospy.init_node('mock')
 
-    #world_model()
+    world_model()
 
-    server = GUIVerificationServer()
+    #server = GUIVerificationServer()
 
     rospy.spin()
