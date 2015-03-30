@@ -1,7 +1,15 @@
 
 """ PANDORAS's FSM Agent """
 
+import time
 import json
+
+import rospy
+import actionlib
+import roslib
+roslib.load_manifest('pandora_fsm')
+from std_msgs.msg import String
+from pandora_fsm.msg import VerifyVictimAction, VerifyVictimGoal
 
 from machine import Machine
 
@@ -23,8 +31,12 @@ class Agent(object):
 
         self.config = config
 
-        # Defines the directory with the configuration files.
-        self.conf_directory = '.'
+        rospy.init_node(self.name)
+
+        # Dummy variables
+        self.victim = False
+        self.is_timeout = False
+        self.gui_verification = False
 
         self.load()
 
@@ -112,23 +124,72 @@ class Agent(object):
 
         print 'Getting closer...'
 
+    def move_linear(self):
+
+        print 'Moving linear...'
+
+    def start_timer(self):
+
+        print 'Starting timer...'
+
+        duration = rospy.Duration(5)
+        rospy.Timer(duration, self.timer_handler, oneshot=True)
+
+    def timer_handler(self, event):
+        """ Timer expired """
+
+        print 'timer expired...'
+
+        # If the timer expires on the closeup state
+        # trigger the timeout event.
+        if self.state == 'closeup':
+            #self.client.cancel_goal()
+            self.is_timeout = True
+            self.timeout()
+            print self.state
+
     def wake_up(self):
         """ Brings up the agent """
 
         print 'I am awake'
 
-    def callback(self, a, b):
-        """ dfd """
-        print 'callback'
-        self.victim_found()
+    def callback(self, data):
+        """ It's called when a victim is found. """
+
+        if data.data == 'victim':
+            print 'Found one.'
+            self.victim = True
+            self.sub.unregister()
+            self.victim_found()
 
     def wait_for_victim(self):
-        """ Emulating victim alert """
-        import signal
-        import os
-        import time
+        self.sub = rospy.Subscriber('world_model', String, self.callback)
 
-        signal.signal(signal.SIGALRM, self.callback)
-        signal.alarm(1)
-        time.sleep(2)
-        print 'Alarm started'
+        while not self.victim:
+            time.sleep(1)
+
+    def response_from_operator(self, status, result):
+        """ Receives the verification from the operator. """
+
+        print 'Received result..'
+        if self.client.get_state() == 3:
+            self.gui_verification = True
+            self.verification()
+        else:
+            self.is_timeout = True
+            self.timeout()
+
+    def wait_for_verification(self):
+        """ Wait verification from the operator """
+
+        print 'Waiting for verification'
+
+        # Send goal to gui and wait for response.
+        self.client = actionlib.SimpleActionClient('verify_victim',
+                                                   VerifyVictimAction)
+        goal = VerifyVictimGoal()
+        self.client.wait_for_server(rospy.Duration(2))
+        self.client.send_goal(goal, done_cb=self.response_from_operator)
+
+        while not self.is_timeout and not self.gui_verification:
+            time.sleep(1)

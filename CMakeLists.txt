@@ -3,10 +3,25 @@ project(pandora_fsm)
 
 find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
+  genmsg
+  actionlib_msgs
+  actionlib
   roslint
 )
 
+add_action_files(
+    DIRECTORY
+        action
+    FILES
+        VerifyVictim.action
+)
+
 catkin_python_setup()
+
+generate_messages(
+    DEPENDENCIES
+    actionlib_msgs
+    )
 
 generate_dynamic_reconfigure_options(
   config/params.cfg
@@ -25,7 +40,7 @@ catkin_package(
 
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
      ${PROJECT_SOURCE_DIR}
-     ./src/**/*.py
+     src/**/*.py
      tests/*.py
     )
 roslint_python(${${PROJECT_NAME}_LINT_PYTHON})

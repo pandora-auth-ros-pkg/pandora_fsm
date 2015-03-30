@@ -1,5 +1,4 @@
-<?xml version="1.0"?>
-<package>
+<package format="2">
   <name>pandora_fsm</name>
   <version>0.1.0</version>
 
@@ -17,24 +16,28 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <run_depend>rospy</run_depend>
-  <run_depend>smach</run_depend>
-  <run_depend>smach_ros</run_depend>
-  <run_depend>move_base_msgs</run_depend>
-  <run_depend>pandora_data_fusion_msgs</run_depend>
-  <run_depend>pandora_navigation_msgs</run_depend>
-  <run_depend>state_manager</run_depend>
-  <run_depend>state_manager_msgs</run_depend>
-  <run_depend>actionlib</run_depend>
-  <run_depend>std_msgs</run_depend>
-  <run_depend>pandora_rqt_gui</run_depend>
-  <run_depend>pandora_end_effector_planner</run_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>smach</exec_depend>
+  <exec_depend>smach_ros</exec_depend>
+  <exec_depend>move_base_msgs</exec_depend>
+  <exec_depend>pandora_data_fusion_msgs</exec_depend>
+  <exec_depend>pandora_navigation_msgs</exec_depend>
+  <exec_depend>state_manager</exec_depend>
+  <exec_depend>state_manager_msgs</exec_depend>
+
+  <depend>actionlib</depend>
+
+  <depend>actionlib_msgs</depend>
+
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>pandora_rqt_gui</exec_depend>
+  <exec_depend>pandora_end_effector_planner</exec_depend>
 
   <build_depend>dynamic_reconfigure</build_depend>
-  <run_depend>dynamic_reconfigure</run_depend>
+  <exec_depend>dynamic_reconfigure</exec_depend>
 
   <build_depend>roslint</build_depend>
-  <run_depend>roslint</run_depend>
+  <exec_depend>roslint</exec_depend>
 
   <test_depend>rostest</test_depend>
 
