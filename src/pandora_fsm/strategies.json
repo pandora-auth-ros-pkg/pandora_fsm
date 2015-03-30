@@ -143,8 +143,8 @@
     "states": [
       {
         "name": "off",
-        "description": "The agent is sleeping"
-        "conditions": [],
+        "description": "The agent is sleeping",
+        "conditions": []
       },
       {
         "name": "init",
