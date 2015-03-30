@@ -5,6 +5,7 @@
       {
         "name": "off",
         "description": "The agent is sleeping",
+        "conditions": [],
         "tasks": [],
         "clean": [],
         "transitions": [
@@ -17,6 +18,7 @@
       {
         "name": "init",
         "description": "The agent starts the system",
+        "conditions": [],
         "tasks": [
           "boot"
         ],
@@ -31,6 +33,7 @@
       {
         "name": "exploration",
         "description": "The agent is exploring the area",
+        "conditions": [],
         "tasks": [
           "scan",
           "explore",
@@ -48,6 +51,7 @@
       },
       {
         "name": "identification",
+        "conditions": [],
         "tasks": [
           "preempt_explore",
           "preempt_scan",
@@ -71,6 +75,7 @@
       {
         "name": "closeup",
         "description": "The agents takes a closer look at the victim",
+        "conditions": [],
         "tasks": [
           "get_closer",
           "move_linear",
@@ -92,6 +97,7 @@
       },
       {
         "name": "victim_deletion",
+        "conditions": [],
         "tasks": [
           "abort",
           "delete_victim"
@@ -107,6 +113,7 @@
       },
       {
         "name": "fusion_validation",
+        "conditions": [],
         "tasks": [
         ],
         "clean": [
@@ -114,6 +121,7 @@
       },
       {
         "name": "operator_validation",
+        "conditions": [],
         "tasks": [
         ],
         "clean": [
@@ -136,10 +144,12 @@
       {
         "name": "off",
         "description": "The agent is sleeping"
+        "conditions": [],
       },
       {
         "name": "init",
         "description": "The agent starts the system",
+        "conditions": [],
         "tasks": [
           "boot"
         ]
