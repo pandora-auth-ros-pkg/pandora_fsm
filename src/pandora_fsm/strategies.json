@@ -46,7 +46,11 @@
           {
             "to": "identification",
             "trigger": "victim_found"
-          }
+          },
+          {
+			"to": "end",
+			"trigger": "map_covered"
+		  },
         ]
       },
       {
@@ -57,7 +61,7 @@
           "preempt_scan",
           "move_base",
           "point_sensors",
-          "wait"
+          "wait_identification"
         ],
         "clean": [
         ],
@@ -77,9 +81,7 @@
         "description": "The agents takes a closer look at the victim",
         "conditions": [],
         "tasks": [
-          "get_closer",
           "move_linear",
-          "start_timer",
           "wait_for_verification"
         ],
         "clean": [
@@ -91,7 +93,7 @@
           },
           {
             "to": "operator_validation",
-            "trigger": "verification"
+            "trigger": "verified"
           }
         ]
       },
@@ -99,7 +101,7 @@
         "name": "victim_deletion",
         "conditions": [],
         "tasks": [
-          "abort",
+          "abort_end_effector",
           "delete_victim"
         ],
         "clean": [
@@ -115,17 +117,31 @@
         "name": "fusion_validation",
         "conditions": [],
         "tasks": [
+		  "victim_classification"
         ],
         "clean": [
-        ]
+        ],
+        "transitions": [
+		  {
+			"to": "exploration",
+			"trigger": "victim_classified"
+		  }
+		] 
       },
       {
         "name": "operator_validation",
         "conditions": [],
         "tasks": [
+          "operator_confirmation"
         ],
         "clean": [
-        ]
+		  "update_victims"
+        ],
+        "transitions": [
+		  {
+			"to": "fusion_validation",
+			"trigger": "responded"
+		  }
       },
       {
         "name": "end",
