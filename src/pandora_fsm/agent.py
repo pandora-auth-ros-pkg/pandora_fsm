@@ -310,11 +310,6 @@ class Agent(object):
             self.timeout()
             print self.state
 
-    def wake_up(self):
-        """ Brings up the agent """
-
-        print 'I am awake'
-    
     def abort_end_effector(self):
 		""" Stops the end effector and starts exploring again """
 		
@@ -373,21 +368,6 @@ class Agent(object):
 
 	
 	
-    def callback(self, data):
-        """ It's called when a victim is found. """
-
-        if data.data == 'victim':
-            print 'Found one.'
-            self.victim = True
-            self.sub.unregister()
-            self.victim_found()
-
-    def wait_for_victim(self):
-        self.sub = rospy.Subscriber('world_model', String, self.callback)
-
-        while not self.victim:
-            time.sleep(1)
-
     def response_from_operator(self, status, result):
         """ Receives the verification from the operator. """
 
