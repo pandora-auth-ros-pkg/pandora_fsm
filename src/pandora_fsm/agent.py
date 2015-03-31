@@ -198,6 +198,16 @@ class Agent(object):
 		goal.center_point = "kinect_frame"
 		self.end_effector_planner_ac_.send_goal(goal)
 	
+	def wait_identification(self):
+		""" Examines if there is a victim """
+		
+		print 'Examining suspected victim..'
+		
+		if self.move_base_ac_.get_state() == GoalStatus.SUCCEEDED:
+			self.valid_victim()
+		elif self.move_base_ac_.get_state() == GoalStatus.ABORTED:
+			self.abort_victim()
+	
 	def move_linear(self)
 		""" Moving linear to identify the victim """
 		
