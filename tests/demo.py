@@ -12,15 +12,14 @@ PKG = 'pandora_fsm'
 import unittest
 
 import rostest
-import rospy
 
-from agent import Agent
+from pandora_fsm.agent import Agent
 
 
 class TestFiniteStateMahine(unittest.TestCase):
 
     def setUp(self):
-        self.woody = Agent()
+        self.woody = Agent(config='../src/pandora_fsm/strategies.json')
 
     def test_initialization(self):
         self.assertEqual(self.woody.name, 'Pandora')
@@ -43,9 +42,9 @@ class TestFiniteStateMahine(unittest.TestCase):
         self.woody.to_closeup()
 
         # Wait for validation.
-        if self.woody.gui_verification == True:
+        if self.woody.gui_verification:
             self.assertEqual(self.woody.state, 'operator_validation')
-        elif self.woody.is_timeout == True:
+        elif self.woody.is_timeout:
             self.assertEqual(self.woody.state, 'fusion_validation')
         else:
             # Fail
