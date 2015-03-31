@@ -48,9 +48,9 @@
             "trigger": "victim_found"
           },
           {
-			"to": "end",
-			"trigger": "map_covered"
-		  },
+            "to": "end",
+            "trigger": "map_covered"
+          }
         ]
       },
       {
@@ -117,16 +117,16 @@
         "name": "fusion_validation",
         "conditions": [],
         "tasks": [
-		  "victim_classification"
+          "victim_classification"
         ],
         "clean": [
         ],
         "transitions": [
-		  {
-			"to": "exploration",
-			"trigger": "victim_classified"
-		  }
-		] 
+          {
+            "to": "exploration",
+            "trigger": "victim_classified"
+          }
+        ]
       },
       {
         "name": "operator_validation",
@@ -135,13 +135,13 @@
           "operator_confirmation"
         ],
         "clean": [
-		  "update_victims"
+          "update_victims"
         ],
         "transitions": [
-		  {
-			"to": "fusion_validation",
-			"trigger": "responded"
-		  }
+          {
+            "to": "fusion_validation",
+            "trigger": "responded"
+          }
       },
       {
         "name": "end",
@@ -153,7 +153,7 @@
         "clean": [
         ]
       }
-    ]
+        ]
   },
   "exploration_mode": {
     "states": [
@@ -172,7 +172,5 @@
       }
     ]
   }
-
-
 
 }
