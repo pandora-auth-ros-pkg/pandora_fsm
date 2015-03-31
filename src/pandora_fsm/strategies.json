@@ -1,10 +1,9 @@
-
 {
   "normal": {
     "states": [
       {
         "name": "off",
-        "description": "The agent is sleeping",
+        "description": "The agent is sleeping.",
         "conditions": [],
         "tasks": [],
         "clean": [],
@@ -17,7 +16,7 @@
       },
       {
         "name": "init",
-        "description": "The agent starts the system",
+        "description": "The agent starts the system.",
         "conditions": [],
         "tasks": [
           "boot"
@@ -32,7 +31,7 @@
       },
       {
         "name": "exploration",
-        "description": "The agent is exploring the area",
+        "description": "The agent is exploring the area.",
         "conditions": [],
         "tasks": [
           "scan",
@@ -55,6 +54,7 @@
       },
       {
         "name": "identification",
+        "description": "",
         "conditions": [],
         "tasks": [
           "preempt_explore",
@@ -63,8 +63,7 @@
           "point_sensors",
           "wait_identification"
         ],
-        "clean": [
-        ],
+        "clean": [],
         "transitions": [
           {
             "to": "victim_deletion",
@@ -78,14 +77,13 @@
       },
       {
         "name": "closeup",
-        "description": "The agents takes a closer look at the victim",
+        "description": "The agents takes a closer look at the victim.",
         "conditions": [],
         "tasks": [
           "move_linear",
           "wait_for_verification"
         ],
-        "clean": [
-        ],
+        "clean": [],
         "transitions": [
           {
             "to": "fusion_validation",
@@ -104,8 +102,7 @@
           "abort_end_effector",
           "delete_victim"
         ],
-        "clean": [
-        ],
+        "clean": [],
         "transitions": [
           {
             "to": "exploration",
@@ -119,8 +116,7 @@
         "tasks": [
           "victim_classification"
         ],
-        "clean": [
-        ],
+        "clean": [],
         "transitions": [
           {
             "to": "exploration",
@@ -142,6 +138,7 @@
             "to": "fusion_validation",
             "trigger": "responded"
           }
+        ]
       },
       {
         "name": "end",
@@ -150,21 +147,19 @@
           "preempt_scan",
           "print_results"
         ],
-        "clean": [
-        ]
+        "clean": []
       }
-        ]
   },
   "exploration_mode": {
     "states": [
       {
         "name": "off",
-        "description": "The agent is sleeping",
+        "description": "The agent is sleeping.",
         "conditions": []
       },
       {
         "name": "init",
-        "description": "The agent starts the system",
+        "description": "The agent starts the system.",
         "conditions": [],
         "tasks": [
           "boot"
@@ -172,5 +167,4 @@
       }
     ]
   }
-
 }
