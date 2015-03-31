@@ -9,19 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   roslint
 )
 
-add_action_files(
-    DIRECTORY
-        action
-    FILES
-        VerifyVictim.action
-)
-
 catkin_python_setup()
 
-generate_messages(
-    DEPENDENCIES
-    actionlib_msgs
-    )
 
 generate_dynamic_reconfigure_options(
   config/params.cfg
