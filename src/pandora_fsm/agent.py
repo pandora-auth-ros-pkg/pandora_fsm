@@ -1,13 +1,16 @@
 
 """ PANDORAS's FSM Agent. """
 
+PKG = 'pandora_fsm'
+
 import json
 
 from math import pi
 
 import roslib
-roslib.load_manifest('pandora_fsm')
+roslib.load_manifest(PKG)
 from rospy import Subscriber, Duration, Timer, sleep, loginfo, logerr
+from rospkg import RosPack
 
 from actionlib import GoalStatus
 from actionlib import SimpleActionClient as Client
@@ -45,39 +48,44 @@ from machine import Machine
 class Agent(object):
     """ Agent implementation with a Finite State Machine.
         The agent uses a Machine instance to move through the FSM that's
-        created based on a given strategy. The class describers with methods
+        created based on a given strategy. The class describes with methods
         all the possible operations the Agent can perform.
     """
 
-    def __init__(self, strategy='normal', name='Pandora',
-                 config='strategies.json'):
+    def __init__(self, config='strategies.json', strategy='normal',
+                 name='Pandora'):
         """ Initializes the agent.
 
         :param :name The name of the agent. Defaults to Pandora.
         :param :strategy Defines the configuration that will be loaded from
                          the Agent.
         """
+
+        # Configuration folder
+        config_dir = RosPack().get_path(PKG) + '/config/'
         self.name = name
 
         self.strategy = strategy
 
-        self.config = config
+        self.config = config_dir + config
 
         # Subscribers.
-        Subscriber(topics.arena_type, ArenaTypeMsg, self.receive_arena_type)
-        Subscriber(topics.robocup_score, Int32, self.receive_score)
-        Subscriber(topics.qr_notification, QrNotificationMsg,
-                   self.receive_qr_notifications)
-        Subscriber(topics.area_covered, Float32, self.receive_area_covered)
-        Subscriber(topics.world_model, WorldModelMsg,
-                   self.receive_world_model)
-        Subscriber(topics.linear_movement_action_feedback,
-                   MoveLinearActionFeedback,
-                   self.receive_linear_feedback)
+        self.arena_sub = Subscriber(topics.arena_type, ArenaTypeMsg,
+                                    self.receive_arena_type)
+        self.score_sub = Subscriber(topics.robocup_score, Int32,
+                                    self.receive_score)
+        self.qr_sub = Subscriber(topics.qr_notification, QrNotificationMsg,
+                                 self.receive_qr_notifications)
+        self.area_coverage_sub = Subscriber(topics.area_covered, Float32,
+                                            self.receive_area_covered)
+        self.world_model_sub = Subscriber(topics.world_model, WorldModelMsg,
+                                          self.receive_world_model)
+        self.linear_sub = Subscriber(topics.linear_movement_action_feedback,
+                                     MoveLinearActionFeedback,
+                                     self.receive_linear_feedback)
 
         # Action clients.
-        self.explorer = Client(topics.do_exploration,
-                                      DoExplorationAction)
+        self.explorer = Client(topics.do_exploration, DoExplorationAction)
         self.base_client = Client(topics.move_base, MoveBaseAction)
         self.delete_victim_client = Client(topics.delete_victim,
                                            DeleteVictimAction)
