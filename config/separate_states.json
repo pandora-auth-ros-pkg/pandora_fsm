@@ -1,0 +1,42 @@
+{
+  "test_init": {
+    "states": [
+      {
+        "name": "off",
+        "description": "The agent is sleeping.",
+        "conditions": [],
+        "tasks": [],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "init",
+            "trigger": "wake_up"
+          }
+        ]
+      },
+      {
+        "name": "init",
+        "description": "The agent starts the system.",
+        "conditions": [],
+        "tasks": [
+          "boot"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "exploration",
+            "trigger": "booted"
+          }
+        ]
+      },
+      {
+        "name": "exploration",
+        "conditions": [],
+        "tasks": [],
+        "clean": [],
+        "transitions": []
+      }
+    ]
+  }
+
+}
