@@ -9,6 +9,7 @@ from math import pi
 
 import roslib
 roslib.load_manifest(PKG)
+import rospy
 from rospy import Subscriber, Duration, Timer, sleep, loginfo, logerr
 from rospkg import RosPack
 
@@ -51,6 +52,7 @@ class Agent(object):
         created based on a given strategy. The class describes with methods
         all the possible operations the Agent can perform.
     """
+    END_EFFECTOR_TIMEOUT = rospy.Duration(10)
 
     def __init__(self, config='strategies.json', strategy='normal',
                  name='Pandora'):
@@ -101,7 +103,7 @@ class Agent(object):
         self.new_victims = []
         self.target_victim = None
 
-        # TODO should load from a config file
+        # TODO should load from a config file or the Parameter Server
         self.valid_victim_probability = 0
         self.exploration_mode = 0
         self.linear_feedback = False
@@ -146,11 +148,9 @@ class Agent(object):
 
                     self.machine.set_state(self.states[0])
 
-
     ######################################################
     #####           SUBSCRIBER'S CALLBACKS           #####
     ######################################################
-
 
     def receive_score(self, score):
         """ Receives the score from data fusion. """
@@ -181,35 +181,49 @@ class Agent(object):
 
         loginfo('System boot!')
 
-        # Test end effector planner
+        # Test end effector planner.
         self.test_end_effector_planner()
         if self.end_effector_client.get_state() == GoalStatus.ABORTED:
             logerr('Failed to test end effector.')
-            self.to_boot()
 
-        # Park end effector planner
+            # Remaining in the current state.
+            self.to_init()
+
+        # Park end effector planner.
         self.park_end_effector_planner()
         if self.end_effector_client.get_state() == GoalStatus.ABORTED:
             logerr('Failed to park end effector.')
-            self.to_boot()
+
+            # Remaining in the current state.
+            self.to_init()
 
         self.booted()
 
-    def test_end_effector_planner(self):
-        """ Tests end effector with action client. """
+    def test_end_effector_planner(self, timeout=END_EFFECTOR_TIMEOUT):
+        """ Tests end effector with action client.
 
+        :param :timeout The amount of tiem that the agent will wait
+                        for a repsonse.
+        """
         loginfo('Testing end effector...')
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
-        self.end_effector_client.send_goal_and_wait(goal)
-        self.end_effector_client.wait_for_result()
+        self.end_effector_client.wait_for_server()
+        self.end_effector_client.send_goal(goal)
+        if not self.end_effector_client.wait_for_result(timeout=timeout):
+            loginfo("Couldn't test end effector in time...")
 
-    def park_end_effector_planner(self):
-        """ Parks end effector with action client. """
+    def park_end_effector_planner(self, timeout=END_EFFECTOR_TIMEOUT):
+        """ Parks end effector with action client.
 
+        :param :timeout The amount of time that the agent will wait
+                        for a response.
+        """
         loginfo('Trying to park end effector...')
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-        self.end_effector_client.send_goal_and_wait(goal)
-        self.end_effector_client.wait_for_result()
+        self.end_effector_client.wait_for_server()
+        self.end_effector_client.send_goal(goal)
+        if not self.end_effector_client.wait_for_result(timeout=timeout):
+            loginfo("Couldn't park end effector in time...")
 
     def scan(self):
         """ Scans the area. """
@@ -375,7 +389,7 @@ class Agent(object):
         self.park_end_effector_planner()
         if self.end_effector_client.get_state() == GoalStatus.ABORTED:
             logerr("Failed to park end effector")
-            self.to_boot()
+            self.to_init()
 
     def preempt_end_effector_planner(self):
         """ Preemts the last goal on the end effector planer. """
@@ -390,7 +404,7 @@ class Agent(object):
         self.delete_victim_client.wait_for_result()
         if self.delete_victim_client.get_state() == GoalStatus.ABORTED:
             loginfo("Failed to delete victim")
-            self.to_boot()
+            self.to_init()
         self.victim_deleted()
 
     def victim_classification(self):
@@ -405,7 +419,7 @@ class Agent(object):
         self.fusion_validate_client.wait_for_result()
         if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
             loginfo("failed to delete victim")
-            self.to_boot()
+            self.to_init()
         self.victim_classified()
 
     def operator_confirmation(self):
