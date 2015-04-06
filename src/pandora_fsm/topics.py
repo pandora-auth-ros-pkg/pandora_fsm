@@ -57,7 +57,7 @@ move_base = '/move_base'
 """ Global state """
 
 # Action to change the global state.
-state_changer_action = '/robot/state/change'
+state_changer = '/robot/state/change'
 
 # Monitors the number of clients registered in the State Manager.
 state_monitor = '/robot/state/clients'

@@ -17,6 +17,7 @@ from actionlib import GoalStatus
 from actionlib import SimpleActionClient as Client
 
 from std_msgs.msg import Int32, Float32
+from geometry_msgs.msg import PoseStamped
 
 from move_base_msgs.msg import MoveBaseGoal
 
@@ -41,6 +42,7 @@ from pandora_rqt_gui.msg import ValidateVictimGUIGoal
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 from pandora_end_effector_planner.msg import MoveLinearActionFeedback
+from pandora_end_effector_planner.msg import MoveLinearFeedback
 
 import topics
 from machine import Machine
@@ -52,6 +54,7 @@ class Agent(object):
         created based on a given strategy. The class describes with methods
         all the possible operations the Agent can perform.
     """
+    # TODO Convert immutable settings to globals
     END_EFFECTOR_TIMEOUT = rospy.Duration(10)
 
     def __init__(self, config='strategies.json', strategy='normal',
@@ -71,7 +74,7 @@ class Agent(object):
 
         self.config = config_dir + config
 
-        # Subscribers.
+        ### SUBSCRIBERS.
         self.arena_sub = Subscriber(topics.arena_type, ArenaTypeMsg,
                                     self.receive_arena_type)
         self.score_sub = Subscriber(topics.robocup_score, Int32,
@@ -86,7 +89,7 @@ class Agent(object):
                                      MoveLinearActionFeedback,
                                      self.receive_linear_feedback)
 
-        # Action clients.
+        ### ACTION CLIENTS.
         self.explorer = Client(topics.do_exploration, DoExplorationAction)
         self.base_client = Client(topics.move_base, MoveBaseAction)
         self.delete_victim_client = Client(topics.delete_victim,
@@ -98,16 +101,29 @@ class Agent(object):
         self.end_effector_client = Client(topics.move_end_effector_planner,
                                           MoveEndEffectorAction)
 
-        self.victim = False
+        ### Attributes to help in the decision making.
+
+        # Arena information.
+        self.current_arena = ArenaTypeMsg.TYPE_YELLOW
+        self.yellow_arena_area_explored = False
+        self.yellow_black_arena_area_explored = False
+
+        # General information.
+        self.QRs = 0
+        self.current_score = 0
+        self.current_robot_pose = PoseStamped()
+        self.linear_feedback = MoveLinearFeedback()
+        self.exploration_mode = -1
+
+        # Victim information.
         self.valid_victims = 0
-        self.new_victims = []
+        self.aborted_victims_ = []
+        self.new_victims_ = []
+        self.victim = False
         self.target_victim = None
-
-        # TODO should load from a config file or the Parameter Server
         self.valid_victim_probability = 0
-        self.exploration_mode = 0
-        self.linear_feedback = False
 
+        # Between-transition information.
         self.is_timeout = False
         self.gui_verification = False
         self.result = False

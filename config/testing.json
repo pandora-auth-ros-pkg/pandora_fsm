@@ -37,6 +37,36 @@
         "transitions": []
       }
     ]
+  },
+  "empty": {
+    "states": [
+      {
+        "name": "off",
+        "description": "The agent is sleeping",
+        "conditions": [],
+        "tasks": [],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "init",
+            "trigger": "wake_up"
+          }
+        ]
+      },
+      {
+        "name": "init",
+        "description": "Booting up the system",
+        "conditions": [],
+        "tasks": [],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "exploration",
+            "trigger": "booted"
+          }
+        ]
+      }
+    ]
   }
 
 }
