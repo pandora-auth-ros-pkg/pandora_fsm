@@ -10,6 +10,7 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 import rospy
+import dynamic_reconfigure.server
 from rospy import Subscriber, Duration, Timer, sleep, loginfo, logerr
 from rospkg import RosPack
 
@@ -43,6 +44,8 @@ from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 from pandora_end_effector_planner.msg import MoveLinearActionFeedback
 from pandora_end_effector_planner.msg import MoveLinearFeedback
+
+from pandora_fsm.cfg import FSMParamsConfig
 
 import topics
 from machine import Machine
@@ -109,8 +112,8 @@ class Agent(object):
         self.yellow_black_arena_area_explored = False
 
         # General information.
-        self.QRs = 0
-        self.current_score = 0
+        self.QRs = []
+        self.score = 0
         self.current_robot_pose = PoseStamped()
         self.linear_feedback = MoveLinearFeedback()
         self.exploration_mode = -1
@@ -118,7 +121,8 @@ class Agent(object):
         # Victim information.
         self.valid_victims = 0
         self.aborted_victims_ = []
-        self.new_victims_ = []
+        self.new_victims = []
+        self.visited_victims = []
         self.victim = False
         self.target_victim = None
         self.valid_victim_probability = 0
@@ -127,6 +131,9 @@ class Agent(object):
         self.is_timeout = False
         self.gui_verification = False
         self.result = False
+
+        # External configuration.
+        # dynamic_reconfigure.server.Server(FSMParamsConfig, self.reconfigure)
 
         self.load()
 
@@ -168,23 +175,29 @@ class Agent(object):
     #####           SUBSCRIBER'S CALLBACKS           #####
     ######################################################
 
-    def receive_score(self, score):
+    def receive_score(self, msg):
         """ Receives the score from data fusion. """
-        pass
 
-    def receive_qr_notifications(self, data):
+        self.score = msg.data
+
+    def receive_qr_notifications(self, msg):
         """ Receives QR notifications from data fusion. """
-        pass
 
-    def receive_world_model(self, data):
-        """ Receives the world model as published by data fusion. """
-        pass
+        self.QRs.append(msg)
 
-    def receive_linear_feedback(self, data):
+    def receive_world_model(self, model):
+        """ Receives the world model from data fusion. """
+
+        self.new_victims = model.victims
+        self.visited_victims = model.visitedVictims
+
+    def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
+        # TODO Check if actually the feedback exists (probably not).
+        # Remove the whole linear feedback thing if not.
         pass
 
-    def receive_area_covered(self, data):
+    def receive_area_covered(self, msg):
         """ Receives notifications about the covered area. """
         pass
 
@@ -203,7 +216,7 @@ class Agent(object):
             logerr('Failed to test end effector.')
 
             # Remaining in the current state.
-            self.to_init()
+            self.stay()
 
         # Park end effector planner.
         self.park_end_effector_planner()
@@ -211,7 +224,7 @@ class Agent(object):
             logerr('Failed to park end effector.')
 
             # Remaining in the current state.
-            self.to_init()
+            self.stay()
 
         self.booted()
 
@@ -250,11 +263,19 @@ class Agent(object):
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
         self.end_effector_client.send_goal(goal)
 
-    def preempt_scan(self):
-        """ Preempts scan. """
+    def move_linear(self):
+        """ Moving linear to identify the victim. """
 
-        loginfo('Stop scanning...')
-        self.end_effector_client.cancel_all_goals()
+        loginfo('Moving linear...')
+
+        self.preempt_end_effector_planner()
+        goal = MoveEndEffectorGoal()
+        goal.command = MoveEndEffectorGoal.LAX_TRACK
+        goal.point_of_interest = self.target_victim.victimFrameId
+        goal.center_point = "kinect_frame"
+        self.linear_feedback = False
+        self.end_effector_client.send_goal(goal)
+
 
     def move_base(self):
         """ Moves base to a point of intereset. """
@@ -278,13 +299,13 @@ class Agent(object):
         goal = MoveBaseGoal(target_pose=victim)
         self.base_client.send_goal(goal, feedback_cb=self.base_feedback)
 
-    ######################################################
-    #####              ACTION'S CALLBACKS            #####
-    ######################################################
+    def explore(self):
+        """ Exploring the area. """
 
-    def base_feedback(self, feedback):
-        """ Receives action feedback from the move base server. """
-        pass
+        loginfo('Exploring...')
+        goal = DoExplorationGoal(exploration_type=self.exploration_mode)
+        self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
+                                done_cb=self.explorer_done)
 
     def point_sensors(self):
         """ Point sensors. """
@@ -297,6 +318,26 @@ class Agent(object):
         goal.center_point = 'kinect_frame'
         self.end_effector_client.send_goal(goal)
 
+    ######################################################
+    #####              ACTION'S CALLBACKS            #####
+    ######################################################
+
+    def explorer_feedback(self, feedback):
+        """ Position feedback. """
+        self.current_robot_pose = feedback.base_position
+
+    def explorer_done(self, status, result):
+        """ Exploration finished. """
+        self.map_covered()
+
+    def victim_callback(self, data):
+        """ It's called when a victim is found. """
+        pass
+
+    def base_feedback(self, feedback):
+        """ Receives action feedback from the move base server. """
+        pass
+
     def wait_identification(self):
         """ Examines if there is a victim. """
 
@@ -306,19 +347,6 @@ class Agent(object):
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
             self.abort_victim()
-
-    def move_linear(self):
-        """ Moving linear to identify the victim. """
-
-        loginfo('Moving linear...')
-
-        self.preempt_end_effector_planner()
-        goal = MoveEndEffectorGoal()
-        goal.command = MoveEndEffectorGoal.LAX_TRACK
-        goal.point_of_interest = self.target_victim.victimFrameId
-        goal.center_point = "kinect_frame"
-        self.linear_feedback = False
-        self.end_effector_client.send_goal(goal)
 
     def wait_for_verification(self):
         """ Waiting for victim to be verified. """
@@ -348,37 +376,37 @@ class Agent(object):
         """ Receives the type of the arena. """
         pass
 
-    def preempt_explore(self):
+    ######################################################
+    #####              PREEMPTS AND ABORTS           #####
+    ######################################################
+
+    def preempt_exploration(self):
         """ Preempts exploration. """
 
         loginfo('Stopping exploration...')
-        self.explorer.cancel_all_goals()
-
-    def explore(self):
-        """ Exploring the area. """
-
-        loginfo('Exploring...')
-        goal = DoExplorationGoal(exploration_type=self.exploration_mode)
-        self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
-                                done_cb=self.explorer_done)
-
-    def explorer_feedback(self, feedback):
-        """ Position feedback. """
-        self.current_robot_pose = feedback.base_position
-
-    def explorer_done(self, status, result):
-        """ Exploration finished. """
-        self.map_covered()
-
-    def victim_callback(self, data):
-        """ It's called when a victim is found. """
-        pass
-
-    def stop_explorer(self):
-        """ Leaving exploration mode. """
-
-        loginfo('Stopping explorer...')
         self.exploration_mode = -1
+        self.explorer.wait_for_server()
+        self.explorer.cancel_all_goals()
+        self.explorer.wait_for_result()
+        loginfo('Exploration stopped...')
+
+    def preempt_scan(self):
+        """ Preempts scan. """
+
+        loginfo('Stopping scanning...')
+        self.explorer.wait_for_server()
+        self.end_effector_client.cancel_all_goals()
+        self.explorer.wait_for_result()
+        loginfo('Scan stopped...')
+
+    def preempt_move_base(self):
+        """ Stops any move base goals. """
+
+        loginfo('Stopping base...')
+        self.base_client.wait_for_server()
+        self.base_client.cancel_all_goals()
+        self.base_client.wait_for_result()
+        loginfo('Base stopped...')
 
     def start_timer(self, period):
 
@@ -405,11 +433,17 @@ class Agent(object):
         self.park_end_effector_planner()
         if self.end_effector_client.get_state() == GoalStatus.ABORTED:
             logerr("Failed to park end effector")
-            self.to_init()
+            self.stay()
+        loginfo('End effector aborted...')
 
     def preempt_end_effector_planner(self):
-        """ Preemts the last goal on the end effector planer. """
-        pass
+        """ Preempts the last goal on the end effector planer. """
+
+        loginfo('Preempting end effector...')
+        self.end_effector_client.wait_for_server()
+        self.end_effector_client.cancel_all_goals()
+        self.end_effector_client.wait_for_result()
+        loginfo('End effector preempted...')
 
     def delete_victim(self):
         """ Deletes the victim that failed to be identified. """
@@ -420,7 +454,7 @@ class Agent(object):
         self.delete_victim_client.wait_for_result()
         if self.delete_victim_client.get_state() == GoalStatus.ABORTED:
             loginfo("Failed to delete victim")
-            self.to_init()
+            self.stay()
         self.victim_deleted()
 
     def victim_classification(self):
@@ -435,7 +469,7 @@ class Agent(object):
         self.fusion_validate_client.wait_for_result()
         if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
             loginfo("failed to delete victim")
-            self.to_init()
+            self.stay()
         self.victim_classified()
 
     def operator_confirmation(self):
@@ -462,3 +496,50 @@ class Agent(object):
         """ Receives the verification from the operator. """
 
         loginfo('Received result..')
+
+    ######################################################
+    #####                  UTILITIES                 #####
+    ######################################################
+
+    def reconfigure(self, config, level):
+        """ Receive parameters from the server. """
+
+        # TODO Maybe replace some of this with a file if nothing changes.
+        self.max_time = config['max_time']
+        self.arena_victims = config['arena_victims']
+        self.max_QRs = config['arena_QRs']
+        self.time_passed = config['time_passed']
+        self.arena_type = config['arena_type']
+        self.initial_time = rospy.get_rostime().secs - config['time_passed']
+        self.valid_victim_probability = config['valid_victim_probability']
+        self.yellow_area = config['yellow_area']
+        self.yellow_black_area = config['yellow_black_area']
+
+        # FIXME Find better names
+        self.aborted_victims_distance = config['aborted_victims_distance']
+        self.updated_victim_threshold = config['updated_victim_threshold']
+        self.aborted_victim_sensor_hold = config['aborted_victim_sensor_hold']
+
+        self.robot_resets = config['robot_resets']
+        self.robot_restarts = config['robot_restarts']
+
+        # TODO Get the current strategy from reconfigure
+        # and then load the appropriate FSM. Add option
+        # in init for how to load the FSM.
+        self.exploration_strategy = config['exploration_strategy']
+
+    def leaving_state(self):
+        """ It should be called when the agent is leaving a state.
+            Receives the lock.
+        """
+
+        # FIXME It might not be necessary.
+        loginfo('%s: Moving to state => %s', self.name, self.state)
+
+    def stay(self):
+        """ It makes the agent stay in the current state.
+            This method should be used when something bad happened and we
+            want a second chance. Possibly when a state task fails.
+        """
+
+        getattr(self, 'to_' + self.state)()

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 """ Tests for the core functionality of the FSM framework """
 
