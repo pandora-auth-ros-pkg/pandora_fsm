@@ -22,7 +22,7 @@ class RobotStateTest(unittest.TestCase):
     def setUp(self):
 
         # Create an agent
-        self.agent = Agent(config='testing.json', strategy='empty')
+        self.agent = Agent(strategy='normal')
 
         # Create a hanlder
         self.handler = RobotStateHandler(NODE_NAME, self.agent)
@@ -37,6 +37,7 @@ class RobotStateTest(unittest.TestCase):
 
     def test_agent_starts(self):
 
+        self.agent.set_breakpoint('init')
         self.handler.start_agent()
         self.assertEqual(self.agent.state, 'init')
 

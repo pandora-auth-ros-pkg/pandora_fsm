@@ -66,7 +66,7 @@ class TestEndEffector(unittest.TestCase):
 
         # Register the mock servers.
         self.cmd_pub = Publisher('mock/cmd', String)
-        self.agent = Agent(config='testing.json', strategy='test_init')
+        self.agent = Agent(strategy='normal')
 
     def test_park_end_effector(self):
 
@@ -102,10 +102,11 @@ class TestInitState(unittest.TestCase):
 
         # Register the mock servers.
         self.cmd_pub = Publisher('mock/cmd', String)
-        self.agent = Agent(config='testing.json', strategy='test_init')
+        self.agent = Agent(strategy='normal')
 
     def test_initialization_from_sleep(self):
 
+        self.agent.set_breakpoint('exploration')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'exploration')
 
@@ -114,6 +115,7 @@ class TestInitState(unittest.TestCase):
         # FIXME Add a signal to make the test fail
         # when it goes in an infinite loop.
         self.cmd_pub.publish(String('ABORTED'))
+        self.agent.set_breakpoint('exploration')
 
         # It will hang indefinitely
         self.agent.to_init()

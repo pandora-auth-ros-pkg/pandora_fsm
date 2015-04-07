@@ -55,3 +55,9 @@ class State(object):
         """
         callback_list = getattr(self, 'on_' + trigger)
         callback_list.append(func)
+
+    def empty(self):
+        """ Removes all the callbacks from a state. """
+
+        self.on_enter = []
+        self.on_exit = []

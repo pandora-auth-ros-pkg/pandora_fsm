@@ -131,6 +131,15 @@ class Agent(object):
 
         self.load()
 
+    def set_breakpoint(self, state):
+        """ Stops the execution of the FSM after a given state.
+            Removes the implementation from the state. Useful when testing.
+
+            :param :state The last state we want to go.
+        """
+        # Removing the implementation of the given state.
+        self.machine.get_state(state).empty()
+
     def load(self):
         """ Loads the configuration file and sets up the FSM accordingly. """
 
