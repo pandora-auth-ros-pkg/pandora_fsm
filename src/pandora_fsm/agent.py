@@ -10,7 +10,6 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 import rospy
-import dynamic_reconfigure.server
 from rospy import Subscriber, Duration, Timer, sleep, loginfo, logerr
 from rospkg import RosPack
 
@@ -44,8 +43,6 @@ from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 from pandora_end_effector_planner.msg import MoveLinearActionFeedback
 from pandora_end_effector_planner.msg import MoveLinearFeedback
-
-from pandora_fsm.cfg import FSMParamsConfig
 
 import topics
 from machine import Machine
@@ -131,9 +128,6 @@ class Agent(object):
         self.is_timeout = False
         self.gui_verification = False
         self.result = False
-
-        # External configuration.
-        # dynamic_reconfigure.server.Server(FSMParamsConfig, self.reconfigure)
 
         self.load()
 
@@ -275,7 +269,6 @@ class Agent(object):
         goal.center_point = "kinect_frame"
         self.linear_feedback = False
         self.end_effector_client.send_goal(goal)
-
 
     def move_base(self):
         """ Moves base to a point of intereset. """
@@ -500,33 +493,6 @@ class Agent(object):
     ######################################################
     #####                  UTILITIES                 #####
     ######################################################
-
-    def reconfigure(self, config, level):
-        """ Receive parameters from the server. """
-
-        # TODO Maybe replace some of this with a file if nothing changes.
-        self.max_time = config['max_time']
-        self.arena_victims = config['arena_victims']
-        self.max_QRs = config['arena_QRs']
-        self.time_passed = config['time_passed']
-        self.arena_type = config['arena_type']
-        self.initial_time = rospy.get_rostime().secs - config['time_passed']
-        self.valid_victim_probability = config['valid_victim_probability']
-        self.yellow_area = config['yellow_area']
-        self.yellow_black_area = config['yellow_black_area']
-
-        # FIXME Find better names
-        self.aborted_victims_distance = config['aborted_victims_distance']
-        self.updated_victim_threshold = config['updated_victim_threshold']
-        self.aborted_victim_sensor_hold = config['aborted_victim_sensor_hold']
-
-        self.robot_resets = config['robot_resets']
-        self.robot_restarts = config['robot_restarts']
-
-        # TODO Get the current strategy from reconfigure
-        # and then load the appropriate FSM. Add option
-        # in init for how to load the FSM.
-        self.exploration_strategy = config['exploration_strategy']
 
     def leaving_state(self):
         """ It should be called when the agent is leaving a state.
