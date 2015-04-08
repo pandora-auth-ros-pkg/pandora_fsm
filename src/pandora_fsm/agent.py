@@ -229,6 +229,8 @@ class Agent(object):
             # Remaining in the current state.
             self.stay()
 
+        # TODO Move log messages inside the machine
+        loginfo('System booted...')
         self.booted()
 
     def test_end_effector_planner(self, timeout=END_EFFECTOR_TIMEOUT):

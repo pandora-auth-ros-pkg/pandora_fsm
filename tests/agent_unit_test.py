@@ -21,7 +21,7 @@ from actionlib_msgs.msg import GoalStatus
 
 from mock import MockEndEffector
 
-from pandora_fsm import Agent, topics
+from pandora_fsm import Agent, topics, TimeoutException, TimeLimiter
 from pandora_behave import MockActionServer
 
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
@@ -56,6 +56,7 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsInstance(self.agent.linear_sub, Subscriber)
 
     def test_load(self):
+        # TODO Write test with full functionality
         self.assertTrue(True)
 
 
@@ -106,20 +107,24 @@ class TestInitState(unittest.TestCase):
 
     def test_initialization_from_sleep(self):
 
+        self.cmd_pub.publish(String('SUCCEEDED'))
         self.agent.set_breakpoint('exploration')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'exploration')
 
     def test_immediate_initialization(self):
 
-        # FIXME Add a signal to make the test fail
-        # when it goes in an infinite loop.
         self.cmd_pub.publish(String('ABORTED'))
         self.agent.set_breakpoint('exploration')
 
-        # It will hang indefinitely
-        self.agent.to_init()
-        self.assertEqual(self.agent.state, 'exploration')
+        # If the end effector is not responsive the init
+        # task will loop forever. Using this decorator
+        # we limit the execution time of the task.
+        # Wrap your function and test the wrapper.
+        @TimeLimiter(timeout=20)
+        def init_wrapper():
+            self.agent.to_init()
+        self.assertRaises(TimeoutException, init_wrapper)
 
 if __name__ == '__main__':
     rospy.init_node('test_node')
