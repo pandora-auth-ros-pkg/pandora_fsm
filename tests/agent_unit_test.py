@@ -93,6 +93,112 @@ class TestEndEffector(unittest.TestCase):
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
+    def test_scan(self):
+        self.cmd_pub.publish(String('ABORTED'))
+        self.agent.scan()
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.cmd_pub.publish(String('SUCCEEDED'))
+        self.agent.scan()
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.SUCCEDED)
+
+    def test_move_linear(self):
+        self.cmd_pub.publish(String('ABORTED'))
+        self.agent.move_linear()
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.cmd_pub.publish(String('SUCCEEDED'))
+        self.agent.move_linear()
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.SUCCEDED)
+
+
+class TestMoveBase(unittest.Testcase):
+    """ Tests for the base action client """
+
+    def setUp(self):
+
+        # Register the mock servers.
+        self.cmd_pub = Publisher('mock/cmd', String)
+        self.agent = Agent(strategy='normal')
+
+    def test_move_base(self):
+        self.cmd_pub.publish(String('ABORTED'))
+        self.agent.move_base()
+        self.assertEqual(self.agent.base_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.cmd_pub.publish(String('SUCCEEDED'))
+        self.agent.move_base()
+        self.assertEqual(self.agent.base_client.get_state(),
+                         GoalStatus.SUCCEDED)
+
+
+class TestExploration(unittest.Testcase):
+    """ Tests for the explorer action client """
+
+    def setUp(self):
+
+        # Register the mock servers.
+        self.cmd_pub = Publisher('mock/cmd', String)
+        self.agent = Agent(strategy='normal')
+
+    def test_explore(self):
+        self.cmd_pub.publish(String('ABORTED'))
+        self.agent.explore()
+        self.assertEqual(self.agent.explorer.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.cmd_pub.publish(String('SUCCEEDED'))
+        self.agent.explore()
+        self.assertEqual(self.agent.explorer.get_state(),
+                         GoalStatus.SUCCEDED)
+
+
+class TestFusionValidation(unittest.Testcase):
+    """ Tests for the fusion validation action client """
+
+    def setUp(self):
+
+        # Register the mock servers.
+        self.cmd_pub = Publisher('mock/cmd', String)
+        self.agent = Agent(strategy='normal')
+
+    def test_victim_classification(self):
+        self.cmd_pub.publish(String('ABORTED'))
+        self.agent.victim_classification()
+        self.assertEqual(self.fusion_validate_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.cmd_pub.publish(String('SUCCEEDED'))
+        self.agent.victim_classification
+        self.assertEqual(self.fusion_validate_client.get_state(),
+                         GoalStatus.SUCCEDED)
+
+
+class TestGuiValidationClient(unittest.Testcase):
+    """ Tests for the GUI validation action client """
+
+    def setUp(self):
+
+        # Register the mock servers.
+        self.cmd_pub = Publisher('mock/cmd', String)
+        self.agent = Agent(strategy='normal')
+
+    def test_operator_confirmation(self):
+        self.cmd_pub.publish(String('ABORTED'))
+        self.agent.operator_confirmation()
+        self.assertEqual(self.gui_validate_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.cmd_pub.publish(String('SUCCEEDED'))
+        self.agent.operator_confirmation()
+        self.assertEqual(self.gui_validate_client.get_state(),
+                         GoalStatus.SUCCEEDED)
+
 
 class TestInitState(unittest.TestCase):
     """ Tests for the agent's tasks. A task is a function that is executed
@@ -125,6 +231,8 @@ class TestInitState(unittest.TestCase):
         def init_wrapper():
             self.agent.to_init()
         self.assertRaises(TimeoutException, init_wrapper)
+
+
 
 if __name__ == '__main__':
     rospy.init_node('test_node')
