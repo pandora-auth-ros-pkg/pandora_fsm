@@ -11,10 +11,8 @@ roslib.load_manifest('pandora_fsm')
 from std_msgs.msg import String
 
 from actionlib import SimpleActionServer as ActionServer
-from pandora_behave import MockActionServer
 from pandora_fsm import topics
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
-from pandora_end_effector_planner.msg import MoveEndEffectorResult
 from pandora_end_effector_planner.msg import MoveLinearAction
 
 

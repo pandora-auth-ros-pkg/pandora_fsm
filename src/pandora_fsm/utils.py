@@ -5,8 +5,6 @@
 import numpy
 import signal
 
-from rospy import logerr
-
 FAILURE_STATES = {2: 'PREEMPTED',
                   4: 'ABORTED',
                   5: 'REJECTED',

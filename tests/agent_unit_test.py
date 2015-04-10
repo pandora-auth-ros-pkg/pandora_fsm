@@ -6,9 +6,7 @@
 """
 
 import unittest
-from threading import Thread
 
-import rostest
 import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
@@ -19,11 +17,7 @@ from std_msgs.msg import String
 from actionlib import SimpleActionClient as Client
 from actionlib_msgs.msg import GoalStatus
 
-from pandora_fsm import Agent, topics, TimeoutException, TimeLimiter
-from pandora_behave import MockActionServer
-
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
-from pandora_end_effector_planner.msg import MoveEndEffectorGoal
+from pandora_fsm import Agent, TimeoutException, TimeLimiter
 
 
 class TestROSIndependentMethods(unittest.TestCase):
@@ -137,6 +131,7 @@ class TestMoveBase(unittest.TestCase):
         self.agent.move_base()
         self.assertEqual(self.agent.base_client.get_state(),
                          GoalStatus.SUCCEDED)
+
 
 @unittest.skip('Not ready yet.')
 class TestExploration(unittest.TestCase):

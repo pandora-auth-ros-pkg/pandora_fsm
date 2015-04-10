@@ -7,8 +7,6 @@ import xmlrpclib
 from threading import Condition
 
 import rospy
-from rospy.service import ServiceManager
-from rospy import Subscriber, Publisher
 from actionlib import SimpleActionClient as Client
 
 from dynamic_reconfigure import find_reconfigure_services
@@ -74,7 +72,7 @@ class RobotStateHandler(object):
 
         code, msg, uri = self.master.lookupService(provider, service)
         if code:
-            res = self.master.unregisterService(provider, service, uri)
+            self.master.unregisterService(provider, service, uri)
 
     def start_agent(self):
         """ Starts the agent. """
