@@ -68,5 +68,8 @@ state_monitor = '/robot/state/clients'
 # Feedback from the linear motor.
 linear_movement_action_feedback = '/control/linear_movement_action/feedback'
 
+# Action Server for the linear motor.
+linear_movement = '/control/linear_movement_action'
+
 # Moves end effector to a point of interest.
 move_end_effector_planner = '/control/move_end_effector_planner_action'

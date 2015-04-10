@@ -5,6 +5,7 @@
 """
 
 import rospy
+from rospy import loginfo, sleep
 import roslib
 roslib.load_manifest('pandora_fsm')
 from std_msgs.msg import String
@@ -14,61 +15,65 @@ from pandora_behave import MockActionServer
 from pandora_fsm import topics
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveEndEffectorResult
+from pandora_end_effector_planner.msg import MoveLinearAction
 
-TIMEOUT = 3
 
+class MockActionServer(object):
 
-class MockEndEffector():
-    """ A mock action server for the end effector """
+    """Docstring for MockActionServer. """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, name, topic, action_type):
+        """ Creating a custom mock action server."""
 
-        rospy.Subscriber('mock/cmd', String, self.receive_commands)
-        self.server = ActionServer(topics.move_end_effector_planner,
-                                   MoveEndEffectorAction,
-                                   self.success_callback,
-                                   False)
-        rospy.loginfo("End effector server is starting...")
-        self.server.start()
-        rospy.loginfo("End effector server is waiting for goals...")
+        self._topic = topic
+        self._name = name
+        self._action_type = action_type
+        self.timeout = 5
 
-    def receive_commands(self, command):
-        """  The command defines the callback that will be used from the
-             ActionServer to handle incoming goals from now on.
-        """
-        if command.data == 'SUCCEEDED':
-            self.server.execute_callback = self.success_callback
-        elif command.data == 'ABORTED':
-            self.server.execute_callback = self.abort_callback
-        elif command.data == 'PREEMPTED':
-            self.server.execute_callback = self.preempt_callback
+        rospy.Subscriber('mock/' + name, String, self.receive_commands)
+        self._server = ActionServer(self._topic, self._action_type,
+                                    self.success, False)
+        self._server.start()
+        loginfo('+ Starting ' + self._name)
 
-        rospy.sleep(1)
+    def receive_commands(self, msg):
+        """ Decides the result of the next call. """
 
-    def preempt_callback(self, goal):
+        result, timeout = msg.data.split(':')
+        self.timeout = float(timeout)
+        self._server.execute_callback = getattr(self, result)
+        loginfo(self._name + ': Current callback -> ' + result)
+        sleep(1)
 
-        rospy.loginfo('This goal will be preempted')
-        rospy.sleep(TIMEOUT)
-        self.server.set_preempted()
+    def abort(self, goal):
+        """ Aborts any incoming goal. """
 
-    def abort_callback(self, goal):
+        loginfo(self._name + ': This goal will be aborted.')
+        sleep(self.timeout)
+        self._server.set_aborted()
 
-        rospy.loginfo('This goal will be aborted')
-        rospy.sleep(TIMEOUT)
-        self.server.set_aborted()
+    def success(self, goal):
+        """ Succeeds any incoming goal. """
 
-    def success_callback(self, goal):
+        loginfo(self._name + ': This goal will succeed.')
+        sleep(self.timeout)
+        self._server.set_succeeded()
 
-        rospy.loginfo('This goal will succeed')
-        rospy.sleep(TIMEOUT)
-        self.server.set_succeeded()
+    def preempt(self, goal):
+        """ Preempts any incoming goal. """
 
-    def __del__(self):
-        self.server.__del__()
+        loginfo(self._name + ': This goal will be preempted.')
+        sleep(self.timeout)
+        self._server.set_preempted()
+
 
 if __name__ == '__main__':
-    rospy.init_node('end_effector_mock')
 
-    server = MockEndEffector()
-
+    rospy.init_node('mock_node')
+    effector = MockActionServer('effector',
+                                topics.move_end_effector_planner,
+                                MoveEndEffectorAction)
+    effector = MockActionServer('linear',
+                                topics.linear_movement,
+                                MoveLinearAction)
     rospy.spin()

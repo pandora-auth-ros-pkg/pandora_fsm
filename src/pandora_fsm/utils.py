@@ -5,6 +5,13 @@
 import numpy
 import signal
 
+from rospy import logerr
+
+FAILURE_STATES = {2: 'PREEMPTED',
+                  4: 'ABORTED',
+                  5: 'REJECTED',
+                  9: 'LOST'}
+
 
 def listify(obj):
     """ Returns an object as a list if it isn't already. """

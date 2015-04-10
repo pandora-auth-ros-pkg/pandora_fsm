@@ -4,12 +4,11 @@
 PKG = 'pandora_fsm'
 
 import json
-
 from math import pi
 
 import roslib
 roslib.load_manifest(PKG)
-import rospy
+
 from rospy import Subscriber, Duration, Timer, sleep, loginfo, logerr
 from rospkg import RosPack
 
@@ -19,33 +18,32 @@ from actionlib import SimpleActionClient as Client
 from std_msgs.msg import Int32, Float32
 from geometry_msgs.msg import PoseStamped
 
-from move_base_msgs.msg import MoveBaseGoal
-
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 from pandora_navigation_msgs.msg import ArenaTypeMsg
-from pandora_navigation_msgs.msg import DoExplorationAction
-from pandora_navigation_msgs.msg import DoExplorationGoal
+from pandora_navigation_msgs.msg import DoExplorationAction, DoExplorationGoal
 
 from pandora_data_fusion_msgs.msg import WorldModelMsg
 from pandora_data_fusion_msgs.msg import QrNotificationMsg
 from pandora_data_fusion_msgs.msg import ValidateVictimAction
 from pandora_data_fusion_msgs.msg import ValidateVictimGoal
-from pandora_data_fusion_msgs.msg import DeleteVictimAction
-from pandora_data_fusion_msgs.msg import DeleteVictimGoal
+from pandora_data_fusion_msgs.msg import DeleteVictimAction, DeleteVictimGoal
 
-from move_base_msgs.msg import MoveBaseAction
+from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction
 
-from pandora_rqt_gui.msg import ValidateVictimGUIAction
-from pandora_rqt_gui.msg import ValidateVictimGUIGoal
+from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
 
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 from pandora_end_effector_planner.msg import MoveLinearActionFeedback
-from pandora_end_effector_planner.msg import MoveLinearFeedback
+from pandora_end_effector_planner.msg import MoveLinearFeedback, MoveLinearGoal
+from pandora_end_effector_planner.msg import MoveLinearAction
 
 import topics
 from machine import Machine
+from utils import FAILURE_STATES
+
+END_EFFECTOR_TIMEOUT = Duration(10)
 
 
 class Agent(object):
@@ -54,8 +52,6 @@ class Agent(object):
         created based on a given strategy. The class describes with methods
         all the possible operations the Agent can perform.
     """
-    # TODO Convert immutable settings to globals
-    END_EFFECTOR_TIMEOUT = rospy.Duration(10)
 
     def __init__(self, config='strategies.json', strategy='normal',
                  name='Pandora'):
@@ -74,7 +70,7 @@ class Agent(object):
 
         self.config = config_dir + config
 
-        ### SUBSCRIBERS.
+        # SUBSCRIBERS.
         self.arena_sub = Subscriber(topics.arena_type, ArenaTypeMsg,
                                     self.receive_arena_type)
         self.score_sub = Subscriber(topics.robocup_score, Int32,
@@ -89,7 +85,7 @@ class Agent(object):
                                      MoveLinearActionFeedback,
                                      self.receive_linear_feedback)
 
-        ### ACTION CLIENTS.
+        # ACTION CLIENTS.
         self.explorer = Client(topics.do_exploration, DoExplorationAction)
         self.base_client = Client(topics.move_base, MoveBaseAction)
         self.delete_victim_client = Client(topics.delete_victim,
@@ -100,8 +96,9 @@ class Agent(object):
                                              ValidateVictimAction)
         self.end_effector_client = Client(topics.move_end_effector_planner,
                                           MoveEndEffectorAction)
+        self.linear_client = Client(topics.linear_movement, MoveLinearAction)
 
-        ### Attributes to help in the decision making.
+        # Attributes to help in the decision making.
 
         # Arena information.
         self.current_arena = ArenaTypeMsg.TYPE_YELLOW
@@ -130,6 +127,18 @@ class Agent(object):
         self.result = False
 
         self.load()
+
+    ######################################################
+    #                   UTILITIES                        #
+    ######################################################
+
+    def stay(self):
+        """ It makes the agent stay in the current state.
+            This method should be used when something bad happened and we
+            want a second chance. Possibly when a state task fails.
+        """
+
+        getattr(self, 'to_' + self.state)()
 
     def set_breakpoint(self, state):
         """ Stops the execution of the FSM after a given state.
@@ -175,7 +184,7 @@ class Agent(object):
                     self.machine.set_state(self.states[0])
 
     ######################################################
-    #####           SUBSCRIBER'S CALLBACKS           #####
+    #               SUBSCRIBER'S CALLBACKS               #
     ######################################################
 
     def receive_score(self, msg):
@@ -196,57 +205,64 @@ class Agent(object):
 
     def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
-        # TODO Check if actually the feedback exists (probably not).
-        # Remove the whole linear feedback thing if not.
-        pass
+
+        self.linear_feedback = msg.feedback.linear_command_converged
 
     def receive_area_covered(self, msg):
         """ Receives notifications about the covered area. """
         pass
 
+    def receive_arena_type(self, msg):
+        """ Receives the type of the arena. """
+        pass
+
     ######################################################
-    #####              AGENT'S ACTIONS               #####
+    #                 AGENT'S ACTIONS                    #
     ######################################################
 
     def boot(self):
-        """ Boots up the system. """
+        """ Boots up the system. Tests that everything is working properly."""
 
-        loginfo('System boot!')
+        loginfo('Starting system boot!')
 
         # Test end effector planner.
         self.test_end_effector_planner()
-        if self.end_effector_client.get_state() == GoalStatus.ABORTED:
-            logerr('Failed to test end effector.')
-
-            # Remaining in the current state.
+        goal_state = self.end_effector_client.get_state()
+        if goal_state in FAILURE_STATES.keys():
+            logerr('Test effector failed: ' + FAILURE_STATES[goal_state])
             self.stay()
 
         # Park end effector planner.
         self.park_end_effector_planner()
-        if self.end_effector_client.get_state() == GoalStatus.ABORTED:
-            logerr('Failed to park end effector.')
-
-            # Remaining in the current state.
+        goal_state = self.end_effector_client.get_state()
+        if goal_state in FAILURE_STATES.keys():
+            logerr('Park effector failed: ' + FAILURE_STATES[goal_state])
             self.stay()
 
-        # TODO Move log messages inside the machine
+        # Test linear motor.
+        self.test_linear_motor()
+        goal_state = self.linear_client.get_state()
+        if goal_state in FAILURE_STATES.keys():
+            logerr('Test linear failed: ' + FAILURE_STATES[goal_state])
+            self.stay()
+
         loginfo('System booted...')
         self.booted()
 
-    def test_end_effector_planner(self, timeout=END_EFFECTOR_TIMEOUT):
+    def test_end_effector_planner(self):
         """ Tests end effector with action client.
 
-        :param :timeout The amount of tiem that the agent will wait
+        :param :timeout The amount of time that the agent will wait
                         for a repsonse.
         """
         loginfo('Testing end effector...')
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
         self.end_effector_client.wait_for_server()
         self.end_effector_client.send_goal(goal)
-        if not self.end_effector_client.wait_for_result(timeout=timeout):
+        if not self.end_effector_client.wait_for_result(END_EFFECTOR_TIMEOUT):
             loginfo("Couldn't test end effector in time...")
 
-    def park_end_effector_planner(self, timeout=END_EFFECTOR_TIMEOUT):
+    def park_end_effector_planner(self):
         """ Parks end effector with action client.
 
         :param :timeout The amount of time that the agent will wait
@@ -256,8 +272,29 @@ class Agent(object):
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
         self.end_effector_client.wait_for_server()
         self.end_effector_client.send_goal(goal)
-        if not self.end_effector_client.wait_for_result(timeout=timeout):
+        if not self.end_effector_client.wait_for_result(END_EFFECTOR_TIMEOUT):
             loginfo("Couldn't park end effector in time...")
+
+    def test_linear_motor(self):
+        """ Tests linear motor. """
+
+        loginfo('Testing linear motor...')
+        goal = MoveLinearGoal(command=MoveLinearGoal.TEST)
+        self.linear_client.wait_for_server()
+        self.linear_client.send_goal(goal)
+        if not self.linear_client.wait_for_result(END_EFFECTOR_TIMEOUT):
+            loginfo("Couldn't test linear motor in time...")
+
+    def point_sensors(self):
+        """ Points end effector to the target. """
+
+        self.preempt_end_effector_planner()
+        goal = MoveEndEffectorGoal()
+        goal.command = MoveEndEffectorGoal.TRACK
+        goal.point_of_interest = self.target_victim.victimFrameId
+        goal.center_point = 'kinect_frame'
+        self.end_effector_client.wait_for_server()
+        self.end_effector_client.send_goal(goal)
 
     def scan(self):
         """ Scans the area. """
@@ -280,6 +317,20 @@ class Agent(object):
         goal.center_point = "kinect_frame"
         self.linear_feedback = False
         self.end_effector_client.send_goal(goal)
+
+    def wait_identification(self):
+        """ Examines if there is a victim. """
+
+        loginfo('Examining suspected victim...')
+
+        if self.base_client.get_state() == GoalStatus.SUCCEEDED:
+            self.valid_victim()
+        elif self.base_client.get_state() == GoalStatus.ABORTED:
+            self.abort_victim()
+
+    def wait_for_verification(self):
+        """ Waiting for victim to be verified. """
+        pass
 
     def move_base(self):
         """ Moves base to a point of intereset. """
@@ -308,22 +359,70 @@ class Agent(object):
 
         loginfo('Exploring...')
         goal = DoExplorationGoal(exploration_type=self.exploration_mode)
+        self.explorer.wait_for_server()
         self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
                                 done_cb=self.explorer_done)
 
-    def point_sensors(self):
-        """ Point sensors. """
+    def delete_victim(self):
+        """ Deletes the victim that failed to be identified. """
 
-        loginfo('Pointing sensors...')
-        goal = MoveEndEffectorGoal()
-        goal.command = MoveEndEffectorGoal.TRACK
-        goal.point_of_interest = self.target_victim.victimFrameId
-        # TODO Move 'kinect_frame' to a variable
-        goal.center_point = 'kinect_frame'
-        self.end_effector_client.send_goal(goal)
+        loginfo('Deleting victim...')
+        goal = DeleteVictimGoal(victimId=self.target_victim.id)
+        self.delete_victim_client.send_goal(goal)
+        self.delete_victim_client.wait_for_result()
+        if self.delete_victim_client.get_state() == GoalStatus.ABORTED:
+            loginfo("Failed to delete victim")
+            self.stay()
+        self.victim_deleted()
+
+    def operator_confirmation(self):
+        """ Waits for operator to confirm the victim. """
+
+        loginfo('Waiting for confiramtion...')
+        goal = ValidateVictimGUIGoal()
+        goal.victimFoundx = self.target_victim.victimPose.pose.position.x
+        goal.victimFoundy = self.target_victim.victimPose.pose.position.y
+        goal.probability = self.target_victim.probability
+        goal.sensorIDsFound = self.target_victim.sensors
+
+        self.gui_validate_client.wait_for_server()
+        self.gui_validate_client.send_goal(goal)
+        self.gui_validate_client.wait_for_result()
+        self.result = self.gui_validate_client.get_result()
+        self.responded()
+
+    def update_victims(self):
+        """ Counts the victim if found """
+
+        loginfo('Adding another victim...')
+        self.valid_victims += 1
+
+    def victim_classification(self):
+        """ Classifies the victim last attempted to identify """
+
+        loginfo('Classifying victim...')
+
+        goal = ValidateVictimGoal()
+        goal.victimId = self.target_victim.id
+        goal.victimValid = self.result.victimValid
+        self.fusion_validate_client.send_goal(goal)
+        self.fusion_validate_client.wait_for_result()
+        if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
+            loginfo('Failed to delete victim.')
+            self.stay()
+        self.victim_classified()
+
+    def response_from_operator(self, result):
+        """ Receives the verification from the operator. """
+
+        loginfo('Received result..')
+
+    def test_sensor(self):
+        """ Tests the sensor """
+        pass
 
     ######################################################
-    #####              ACTION'S CALLBACKS            #####
+    #              ACTION'S CALLBACKS                    #
     ######################################################
 
     def explorer_feedback(self, feedback):
@@ -342,46 +441,8 @@ class Agent(object):
         """ Receives action feedback from the move base server. """
         pass
 
-    def wait_identification(self):
-        """ Examines if there is a victim. """
-
-        loginfo('Examining suspected victim...')
-
-        if self.base_client.get_state() == GoalStatus.SUCCEEDED:
-            self.valid_victim()
-        elif self.base_client.get_state() == GoalStatus.ABORTED:
-            self.abort_victim()
-
-    def wait_for_verification(self):
-        """ Waiting for victim to be verified. """
-
-        for victim in self.new_victims:
-            if victim.id == self.target_victim.id:
-                face = False
-        for sensor in victim.sensors:
-            if sensor == 'FACE':
-                face = True
-        if victim.probability > self.valid_victim_probability and \
-           len(victim.sensors) >= 2 or face:
-            self.target_victim = victim
-            self.verified()
-        else:
-            goal = ValidateVictimGoal()
-            goal.victimId = self.target_victim.id
-            goal.victimValid = False
-            result_ = self.fusion_validate_client.send_goal_and_wait(goal, 60)
-        if result_ == 'DONE':
-            self.verified()
-        else:
-            self.timeout()
-        sleep(1.)
-
-    def receive_arena_type(self, data):
-        """ Receives the type of the arena. """
-        pass
-
     ######################################################
-    #####              PREEMPTS AND ABORTS           #####
+    #               PREEMPTS AND ABORTS                  #
     ######################################################
 
     def preempt_exploration(self):
@@ -412,23 +473,6 @@ class Agent(object):
         self.base_client.wait_for_result()
         loginfo('Base stopped...')
 
-    def start_timer(self, period):
-
-        loginfo('Starting timer...')
-
-        duration = Duration(secs=period)
-        Timer(duration, self.timer_handler, oneshot=True)
-
-    def timer_handler(self, event):
-        """ Timer expired. """
-
-        loginfo('Timer expired...')
-
-        if self.state == 'closeup':
-            self.is_timeout = True
-            self.timeout()
-            loginfo(self.state)
-
     def abort_end_effector(self):
         """ Stops the end effector and starts exploring again. """
 
@@ -448,75 +492,3 @@ class Agent(object):
         self.end_effector_client.cancel_all_goals()
         self.end_effector_client.wait_for_result()
         loginfo('End effector preempted...')
-
-    def delete_victim(self):
-        """ Deletes the victim that failed to be identified. """
-
-        loginfo('Deleting victim...')
-        goal = DeleteVictimGoal(victimId=self.target_victim.id)
-        self.delete_victim_client.send_goal(goal)
-        self.delete_victim_client.wait_for_result()
-        if self.delete_victim_client.get_state() == GoalStatus.ABORTED:
-            loginfo("Failed to delete victim")
-            self.stay()
-        self.victim_deleted()
-
-    def victim_classification(self):
-        """ Classifies the victim last attempted to identify """
-
-        loginfo('Classifying victim...')
-
-        goal = ValidateVictimGoal()
-        goal.victimId = self.target_victim.id
-        goal.victimValid = self.result.victimValid
-        self.fusion_validate_client.send_goal(goal)
-        self.fusion_validate_client.wait_for_result()
-        if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
-            loginfo("failed to delete victim")
-            self.stay()
-        self.victim_classified()
-
-    def operator_confirmation(self):
-        """ Waits for operator to confirm the victim found """
-
-        loginfo('DID WE FIND IT?????')
-        goal = ValidateVictimGUIGoal()
-        goal.victimFoundx = self.target_victim.victimPose.pose.position.x
-        goal.victimFoundy = self.target_victim.victimPose.pose.position.y
-        goal.probability = self.target_victim.probability
-        goal.sensorIDsFound = self.target_victim.sensors
-        self.gui_validate_client.send_goal(goal)
-        self.gui_validate_client.wait_for_result()
-        self.result = self.gui_validate_client.get_result()
-        self.responded()
-
-    def update_victims(self):
-        """ Counts the victim if found """
-
-        loginfo('AND ONE')
-        self.valid_victims += 1
-
-    def response_from_operator(self, result):
-        """ Receives the verification from the operator. """
-
-        loginfo('Received result..')
-
-    ######################################################
-    #####                  UTILITIES                 #####
-    ######################################################
-
-    def leaving_state(self):
-        """ It should be called when the agent is leaving a state.
-            Receives the lock.
-        """
-
-        # FIXME It might not be necessary.
-        loginfo('%s: Moving to state => %s', self.name, self.state)
-
-    def stay(self):
-        """ It makes the agent stay in the current state.
-            This method should be used when something bad happened and we
-            want a second chance. Possibly when a state task fails.
-        """
-
-        getattr(self, 'to_' + self.state)()
