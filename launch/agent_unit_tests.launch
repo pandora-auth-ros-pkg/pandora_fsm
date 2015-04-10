@@ -1,13 +1,11 @@
 <launch>
-  <node
-    pkg="pandora_fsm"
-    type="mock.py"
-    name="mock"
-    />
+  <node name="StateServer"
+        pkg="state_manager"
+        type="state_server"
+        output="screen" />
 
-  <node
-    name="Agent unit tests"
-    pkg="pandora_fsm"
-    type="agent_unit_test.py"
-    />
+  <node name="mock"
+        pkg="pandora_fsm"
+        type="mock.py"
+        output="screen" />
 </launch>
