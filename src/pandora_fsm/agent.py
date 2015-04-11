@@ -9,7 +9,7 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, Timer, sleep, loginfo, logerr
+from rospy import Subscriber, Duration, loginfo, logerr
 from rospkg import RosPack
 
 from actionlib import GoalStatus
@@ -17,6 +17,9 @@ from actionlib import SimpleActionClient as Client
 
 from std_msgs.msg import Int32, Float32
 from geometry_msgs.msg import PoseStamped
+
+from state_manager.state_client import StateClient
+from state_manager_msgs.msg import RobotModeMsg
 
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
@@ -60,6 +63,9 @@ class Agent(object):
         :param :name The name of the agent. Defaults to Pandora.
         :param :strategy Defines the configuration that will be loaded from
                          the Agent.
+        :param :config A json file that contains the agent strategies.
+                       The file should be located in the config folder of this
+                       package.
         """
 
         # Configuration folder
@@ -97,6 +103,11 @@ class Agent(object):
         self.end_effector_client = Client(topics.move_end_effector_planner,
                                           MoveEndEffectorAction)
         self.linear_client = Client(topics.linear_movement, MoveLinearAction)
+
+        # State client
+        self.state_changer = StateClient()
+        self.state_changer.client_initialize()
+        self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
 
         # Attributes to help in the decision making.
 
@@ -492,3 +503,56 @@ class Agent(object):
         self.end_effector_client.cancel_all_goals()
         self.end_effector_client.wait_for_result()
         loginfo('End effector preempted...')
+
+    ######################################################
+    #               GLOBAL STATE TRANSITIONS             #
+    ######################################################
+
+    def mode_off(self):
+        """ Changes the global robot state to
+            MODE 0 -> OFF
+        """
+        next_state = RobotModeMsg.MODE_OFF
+        return self.state_changer.change_state_and_wait(next_state)
+
+    def mode_autonomous(self):
+        """ Changes the global robot state to
+            MODE 1 -> START_AUTONOMOUS
+        """
+        next_state = RobotModeMsg.MODE_START_AUTONOMOUS
+        return self.state_changer.change_state_and_wait(next_state)
+
+    def mode_exploration_rescue(self):
+        """ Changes the global robot state to
+            MODE 2 -> EXPLORATION_RESCUE
+        """
+        next_state = RobotModeMsg.MODE_EXPLORATION_RESCUE
+        return self.state_changer.change_state_and_wait(next_state)
+
+    def mode_identification(self):
+        """ Changes the global robot state to
+            MODE 3 -> MODE_IDENTIFICATION
+        """
+        next_state = RobotModeMsg.MODE_IDENTIFICATION
+        return self.state_changer.change_state_and_wait(next_state)
+
+    def mode_sensor_hold(self):
+        """ Changes the global robot state to
+            MODE 4 -> MODE_SENSOR_HOLD
+        """
+        next_state = RobotModeMsg.MODE_SENSOR_HOLD
+        return self.state_changer.change_state_and_wait(next_state)
+
+    def mode_sensor_test(self):
+        """ Changes the global robot state to
+            MODE 7 -> MODE_SENSOR_TEST
+        """
+        next_state = RobotModeMsg.MODE_SENSOR_TEST
+        return self.state_changer.change_state_and_wait(next_state)
+
+    def mode_exploration_mapping(self):
+        """ Changes the global robot state to
+            MODE 8 -> MODE_EXPLORATION_MAPPING
+        """
+        next_state = RobotModeMsg.MODE_EXPLORATION_MAPPING
+        return self.state_changer.change_state_and_wait(next_state)
