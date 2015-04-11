@@ -3,7 +3,7 @@
 
 PKG = 'pandora_fsm'
 
-import json
+import yaml
 from math import pi
 
 import roslib
@@ -63,7 +63,7 @@ class Agent(object):
         :param :name The name of the agent. Defaults to Pandora.
         :param :strategy Defines the configuration that will be loaded from
                          the Agent.
-        :param :config A json file that contains the agent strategies.
+        :param :config A yaml/json file that contains the agent strategies.
                        The file should be located in the config folder of this
                        package.
         """
@@ -166,7 +166,7 @@ class Agent(object):
         try:
             # Read the configuration file.
             with open(self.config) as file_handler:
-                data = json.load(file_handler)
+                data = yaml.load(file_handler)
         except IOError, err:
             raise err
 
@@ -186,13 +186,15 @@ class Agent(object):
         # Create the transition table.
         self.transitions = []
         for state in states:
-            if 'transitions' in state.keys():
-                for transition in state['transitions']:
-                    self.machine.add_transition(transition['trigger'],
-                                                state['name'],
-                                                transition['to'])
-
-                    self.machine.set_state(self.states[0])
+            for transition in state['transitions']:
+                self.machine.add_transition(transition['trigger'],
+                                            state['name'],
+                                            transition['to'],
+                                            before=transition['before'],
+                                            after=transition['after'],
+                                            conditions=transition['conditions'])
+        # Sets up the initial state
+        self.machine.set_state(self.states[0])
 
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #

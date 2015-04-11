@@ -4,12 +4,14 @@
       {
         "name": "off",
         "description": "The agent is sleeping.",
-        "conditions": [],
         "tasks": [],
         "clean": [],
         "transitions": [
           {
             "to": "init",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "wake_up"
           }
         ]
@@ -17,7 +19,6 @@
       {
         "name": "init",
         "description": "The agent starts the system.",
-        "conditions": [],
         "tasks": [
           "boot"
         ],
@@ -25,6 +26,9 @@
         "transitions": [
           {
             "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "booted"
           }
         ]
@@ -32,7 +36,6 @@
       {
         "name": "exploration",
         "description": "The agent is exploring the area.",
-        "conditions": [],
         "tasks": [
           "scan",
           "explore",
@@ -44,18 +47,23 @@
         "transitions": [
           {
             "to": "identification",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "victim_found"
           },
           {
             "to": "end",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "map_covered"
           }
         ]
       },
       {
         "name": "identification",
-        "description": "",
-        "conditions": [],
+        "description": "Examining the candidate victim",
         "tasks": [
           "preempt_explore",
           "preempt_scan",
@@ -67,10 +75,16 @@
         "transitions": [
           {
             "to": "victim_deletion",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "abort_victim"
           },
           {
             "to": "closeup",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "valid_victim"
           }
         ]
@@ -78,7 +92,6 @@
       {
         "name": "closeup",
         "description": "The agents takes a closer look at the victim.",
-        "conditions": [],
         "tasks": [
           "move_linear",
           "wait_for_verification"
@@ -87,17 +100,23 @@
         "transitions": [
           {
             "to": "fusion_validation",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "timeout"
           },
           {
             "to": "operator_validation",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "verified"
           }
         ]
       },
       {
         "name": "victim_deletion",
-        "conditions": [],
+        "description": "Data fusion deletes the victim",
         "tasks": [
           "abort_end_effector",
           "delete_victim"
@@ -106,13 +125,16 @@
         "transitions": [
           {
             "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "victim_deleted"
           }
         ]
       },
       {
         "name": "fusion_validation",
-        "conditions": [],
+        "description": "Data fusion validates the victim",
         "tasks": [
           "victim_classification"
         ],
@@ -120,13 +142,16 @@
         "transitions": [
           {
             "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "victim_classified"
           }
         ]
       },
       {
         "name": "operator_validation",
-        "conditions": [],
+        "description": "Waiting validation from the operator",
         "tasks": [
           "operator_confirmation"
         ],
@@ -136,6 +161,9 @@
         "transitions": [
           {
             "to": "fusion_validation",
+            "conditions": [],
+            "before": [],
+            "after": [],
             "trigger": "responded"
           }
         ]
@@ -147,7 +175,8 @@
           "preempt_scan",
           "print_results"
         ],
-        "clean": []
+        "clean": [],
+        "transitions": {}
       }
     ]
   },
