@@ -9,7 +9,7 @@
         "transitions": [
           {
             "to": "init",
-            "conditions": [],
+            "conditions": ["mode_autonomous"],
             "before": [],
             "after": [],
             "trigger": "wake_up"
@@ -42,7 +42,8 @@
           "wait_for_victim"
         ],
         "clean": [
-          "stop_explorer"
+          "preempt_exploration",
+          "preempt_scan"
         ],
         "transitions": [
           {

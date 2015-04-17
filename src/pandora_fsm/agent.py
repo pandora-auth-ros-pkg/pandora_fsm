@@ -3,6 +3,8 @@
 
 PKG = 'pandora_fsm'
 
+import os
+import signal
 import yaml
 from math import pi
 
@@ -15,7 +17,7 @@ from rospkg import RosPack
 from actionlib import GoalStatus
 from actionlib import SimpleActionClient as Client
 
-from std_msgs.msg import Int32, Float32
+from std_msgs.msg import Int32, Float32, String
 from geometry_msgs.msg import PoseStamped
 
 from state_manager.state_client import StateClient
@@ -44,7 +46,7 @@ from pandora_end_effector_planner.msg import MoveLinearAction
 
 import topics
 from machine import Machine
-from utils import FAILURE_STATES
+from utils import FAILURE_STATES, Interrupt
 
 END_EFFECTOR_TIMEOUT = Duration(10)
 
@@ -90,6 +92,8 @@ class Agent(object):
         self.linear_sub = Subscriber(topics.linear_movement_action_feedback,
                                      MoveLinearActionFeedback,
                                      self.receive_linear_feedback)
+        self.interrupts = Subscriber(topics.agent_interrupt, String,
+                                     self.receive_interrupts)
 
         # ACTION CLIENTS.
         self.explorer = Client(topics.do_exploration, DoExplorationAction)
@@ -196,6 +200,21 @@ class Agent(object):
         # Sets up the initial state
         self.machine.set_state(self.states[0])
 
+    def clean_up(self):
+        """ Kills agent and cleans the environment. """
+
+        self.explorer.cancel_all_goals()
+        self.base_client.cancel_all_goals()
+        self.linear_client.cancel_all_goals()
+        self.end_effector_client.cancel_all_goals()
+        self.fusion_validate_client.cancel_all_goals()
+        self.gui_validate_client.cancel_all_goals()
+        self.delete_victim_client.cancel_all_goals()
+
+        self.to_off()
+
+        loginfo('Agent is sleeping...')
+
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
     ######################################################
@@ -229,10 +248,17 @@ class Agent(object):
         """ Receives the type of the arena. """
         pass
 
+    def receive_interrupts(self, msg):
+        """ Receives interrupt commands. Stops the current task and
+            executes another.
+        """
+        os.kill(os.getpid(), signal.SIGINT)
+
     ######################################################
     #                 AGENT'S ACTIONS                    #
     ######################################################
 
+    @Interrupt(clean_up)
     def boot(self):
         """ Boots up the system. Tests that everything is working properly."""
 
@@ -558,3 +584,4 @@ class Agent(object):
         """
         next_state = RobotModeMsg.MODE_EXPLORATION_MAPPING
         return self.state_changer.change_state_and_wait(next_state)
+

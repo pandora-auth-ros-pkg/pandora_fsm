@@ -62,6 +62,9 @@ state_changer = '/robot/state/change'
 # Monitors the number of clients registered in the State Manager.
 state_monitor = '/robot/state/clients'
 
+# Stops the current task.
+agent_interrupt = '/agent/interrupt'
+
 
 """ Control """
 

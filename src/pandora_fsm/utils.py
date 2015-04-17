@@ -5,6 +5,8 @@
 import numpy
 import signal
 
+from rospy import logerr, loginfo
+
 FAILURE_STATES = {2: 'PREEMPTED',
                   4: 'ABORTED',
                   5: 'REJECTED',
@@ -39,6 +41,10 @@ class TimeoutException(Exception):
     pass
 
 
+class InterruptException(Exception):
+    pass
+
+
 class TimeLimiter(object):
     """ Decorator class to limit the runtime of a function. """
 
@@ -67,3 +73,31 @@ class TimeLimiter(object):
 
         err_msg = 'Execution of %s exceeded the time limit [%d seconds]' % (self.task.__name__,  self.timeout, )
         raise TimeoutException(err_msg)
+
+
+class Interrupt(object):
+    """ Decorator that stops the execution of a function and starts another.
+    """
+
+    def __init__(self, after):
+        """ Initializing the decorator.
+
+        :param :after A function to execute after the interrupt.
+        """
+        self.after = after
+
+    def __call__(self, task):
+        self.task = task
+        signal.signal(signal.SIGINT, self.interrupt_handler)
+
+        def wrapper(*args, **kwargs):
+            try:
+                self.task(*args, **kwargs)
+            except InterruptException:
+                self.after(*args)
+
+        return wrapper
+
+    def interrupt_handler(self, signum, frame):
+        msg = '%s is interrupted by %s' % (self.task.__name__, self.after.__name__)
+        raise InterruptException(msg)
