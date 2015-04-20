@@ -133,16 +133,17 @@ class TestMoveBase(unittest.TestCase):
                          GoalStatus.SUCCEDED)
 
 
-@unittest.skip('Not ready yet.')
-class TestExploration(unittest.TestCase):
-    """ Tests for the explorer action client """
+class TestExplorationState(unittest.TestCase):
+    """ Tests for the exploration state and the action client."""
 
     def setUp(self):
 
         # Register the mock servers.
-        self.cmd_pub = Publisher('mock/cmd', String)
+        self.world_model = Publisher('mock/world_model', String)
+        self.explorer = Publisher('mock/explorer', String)
         self.agent = Agent(strategy='normal')
 
+    @unittest.skip('Not ready yet')
     def test_explore(self):
         self.cmd_pub.publish(String('ABORTED'))
         self.agent.explore()
@@ -153,6 +154,18 @@ class TestExploration(unittest.TestCase):
         self.agent.explore()
         self.assertEqual(self.agent.explorer.get_state(),
                          GoalStatus.SUCCEDED)
+
+    def test_new_victim(self):
+        """We send the world model containing a new victim and we expect
+           to move into the identification state.
+        """
+        self.agent.set_breakpoint('identification')
+
+        # We don't care about the exploration goal
+        self.explorer.publish('preempt:2')
+        self.world_model.publish('0.2')
+        self.agent.to_exploration()
+        self.assertEqual(self.agent.state, 'identification')
 
 
 @unittest.skip('Not ready yet.')

@@ -4,6 +4,7 @@
 PKG = 'pandora_fsm'
 
 import os
+import threading
 import signal
 import yaml
 from math import pi
@@ -11,7 +12,7 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, loginfo, logerr
+from rospy import Subscriber, Duration, loginfo, logerr, sleep
 from rospkg import RosPack
 
 from actionlib import GoalStatus
@@ -125,14 +126,13 @@ class Agent(object):
         self.score = 0
         self.current_robot_pose = PoseStamped()
         self.linear_feedback = MoveLinearFeedback()
-        self.exploration_mode = -1
+        self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
 
         # Victim information.
         self.valid_victims = 0
         self.aborted_victims_ = []
         self.new_victims = []
         self.visited_victims = []
-        self.victim = False
         self.target_victim = None
         self.valid_victim_probability = 0
 
@@ -140,6 +140,9 @@ class Agent(object):
         self.is_timeout = False
         self.gui_verification = False
         self.result = False
+
+        # Communication between threads (callbacks and the main thread).
+        self.new_victim = threading.Event()
 
         self.load()
 
@@ -157,9 +160,10 @@ class Agent(object):
 
     def set_breakpoint(self, state):
         """ Stops the execution of the FSM after a given state.
-            Removes the implementation from the state. Useful when testing.
+            Removes the implementation from the state.
 
-            :param :state The last state we want to go.
+            :param :state The last state we want to go. After this state
+                          the FSM will stop.
         """
         # Removing the implementation of the given state.
         self.machine.get_state(state).empty()
@@ -196,7 +200,8 @@ class Agent(object):
                                             transition['to'],
                                             before=transition['before'],
                                             after=transition['after'],
-                                            conditions=transition['conditions'])
+                                            conditions=transition['conditions']
+                                            )
         # Sets up the initial state
         self.machine.set_state(self.states[0])
 
@@ -232,8 +237,12 @@ class Agent(object):
     def receive_world_model(self, model):
         """ Receives the world model from data fusion. """
 
+        loginfo('World model updated...')
         self.new_victims = model.victims
         self.visited_victims = model.visitedVictims
+
+        if self.new_victims:
+            self.new_victim.set()
 
     def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
@@ -302,11 +311,8 @@ class Agent(object):
             loginfo("Couldn't test end effector in time...")
 
     def park_end_effector_planner(self):
-        """ Parks end effector with action client.
+        """ Parks end effector with action client. """
 
-        :param :timeout The amount of time that the agent will wait
-                        for a response.
-        """
         loginfo('Trying to park end effector...')
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
         self.end_effector_client.wait_for_server()
@@ -366,6 +372,21 @@ class Agent(object):
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
             self.abort_victim()
+
+    def wait_for_victim(self):
+        """ The agent stops until a candidate victim is found."""
+
+        loginfo('Waiting for victim...')
+        self.new_victim.wait()
+        sleep(1)
+
+        loginfo('Victim found...')
+
+        # Reseting the flag.
+        self.new_victim.clear()
+
+        # Changing state.
+        self.victim_found()
 
     def wait_for_verification(self):
         """ Waiting for victim to be verified. """
@@ -456,10 +477,6 @@ class Agent(object):
 
         loginfo('Received result..')
 
-    def test_sensor(self):
-        """ Tests the sensor """
-        pass
-
     ######################################################
     #              ACTION'S CALLBACKS                    #
     ######################################################
@@ -469,8 +486,15 @@ class Agent(object):
         self.current_robot_pose = feedback.base_position
 
     def explorer_done(self, status, result):
-        """ Exploration finished. """
-        self.map_covered()
+        """ Results from the exploration. """
+
+        if status == GoalStatus.SUCCEEDED:
+            loginfo('Exploration has finished successfully...')
+            self.map_covered()
+        elif status == GoalStatus.ABORTED:
+            loginfo('Exploration has been aborted...')
+        elif status == GoalStatus.REJECTED:
+            loginfo('Exploration has been rejected...')
 
     def victim_callback(self, data):
         """ It's called when a victim is found. """
@@ -488,7 +512,7 @@ class Agent(object):
         """ Preempts exploration. """
 
         loginfo('Stopping exploration...')
-        self.exploration_mode = -1
+        self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
         self.explorer.wait_for_server()
         self.explorer.cancel_all_goals()
         self.explorer.wait_for_result()
@@ -498,9 +522,9 @@ class Agent(object):
         """ Preempts scan. """
 
         loginfo('Stopping scanning...')
-        self.explorer.wait_for_server()
+        self.end_effector_client.wait_for_server()
         self.end_effector_client.cancel_all_goals()
-        self.explorer.wait_for_result()
+        self.end_effector_client.wait_for_result()
         loginfo('Scan stopped...')
 
     def preempt_move_base(self):
@@ -584,4 +608,3 @@ class Agent(object):
         """
         next_state = RobotModeMsg.MODE_EXPLORATION_MAPPING
         return self.state_changer.change_state_and_wait(next_state)
-

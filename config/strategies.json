@@ -66,8 +66,6 @@
         "name": "identification",
         "description": "Examining the candidate victim",
         "tasks": [
-          "preempt_explore",
-          "preempt_scan",
           "move_base",
           "point_sensors",
           "wait_identification"
