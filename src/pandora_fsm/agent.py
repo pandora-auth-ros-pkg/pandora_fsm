@@ -352,6 +352,7 @@ class Agent(object):
 
         self.preempt_end_effector_planner()
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
+        self.end_effector_client.wait_for_server()
         self.end_effector_client.send_goal(goal)
 
     def move_linear(self):

@@ -166,8 +166,10 @@ class WorldModel(object):
         return msg
 
     def receive_probability(self, msg):
-        prob = float(msg.data)
-        self.publish_custom_msg(probability=prob)
+        ident_temp, prob_temp = msg.data.split(':')
+        ident = int(ident_temp)
+        prob = float(prob_temp)
+        self.publish_custom_msg(id=ident, probability=prob)
 
     def publish_custom_msg(self, id=None, victim_frame_id=None, sensors=None,
                            valid=None, probability=None):

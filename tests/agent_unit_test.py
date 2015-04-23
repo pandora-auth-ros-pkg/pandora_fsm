@@ -18,7 +18,7 @@ from actionlib_msgs.msg import GoalStatus
 
 from pandora_fsm import Agent, TimeoutException, TimeLimiter, topics
 from pandora_data_fusion_msgs.msg import WorldModelMsg
-from mock import WorldModel
+import mock
 
 
 class TestROSIndependentMethods(unittest.TestCase):
@@ -54,7 +54,7 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertTrue(True)
 
 
-@unittest.skip('save time')
+# @unittest.skip('save time')
 class TestEndEffector(unittest.TestCase):
     """ Tests for the end effector action client. """
 
@@ -93,11 +93,13 @@ class TestEndEffector(unittest.TestCase):
     def test_scan(self):
         self.effector_mock.publish(String('abort:1'))
         self.agent.scan()
+        sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.ABORTED)
 
         self.effector_mock.publish(String('success:1'))
         self.agent.scan()
+        sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
@@ -160,25 +162,23 @@ class TestExploration(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-@unittest.skip('Not ready yet.')
+# @unittest.skip('Not ready yet.')
 class TestUpdateVictim(unittest.TestCase):
     def setUp(self):
-        self.world = WorldModel('pluto')
+        self.my_world = Publisher('mock/victim_probability', String)
         self.agent = Agent(strategy='normal')
 
     def test_update(self):
 
-        msg = self.world.custom_victim(0.65)
-        self.agent.target_victim = msg.victims[0]
+        msg = mock.create_victim_info(id=8, probability=0.65)
+        self.agent.target_victim = msg
         sleep(2)
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.65)
-        msg = self.world.custom_victim(0.88)
-        self.world._pub.publish(msg)
+        self.my_world.publish('8:0.88')
         sleep(2)
         self.agent.update_target_victim()
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.88)
-        msg = self.world.custom_victim(0.95)
-        self.world._pub.publish(msg)
+        self.my_world.publish('8:0.95')
         sleep(2)
         self.agent.update_target_victim()
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.95)
@@ -293,7 +293,7 @@ class TestInitState(unittest.TestCase):
         self.linear_mock.publish(String('success:1'))
         self.move_base_mock.publish(String('success:1'))
         self.explorer_mock.publish(String('abort:1'))
-        self.my_world.publish('0.4')
+        self.my_world.publish('2:0.4')
         self.agent.set_breakpoint('fusion_validation')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'fusion_validation')
@@ -303,7 +303,8 @@ class TestInitState(unittest.TestCase):
         self.linear_mock.publish(String('success:1'))
         self.move_base_mock.publish(String('success:1'))
         self.explorer_mock.publish(String('abort:1'))
-        self.my_world.publish('0.9')
+        self.my_world.publish('2:0.4')
+        self.my_world.publish('2:0.9')
         # self.my_world.publish_custom_msg(probability=0.9)
         self.agent.set_breakpoint('operator_validation')
         self.agent.wake_up()
@@ -314,17 +315,20 @@ class TestInitState(unittest.TestCase):
         self.linear_mock.publish(String('success:1'))
         self.move_base_mock.publish(String('abort:1'))
         self.explorer_mock.publish(String('abort:1'))
-        self.my_world.publish('0.9')
+        self.my_world.publish('2:0.4')
+        self.my_world.publish('2:0.6')
+        self.my_world.publish('2:0.9')
         # self.my_world.publish_custom_msg(probability=0.9)
         self.agent.set_breakpoint('operator_validation')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'operator_validation')
 
-    @unittest.skip('Not ready yet.')
+    @unittest.skip('save_time')
     def initialization_to_permanent_exploration(self):
 
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
+        self.explorer_mock.publish(String('abort:1'))
         self.agent.set_breakpoint('exploration')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'exploration')
