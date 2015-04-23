@@ -58,15 +58,34 @@ def create_pose_stamped():
     return msg
 
 
-def create_victim_info():
+def create_victim_info(id=None, victim_frame_id=None, sensors=None, valid=None,
+                       probability=None):
     msg = VictimInfoMsg()
-    msg.id = randint(0, 100)
-    msg.victimFrameId = 'kinect'
-    msg.sensors = ['thermal', 'kinect']
-    msg.valid = True
-    msg.probability = random()
-    msg.victimPose = create_pose_stamped()
+    if id is None:
+        msg.id = randint(0, 100)
+    else:
+        msg.id = id
 
+    if not victim_frame_id:
+        msg.victimFrameId = 'kinect'
+    else:
+        msg.victimFrameId = victim_frame_id
+
+    if not sensors:
+        msg.sensors = ['thermal', 'kinect']
+    else:
+        msg.sensors = sensors
+
+    if valid is None:
+        msg.valid = True
+    else:
+        msg.valid = valid
+
+    if probability is None:
+        msg.probability = random()
+    else:
+        msg.probability = probability
+    msg.victimPose = create_pose_stamped()
     return msg
 
 
@@ -125,31 +144,13 @@ class WorldModel(object):
         self._name = name
         self._pub = Publisher(topics.world_model, WorldModelMsg)
         Subscriber('mock/' + self._name, String, self.receive_commands)
+        Subscriber('mock/victim_probability', String, self.receive_probability)
         loginfo('+ Starting ' + self._name)
 
     def receive_commands(self, msg):
         self.frequency = float(msg.data)
         self._rate = rospy.Rate(self.frequency)
         self.send()
-
-    def custom_victim(self, probability):
-        msgworld = WorldModelMsg()
-        msg = VictimInfoMsg()
-        msg.id = 3
-        msg.victimFrameId = 'anakin'
-        msg.victimPose.header = rospy.Header()
-        msg.victimPose.pose.position.x = 1.0
-        msg.victimPose.pose.position.y = 2.0
-        msg.victimPose.pose.position.z = 3.0
-        msg.victimPose.pose.orientation.x = 1.0
-        msg.victimPose.pose.orientation.y = 2.0
-        msg.victimPose.pose.orientation.z = 3.0
-        msg.victimPose.pose.orientation.w = 4.0
-        msg.probability = probability
-        msg.sensors = '6th'
-        msg.valid = True
-        msgworld.victims.append(msg)
-        return msgworld
 
     def send(self):
         while not rospy.is_shutdown():
@@ -163,6 +164,17 @@ class WorldModel(object):
         msg.visitedVictims = [create_victim_info() for i in range(randint(0, 3))]
 
         return msg
+
+    def receive_probability(self, msg):
+        prob = float(msg.data)
+        self.publish_custom_msg(probability=prob)
+
+    def publish_custom_msg(self, id=None, victim_frame_id=None, sensors=None,
+                           valid=None, probability=None):
+        msg = WorldModelMsg()
+        msg.victims = [create_victim_info(id, victim_frame_id, sensors, valid,
+                       probability)]
+        self._pub.publish(msg)
 
 if __name__ == '__main__':
 

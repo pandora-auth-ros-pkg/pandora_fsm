@@ -160,25 +160,28 @@ class TestExploration(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-# @unittest.skip('Not ready yet.')
+@unittest.skip('Not ready yet.')
 class TestUpdateVictim(unittest.TestCase):
     def setUp(self):
         self.world = WorldModel('pluto')
         self.agent = Agent(strategy='normal')
 
     def test_update(self):
-        """ first append a victim to the agent, maybe make custom_victim to
-            return a victim and publish later
-        """
+
         msg = self.world.custom_victim(0.65)
         self.agent.target_victim = msg.victims[0]
-        sleep(1)
+        sleep(2)
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.65)
         msg = self.world.custom_victim(0.88)
         self.world._pub.publish(msg)
-        sleep(1)
+        sleep(2)
         self.agent.update_target_victim()
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.88)
+        msg = self.world.custom_victim(0.95)
+        self.world._pub.publish(msg)
+        sleep(2)
+        self.agent.update_target_victim()
+        self.assertAlmostEqual(self.agent.target_victim.probability, 0.95)
 
 
 @unittest.skip('Not ready yet.')
@@ -239,6 +242,7 @@ class TestInitState(unittest.TestCase):
         self.explorer_mock = Publisher('mock/explorer', String)
         self.move_base_mock = Publisher('mock/move', String)
         self.world_model = Publisher('mock/world_model', String)
+        self.my_world = Publisher('mock/victim_probability', String)
         self.agent = Agent(strategy='normal')
 
     @unittest.skip('save time')
@@ -261,7 +265,7 @@ class TestInitState(unittest.TestCase):
         sleep(2.0)
         self.assertEqual(self.agent.state, 'end')
 
-    # @unittest.skip('Not ready yet.')
+    @unittest.skip('save time')
     def test_initialization_to_closeup(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -272,6 +276,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'closeup')
 
+    @unittest.skip('save time')
     def test_initialization_to_victim_deletion(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -281,6 +286,39 @@ class TestInitState(unittest.TestCase):
         self.agent.set_breakpoint('victim_deletion')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'victim_deletion')
+
+    # @unittest.skip('save time')
+    def test_initialization_to_fusion_validation(self):
+        self.effector_mock.publish(String('success:1'))
+        self.linear_mock.publish(String('success:1'))
+        self.move_base_mock.publish(String('success:1'))
+        self.explorer_mock.publish(String('abort:1'))
+        self.my_world.publish('0.4')
+        self.agent.set_breakpoint('fusion_validation')
+        self.agent.wake_up()
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
+    def test_initialization_to_operator_validation(self):
+        self.effector_mock.publish(String('success:1'))
+        self.linear_mock.publish(String('success:1'))
+        self.move_base_mock.publish(String('success:1'))
+        self.explorer_mock.publish(String('abort:1'))
+        self.my_world.publish('0.9')
+        # self.my_world.publish_custom_msg(probability=0.9)
+        self.agent.set_breakpoint('operator_validation')
+        self.agent.wake_up()
+        self.assertEqual(self.agent.state, 'operator_validation')
+
+    def test_initialization_to_operator_with_aborted_move_base(self):
+        self.effector_mock.publish(String('success:1'))
+        self.linear_mock.publish(String('success:1'))
+        self.move_base_mock.publish(String('abort:1'))
+        self.explorer_mock.publish(String('abort:1'))
+        self.my_world.publish('0.9')
+        # self.my_world.publish_custom_msg(probability=0.9)
+        self.agent.set_breakpoint('operator_validation')
+        self.agent.wake_up()
+        self.assertEqual(self.agent.state, 'operator_validation')
 
     @unittest.skip('Not ready yet.')
     def initialization_to_permanent_exploration(self):

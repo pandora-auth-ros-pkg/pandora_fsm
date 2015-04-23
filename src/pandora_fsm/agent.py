@@ -377,9 +377,10 @@ class Agent(object):
         if self.base_client.get_state() == GoalStatus.SUCCEEDED:
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
-            if (self.target_victim.probability > 0.7):
+            if (self.target_victim.probability > 0.65):
                 self.valid_victim()
-            self.abort_victim()
+            else:
+                self.abort_victim()
 
     def wait_for_victim(self):
         """ The agent stops until a candidate victim is found."""
@@ -403,16 +404,20 @@ class Agent(object):
         """ Waiting for victim to be verified. """
 
         loginfo('Victim is being verified...')
-        Timer(Duration(10), self.verification_timeout, True)
+        timeout_timer = Timer(Duration(10), self.verification_timeout, True)
         while self.flag:
+            self.update_target_victim()
             value = self.target_victim.probability
             """ value of probability has to be decided carefully """
             if (value > 0.75):
                 self.verified()
-        self.flag = True
-        self.timeout()
+                timeout_timer.shutdown()
+                break
+        if not self.flag:
+            self.timeout()
+            self.flag = True
 
-    def verification_timeout(self):
+    def verification_timeout(self, event):
         """ Verification was timed out. """
 
         loginfo('agent timed out during identification')
@@ -488,7 +493,7 @@ class Agent(object):
         """ Update the current victim """
 
         for victim in self.new_victims:
-            if (victim.victimFrameId == self.target_victim.victimFrameId):
+            if (victim.id == self.target_victim.id):
                 self.target_victim = victim
 
     def victim_classification(self):
