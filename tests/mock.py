@@ -19,6 +19,7 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from pandora_navigation_msgs.msg import DoExplorationAction
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveLinearAction
+from move_base_msgs.msg import MoveBaseAction
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
 
 
@@ -129,8 +130,26 @@ class WorldModel(object):
     def receive_commands(self, msg):
         self.frequency = float(msg.data)
         self._rate = rospy.Rate(self.frequency)
-
         self.send()
+
+    def custom_victim(self, probability):
+        msgworld = WorldModelMsg()
+        msg = VictimInfoMsg()
+        msg.id = 3
+        msg.victimFrameId = 'anakin'
+        msg.victimPose.header = rospy.Header()
+        msg.victimPose.pose.position.x = 1.0
+        msg.victimPose.pose.position.y = 2.0
+        msg.victimPose.pose.position.z = 3.0
+        msg.victimPose.pose.orientation.x = 1.0
+        msg.victimPose.pose.orientation.y = 2.0
+        msg.victimPose.pose.orientation.z = 3.0
+        msg.victimPose.pose.orientation.w = 4.0
+        msg.probability = probability
+        msg.sensors = '6th'
+        msg.valid = True
+        msgworld.victims.append(msg)
+        return msgworld
 
     def send(self):
         while not rospy.is_shutdown():
@@ -154,6 +173,9 @@ if __name__ == '__main__':
                                 MoveLinearAction)
     explorer = MockActionServer('explorer', topics.do_exploration,
                                 DoExplorationAction)
+    move_base = MockActionServer('move',
+                                 topics.move_base,
+                                 MoveBaseAction)
     world = WorldModel('world_model')
 
     rospy.spin()

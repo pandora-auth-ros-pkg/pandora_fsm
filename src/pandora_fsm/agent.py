@@ -12,7 +12,7 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, loginfo, logerr, sleep
+from rospy import Subscriber, Duration, loginfo, logerr, sleep, Timer
 from rospkg import RosPack
 
 from actionlib import GoalStatus
@@ -143,6 +143,10 @@ class Agent(object):
 
         # Communication between threads (callbacks and the main thread).
         self.new_victim = threading.Event()
+        self.realistic_victim = threading.Event()
+
+        # Utility Variables
+        self.flag = True
 
         self.load()
 
@@ -367,10 +371,14 @@ class Agent(object):
         """ Examines if there is a victim. """
 
         loginfo('Examining suspected victim...')
-
+        self.base_client.wait_for_result()
+        self.update_target_victim()
+        """ test fails without the sleep. Race Condition? """
         if self.base_client.get_state() == GoalStatus.SUCCEEDED:
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
+            if (self.target_victim.probability > 0.7):
+                self.valid_victim()
             self.abort_victim()
 
     def wait_for_victim(self):
@@ -385,12 +393,30 @@ class Agent(object):
         # Reseting the flag.
         self.new_victim.clear()
 
+        # Setting the target victim
+        self.target_victim = self.new_victims[0]
+
         # Changing state.
         self.victim_found()
 
     def wait_for_verification(self):
         """ Waiting for victim to be verified. """
-        pass
+
+        loginfo('Victim is being verified...')
+        Timer(Duration(10), self.verification_timeout, True)
+        while self.flag:
+            value = self.target_victim.probability
+            """ value of probability has to be decided carefully """
+            if (value > 0.75):
+                self.verified()
+        self.flag = True
+        self.timeout()
+
+    def verification_timeout(self):
+        """ Verification was timed out. """
+
+        loginfo('agent timed out during identification')
+        self.flag = False
 
     def move_base(self):
         """ Moves base to a point of intereset. """
@@ -412,6 +438,7 @@ class Agent(object):
         victim.pose.position.z = 0
 
         goal = MoveBaseGoal(target_pose=victim)
+        self.base_client.wait_for_server()
         self.base_client.send_goal(goal, feedback_cb=self.base_feedback)
 
     def explore(self):
@@ -457,6 +484,13 @@ class Agent(object):
         loginfo('Adding another victim...')
         self.valid_victims += 1
 
+    def update_target_victim(self):
+        """ Update the current victim """
+
+        for victim in self.new_victims:
+            if (victim.victimFrameId == self.target_victim.victimFrameId):
+                self.target_victim = victim
+
     def victim_classification(self):
         """ Classifies the victim last attempted to identify """
 
@@ -476,6 +510,10 @@ class Agent(object):
         """ Receives the verification from the operator. """
 
         loginfo('Received result..')
+
+    def print_results(self):
+        """ Prints results of the mission """
+        pass
 
     ######################################################
     #              ACTION'S CALLBACKS                    #
