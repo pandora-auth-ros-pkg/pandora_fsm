@@ -20,7 +20,8 @@ from pandora_navigation_msgs.msg import DoExplorationAction
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveLinearAction
 from move_base_msgs.msg import MoveBaseAction
-from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
+from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg, DeleteVictimAction
+from pandora_rqt_gui.msg import ValidateVictimGUIAction
 
 
 def create_pose():
@@ -205,6 +206,12 @@ if __name__ == '__main__':
     move_base = MockActionServer('move',
                                  topics.move_base,
                                  MoveBaseAction)
+    validate_victim_gui = MockActionServer('validate_gui',
+                                           topics.gui_validation,
+                                           ValidateVictimGUIAction)
+    delete_victim = MockActionServer('delete_victim',
+                                     topics.delete_victim,
+                                     DeleteVictimAction)
     world = WorldModel('world_model')
 
     rospy.spin()

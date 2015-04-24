@@ -469,7 +469,7 @@ class Agent(object):
     def operator_confirmation(self):
         """ Waits for operator to confirm the victim. """
 
-        loginfo('Waiting for confiramtion...')
+        loginfo('Waiting for confirmation...')
         goal = ValidateVictimGUIGoal()
         goal.victimFoundx = self.target_victim.victimPose.pose.position.x
         goal.victimFoundy = self.target_victim.victimPose.pose.position.y

@@ -21,6 +21,7 @@ from pandora_data_fusion_msgs.msg import WorldModelMsg
 import mock
 
 
+@unittest.skip('save time')
 class TestROSIndependentMethods(unittest.TestCase):
 
     def setUp(self):
@@ -242,7 +243,9 @@ class TestInitState(unittest.TestCase):
         self.explorer_mock = Publisher('mock/explorer', String)
         self.move_base_mock = Publisher('mock/move', String)
         self.world_model = Publisher('mock/world_model', String)
+        self.validate_gui_mock = Publisher('mock/validate_gui', String)
         self.my_world = Publisher('mock/victim_probability', String)
+        self.delete_victim_mock = Publisher('/mock/delete_victim', String)
         self.agent = Agent(strategy='normal')
 
     @unittest.skip('save time')
@@ -254,11 +257,10 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'exploration')
 
-    @unittest.skip('save time')
+    # @unittest.skip('Not working exploration needs fixing')
     def test_initialization_to_end(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
-        self.effector_mock.publish(String('success:1'))
         self.explorer_mock.publish(String('success:1'))
         self.agent.set_breakpoint('end')
         self.agent.wake_up()
@@ -287,7 +289,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'victim_deletion')
 
-    # @unittest.skip('save time')
+    @unittest.skip('save time')
     def test_initialization_to_fusion_validation(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -298,7 +300,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'fusion_validation')
 
-    # @unittest.skip('save time')
+    @unittest.skip('save time')
     def test_initialization_to_operator_validation(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -310,6 +312,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'operator_validation')
 
+    @unittest.skip('save time')
     def test_initialization_to_operator_with_aborted_move_base(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -320,6 +323,32 @@ class TestInitState(unittest.TestCase):
         self.agent.set_breakpoint('operator_validation')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'operator_validation')
+
+    @unittest.skip('save time')
+    def test_initialization_to_fusion_validation_through_operator_1(self):
+        # operator goal aborted
+        self.effector_mock.publish(String('success:1'))
+        self.linear_mock.publish(String('success:1'))
+        self.move_base_mock.publish(String('abort:1'))
+        self.explorer_mock.publish(String('abort:1'))
+        self.validate_gui_mock.publish(String('abort:1'))
+        self.my_world.publish('2:0.9')
+        self.agent.set_breakpoint('fusion_validation')
+        self.agent.wake_up()
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
+    @unittest.skip('save time')
+    def test_initialization_to_fusion_validation_through_operator_2(self):
+        # operator goal succeeded
+        self.effector_mock.publish(String('success:1'))
+        self.linear_mock.publish(String('success:1'))
+        self.move_base_mock.publish(String('abort:1'))
+        self.explorer_mock.publish(String('abort:1'))
+        self.validate_gui_mock.publish(String('success:1'))
+        self.my_world.publish('2:0.9')
+        self.agent.set_breakpoint('fusion_validation')
+        self.agent.wake_up()
+        self.assertEqual(self.agent.state, 'fusion_validation')
 
     @unittest.skip('save_time')
     def initialization_to_permanent_exploration(self):
