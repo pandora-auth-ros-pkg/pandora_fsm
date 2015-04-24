@@ -21,7 +21,7 @@ from pandora_data_fusion_msgs.msg import WorldModelMsg
 import mock
 
 
-@unittest.skip('save time')
+# @unittest.skip('save time')
 class TestROSIndependentMethods(unittest.TestCase):
 
     def setUp(self):
@@ -55,7 +55,7 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertTrue(True)
 
 
-@unittest.skip('save time')
+# @unittest.skip('save time')
 class TestEndEffector(unittest.TestCase):
     """ Tests for the end effector action client. """
 
@@ -90,7 +90,6 @@ class TestEndEffector(unittest.TestCase):
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
-    # @unittest.skip('Not ready yet.')
     def test_scan(self):
         self.effector_mock.publish(String('abort:1'))
         self.agent.scan()
@@ -138,7 +137,7 @@ class TestMoveBase(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-@unittest.skip('Not ready yet.')
+# @unittest.skip('save time.')
 class TestExploration(unittest.TestCase):
     """ Tests for the explorer action client """
 
@@ -163,7 +162,7 @@ class TestExploration(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-@unittest.skip('Not ready yet.')
+# @unittest.skip('save time.')
 class TestUpdateVictim(unittest.TestCase):
     def setUp(self):
         self.my_world = Publisher('mock/victim_probability', String)
@@ -179,57 +178,14 @@ class TestUpdateVictim(unittest.TestCase):
         sleep(2)
         self.agent.update_target_victim()
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.88)
+        sleep(8.0)
         self.my_world.publish('8:0.95')
         sleep(2)
         self.agent.update_target_victim()
         self.assertAlmostEqual(self.agent.target_victim.probability, 0.95)
 
 
-@unittest.skip('Not ready yet.')
-class TestFusionValidation(unittest.TestCase):
-    """ Tests for the fusion validation action client """
-
-    def setUp(self):
-
-        # Register the mock servers.
-        self.cmd_pub = Publisher('mock/cmd', String)
-        self.agent = Agent(strategy='normal')
-
-    def test_victim_classification(self):
-        self.cmd_pub.publish(String('ABORTED'))
-        self.agent.victim_classification()
-        self.assertEqual(self.fusion_validate_client.get_state(),
-                         GoalStatus.ABORTED)
-
-        self.cmd_pub.publish(String('SUCCEEDED'))
-        self.agent.victim_classification
-        self.assertEqual(self.fusion_validate_client.get_state(),
-                         GoalStatus.SUCCEDED)
-
-
-@unittest.skip('Not ready yet.')
-class TestGuiValidationClient(unittest.TestCase):
-    """ Tests for the GUI validation action client """
-
-    def setUp(self):
-
-        # Register the mock servers.
-        self.cmd_pub = Publisher('mock/cmd', String)
-        self.agent = Agent(strategy='normal')
-
-    def test_operator_confirmation(self):
-        self.cmd_pub.publish(String('ABORTED'))
-        self.agent.operator_confirmation()
-        self.assertEqual(self.gui_validate_client.get_state(),
-                         GoalStatus.ABORTED)
-
-        self.cmd_pub.publish(String('SUCCEEDED'))
-        self.agent.operator_confirmation()
-        self.assertEqual(self.gui_validate_client.get_state(),
-                         GoalStatus.SUCCEEDED)
-
-
-# @unittest.skip('Not ready yet.')
+# @unittest.skip('save time.')
 class TestInitState(unittest.TestCase):
     """ Tests for the agent's tasks. A task is a function that is executed
         within a state. A task can belong to multiple states.
@@ -248,7 +204,7 @@ class TestInitState(unittest.TestCase):
         self.delete_victim_mock = Publisher('/mock/delete_victim', String)
         self.agent = Agent(strategy='normal')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_from_sleep(self):
 
         self.effector_mock.publish(String('success:1'))
@@ -257,7 +213,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'exploration')
 
-    # @unittest.skip('Not working exploration needs fixing')
+    @unittest.skip('Not working exploration needs fixing')
     def test_initialization_to_end(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -267,7 +223,7 @@ class TestInitState(unittest.TestCase):
         sleep(2.0)
         self.assertEqual(self.agent.state, 'end')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_closeup(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -278,18 +234,18 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'closeup')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_victim_deletion(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
         self.explorer_mock.publish(String('abort:1'))
         self.move_base_mock.publish(String('abort:1'))
-        self.world_model.publish('0.2')
+        self.my_world.publish('2:0.4')
         self.agent.set_breakpoint('victim_deletion')
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'victim_deletion')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_fusion_validation(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -300,7 +256,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'fusion_validation')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_operator_validation(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -312,7 +268,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'operator_validation')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_operator_with_aborted_move_base(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
@@ -324,7 +280,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'operator_validation')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_fusion_validation_through_operator_1(self):
         # operator goal aborted
         self.effector_mock.publish(String('success:1'))
@@ -337,7 +293,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'fusion_validation')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_initialization_to_fusion_validation_through_operator_2(self):
         # operator goal succeeded
         self.effector_mock.publish(String('success:1'))
@@ -350,7 +306,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'fusion_validation')
 
-    @unittest.skip('save_time')
+    # @unittest.skip('save_time')
     def initialization_to_permanent_exploration(self):
 
         self.effector_mock.publish(String('success:1'))
@@ -360,7 +316,7 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'exploration')
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_immediate_initialization_with_linear_failure(self):
 
         self.effector_mock.publish(String('success:1'))
@@ -376,7 +332,7 @@ class TestInitState(unittest.TestCase):
             self.agent.to_init()
         self.assertRaises(TimeoutException, init_wrapper)
 
-    @unittest.skip('save time')
+    # @unittest.skip('save time')
     def test_immediate_initialization_with_effector_failure(self):
 
         self.effector_mock.publish(String('abort:1'))

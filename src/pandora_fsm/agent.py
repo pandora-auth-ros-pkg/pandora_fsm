@@ -38,6 +38,7 @@ from pandora_data_fusion_msgs.msg import DeleteVictimAction, DeleteVictimGoal
 from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction
 
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
+from pandora_rqt_gui.msg import ValidateVictimGUIResult
 
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveEndEffectorGoal
@@ -137,12 +138,13 @@ class Agent(object):
         # Between-transition information.
         self.is_timeout = False
         self.gui_verification = False
-        self.result = False
+        self.result = ValidateVictimGUIResult()
 
         # Communication between threads (callbacks and the main thread).
         self.promising_victim = threading.Event()
         self.accessible_victim = threading.Event()
         self.recognized_victim = threading.Event()
+        self.explored = threading.Event()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
@@ -248,6 +250,8 @@ class Agent(object):
         self.visited_victims = model.visitedVictims
         if self.current_victims:
             self.promising_victim.set()
+        else:
+            self.promising_victim.clear()
         if self.target_victim:
             self.update_target_victim()
             loginfo(self.target_victim.probability)
@@ -255,6 +259,8 @@ class Agent(object):
                 self.accessible_victim.set()
             if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
                 self.recognized_victim.set()
+        else:
+            self.target_victim = self.choose_next_victim()
 
     def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
@@ -397,8 +403,11 @@ class Agent(object):
 
         # Reset because the callback always sets the event even if there is
         # only the target victim.
+        self.explored.clear()
         self.promising_victim.clear()
-        self.promising_victim.wait()
+        while not self.promising_victim.is_set():
+            if self.explored.is_set():
+                return
         sleep(1)
 
         loginfo('Victim found...')
@@ -407,7 +416,7 @@ class Agent(object):
         self.promising_victim.clear()
 
         # Setting the target victim
-        self.target_victim = self.choose_next_victim()
+        # self.target_victim = self.choose_next_victim()
 
         # Changing state.
         self.victim_found()
@@ -525,6 +534,7 @@ class Agent(object):
 
         if status == GoalStatus.SUCCEEDED:
             loginfo('Exploration has finished successfully...')
+            self.explored.set()
             self.map_covered()
         elif status == GoalStatus.ABORTED:
             loginfo('Exploration has been aborted...')
