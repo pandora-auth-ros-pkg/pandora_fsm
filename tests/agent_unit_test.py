@@ -54,7 +54,7 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertTrue(True)
 
 
-# @unittest.skip('save time')
+@unittest.skip('save time')
 class TestEndEffector(unittest.TestCase):
     """ Tests for the end effector action client. """
 
@@ -162,7 +162,7 @@ class TestExploration(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-# @unittest.skip('Not ready yet.')
+@unittest.skip('Not ready yet.')
 class TestUpdateVictim(unittest.TestCase):
     def setUp(self):
         self.my_world = Publisher('mock/victim_probability', String)
@@ -298,12 +298,12 @@ class TestInitState(unittest.TestCase):
         self.agent.wake_up()
         self.assertEqual(self.agent.state, 'fusion_validation')
 
+    # @unittest.skip('save time')
     def test_initialization_to_operator_validation(self):
         self.effector_mock.publish(String('success:1'))
         self.linear_mock.publish(String('success:1'))
         self.move_base_mock.publish(String('success:1'))
         self.explorer_mock.publish(String('abort:1'))
-        self.my_world.publish('2:0.4')
         self.my_world.publish('2:0.9')
         # self.my_world.publish_custom_msg(probability=0.9)
         self.agent.set_breakpoint('operator_validation')
@@ -315,8 +315,6 @@ class TestInitState(unittest.TestCase):
         self.linear_mock.publish(String('success:1'))
         self.move_base_mock.publish(String('abort:1'))
         self.explorer_mock.publish(String('abort:1'))
-        self.my_world.publish('2:0.4')
-        self.my_world.publish('2:0.6')
         self.my_world.publish('2:0.9')
         # self.my_world.publish_custom_msg(probability=0.9)
         self.agent.set_breakpoint('operator_validation')

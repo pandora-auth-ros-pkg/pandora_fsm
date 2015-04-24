@@ -6,7 +6,7 @@
 
 from random import randint, random
 import rospy
-from rospy import loginfo, sleep, Publisher, Subscriber
+from rospy import loginfo, sleep, Publisher, Subscriber, Timer, Duration
 import roslib
 roslib.load_manifest('pandora_fsm')
 from std_msgs.msg import String
@@ -176,7 +176,22 @@ class WorldModel(object):
         msg = WorldModelMsg()
         msg.victims = [create_victim_info(id, victim_frame_id, sensors, valid,
                        probability)]
-        self._pub.publish(msg)
+        rate = rospy.Rate(5)
+        timeout_thershold = 7
+        self._rate = rate
+        self.flag = True
+
+        # We set the threshold and the rate so that the world model is
+        # updated in time for the tests to run smoothly
+        Timer(Duration(timeout_thershold), self.publish_timeout, True)
+        while self.flag:
+            self._pub.publish(msg)
+            self._rate.sleep()
+
+    def publish_timeout(self, event):
+        loginfo("finished publishing")
+
+        self.flag = False
 
 if __name__ == '__main__':
 

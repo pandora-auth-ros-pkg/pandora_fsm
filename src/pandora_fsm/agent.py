@@ -12,7 +12,7 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, loginfo, logerr, sleep, Timer
+from rospy import Subscriber, Duration, loginfo, logerr, sleep
 from rospkg import RosPack
 
 from actionlib import GoalStatus
@@ -48,8 +48,6 @@ from pandora_end_effector_planner.msg import MoveLinearAction
 import topics
 from machine import Machine
 from utils import FAILURE_STATES, Interrupt
-
-END_EFFECTOR_TIMEOUT = Duration(10)
 
 
 class Agent(object):
@@ -131,7 +129,7 @@ class Agent(object):
         # Victim information.
         self.valid_victims = 0
         self.aborted_victims_ = []
-        self.new_victims = []
+        self.current_victims = []
         self.visited_victims = []
         self.target_victim = None
         self.valid_victim_probability = 0
@@ -142,11 +140,15 @@ class Agent(object):
         self.result = False
 
         # Communication between threads (callbacks and the main thread).
-        self.new_victim = threading.Event()
-        self.realistic_victim = threading.Event()
+        self.promising_victim = threading.Event()
+        self.accessible_victim = threading.Event()
+        self.recognized_victim = threading.Event()
 
         # Utility Variables
-        self.flag = True
+        self.IDENTIFICATION_THRESHOLD = 0.65
+        self.VERIFICATION_THRESHOLD = 0.75
+        self.VERIFICATION_TIMEOUT = 10
+        self.END_EFFECTOR_TIMEOUT = Duration(10)
 
         self.load()
 
@@ -242,11 +244,17 @@ class Agent(object):
         """ Receives the world model from data fusion. """
 
         loginfo('World model updated...')
-        self.new_victims = model.victims
+        self.current_victims = model.victims
         self.visited_victims = model.visitedVictims
-
-        if self.new_victims:
-            self.new_victim.set()
+        if self.current_victims:
+            self.promising_victim.set()
+        if self.target_victim:
+            self.update_target_victim()
+            loginfo(self.target_victim.probability)
+            if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
+                self.accessible_victim.set()
+            if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
+                self.recognized_victim.set()
 
     def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
@@ -311,7 +319,7 @@ class Agent(object):
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
         self.end_effector_client.wait_for_server()
         self.end_effector_client.send_goal(goal)
-        if not self.end_effector_client.wait_for_result(END_EFFECTOR_TIMEOUT):
+        if not self.end_effector_client.wait_for_result(self.END_EFFECTOR_TIMEOUT):
             loginfo("Couldn't test end effector in time...")
 
     def park_end_effector_planner(self):
@@ -321,7 +329,7 @@ class Agent(object):
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
         self.end_effector_client.wait_for_server()
         self.end_effector_client.send_goal(goal)
-        if not self.end_effector_client.wait_for_result(END_EFFECTOR_TIMEOUT):
+        if not self.end_effector_client.wait_for_result(self.END_EFFECTOR_TIMEOUT):
             loginfo("Couldn't park end effector in time...")
 
     def test_linear_motor(self):
@@ -331,7 +339,7 @@ class Agent(object):
         goal = MoveLinearGoal(command=MoveLinearGoal.TEST)
         self.linear_client.wait_for_server()
         self.linear_client.send_goal(goal)
-        if not self.linear_client.wait_for_result(END_EFFECTOR_TIMEOUT):
+        if not self.linear_client.wait_for_result(self.END_EFFECTOR_TIMEOUT):
             loginfo("Couldn't test linear motor in time...")
 
     def point_sensors(self):
@@ -372,13 +380,12 @@ class Agent(object):
         """ Examines if there is a victim. """
 
         loginfo('Examining suspected victim...')
+        self.accessible_victim.clear()
         self.base_client.wait_for_result()
-        self.update_target_victim()
-        """ test fails without the sleep. Race Condition? """
         if self.base_client.get_state() == GoalStatus.SUCCEEDED:
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
-            if (self.target_victim.probability > 0.65):
+            if self.accessible_victim.is_set():
                 self.valid_victim()
             else:
                 self.abort_victim()
@@ -387,16 +394,20 @@ class Agent(object):
         """ The agent stops until a candidate victim is found."""
 
         loginfo('Waiting for victim...')
-        self.new_victim.wait()
+
+        # Reset because the callback always sets the event even if there is
+        # only the target victim.
+        self.promising_victim.clear()
+        self.promising_victim.wait()
         sleep(1)
 
         loginfo('Victim found...')
 
         # Reseting the flag.
-        self.new_victim.clear()
+        self.promising_victim.clear()
 
         # Setting the target victim
-        self.target_victim = self.new_victims[0]
+        self.target_victim = self.choose_next_victim()
 
         # Changing state.
         self.victim_found()
@@ -405,24 +416,11 @@ class Agent(object):
         """ Waiting for victim to be verified. """
 
         loginfo('Victim is being verified...')
-        timeout_timer = Timer(Duration(10), self.verification_timeout, True)
-        while self.flag:
-            self.update_target_victim()
-            value = self.target_victim.probability
-            """ value of probability has to be decided carefully """
-            if (value > 0.75):
-                self.verified()
-                timeout_timer.shutdown()
-                break
-        if not self.flag:
+        self.recognized_victim.clear()
+        if self.recognized_victim.wait(self.VERIFICATION_TIMEOUT):
+            self.verified()
+        else:
             self.timeout()
-            self.flag = True
-
-    def verification_timeout(self, event):
-        """ Verification was timed out. """
-
-        loginfo('agent timed out during identification')
-        self.flag = False
 
     def move_base(self):
         """ Moves base to a point of intereset. """
@@ -490,13 +488,6 @@ class Agent(object):
         loginfo('Adding another victim...')
         self.valid_victims += 1
 
-    def update_target_victim(self):
-        """ Update the current victim """
-
-        for victim in self.new_victims:
-            if (victim.id == self.target_victim.id):
-                self.target_victim = victim
-
     def victim_classification(self):
         """ Classifies the victim last attempted to identify """
 
@@ -547,6 +538,22 @@ class Agent(object):
     def base_feedback(self, feedback):
         """ Receives action feedback from the move base server. """
         pass
+
+    ######################################################
+    #                  AGENT LOGIC                       #
+    ######################################################
+
+    def update_target_victim(self):
+        """ Update the current victim """
+
+        for victim in self.current_victims:
+            if (victim.id == self.target_victim.id):
+                self.target_victim = victim
+
+    def choose_next_victim(self):
+        """ Choose the next possible victim """
+
+        return self.current_victims[0]
 
     ######################################################
     #               PREEMPTS AND ABORTS                  #
