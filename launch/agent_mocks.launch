@@ -1,0 +1,20 @@
+<launch>
+
+<!--Brings up all the testing mocks-->
+
+  <node name="StateServer"
+        pkg="state_manager"
+        type="state_server"
+        output="screen" />
+
+  <node name="mock_publishers_subscribers"
+        pkg="pandora_fsm"
+        type="mock_publishers_subscribers.py"
+        output="screen" />
+
+  <node name="mock_action_clients"
+        pkg="pandora_fsm"
+        type="mock_action_clients.py"
+        output="screen" />
+
+</launch>
