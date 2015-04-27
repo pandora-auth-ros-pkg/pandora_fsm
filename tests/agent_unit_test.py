@@ -6,7 +6,7 @@
 """
 
 import unittest
-from threading import Event
+import threading
 
 import roslib
 roslib.load_manifest('pandora_fsm')
@@ -19,6 +19,8 @@ from actionlib_msgs.msg import GoalStatus
 
 from pandora_fsm import Agent, TimeoutException, TimeLimiter, topics
 from pandora_data_fusion_msgs.msg import WorldModelMsg
+
+import mock_msgs
 
 
 class TestROSIndependentMethods(unittest.TestCase):
@@ -49,6 +51,19 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsInstance(self.agent.world_model_sub, Subscriber)
         self.assertIsInstance(self.agent.linear_sub, Subscriber)
 
+        # Make sure the threading.Events are initialized.
+        self.assertIsInstance(self.agent.promising_victim, threading._Event)
+        self.assertIsInstance(self.agent.accessible_victim, threading._Event)
+        self.assertIsInstance(self.agent.recognized_victim, threading._Event)
+        self.assertIsInstance(self.agent.explored, threading._Event)
+        self.assertFalse(self.agent.promising_victim.is_set())
+        self.assertFalse(self.agent.accessible_victim.is_set())
+        self.assertFalse(self.agent.recognized_victim.is_set())
+
+        # Empty variables
+        self.assertEqual(self.agent.current_victims, [])
+        self.assertEqual(self.agent.visited_victims, [])
+
     @unittest.skip('Not ready yet.')
     def test_load(self):
         # TODO Write test with full functionality
@@ -60,17 +75,82 @@ class TestCallbacks(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-        self.world_model = Publisher('mock/world_model', String, latch=True)
+        self.world_model = Publisher('mock/world_model', String)
 
     def test_receive_world_model_response(self):
         while not rospy.is_shutdown():
-            self.world_model.publish('2')
             self.world_model.publish('2')
             break
         sleep(3)
         self.assertNotEqual(self.agent.current_victims, [])
         self.assertNotEqual(self.agent.visited_victims, [])
         self.assertTrue(self.agent.promising_victim.is_set())
+
+    def test_receive_world_model_with_target(self):
+        """ Tests that the target is updated. """
+
+        # Create a victim and assign it to the target.
+        target = mock_msgs.create_victim_info()
+        self.agent.target_victim = target
+
+        self.assertEqual(self.agent.target_victim.id, target.id)
+
+        # Create a custom world_model msg with updated target.
+        target.probability = 0.8
+        visited = [mock_msgs.create_victim_info() for i in range(2)]
+        current_victims = [target]
+        model = mock_msgs.create_world_model(current_victims, visited)
+
+        self.agent.receive_world_model(model)
+        self.assertEqual(self.agent.target_victim.id, target.id)
+        self.assertEqual(self.agent.target_victim.probability, 0.8)
+        self.assertTrue(self.agent.promising_victim.is_set())
+
+    def test_receive_world_model_identification_threshold(self):
+        """ Tests that the accessible_victim event is set. """
+
+        self.agent.IDENTIFICATION_THRESHOLD = 0.5
+        target = mock_msgs.create_victim_info(probability=0.7)
+        self.agent.target_victim = target
+
+        visited = [mock_msgs.create_victim_info() for i in range(2)]
+        current_victims = [target]
+        model = mock_msgs.create_world_model(current_victims, visited)
+
+        self.agent.receive_world_model(model)
+        self.assertEqual(self.agent.target_victim.id, target.id)
+        self.assertTrue(self.agent.accessible_victim.is_set())
+
+        target.probability = 0.2
+        current_victims = [target]
+        model = mock_msgs.create_world_model(current_victims, visited)
+
+        self.agent.receive_world_model(model)
+        self.assertEqual(self.agent.target_victim.id, target.id)
+        self.assertFalse(self.agent.accessible_victim.is_set())
+
+    def test_receive_world_model_verification_threshold(self):
+        """ Tests that the recognized_victim event is set. """
+
+        self.agent.VERIFICATION_THRESHOLD = 0.5
+        target = mock_msgs.create_victim_info(probability=0.7)
+        self.agent.target_victim = target
+
+        visited = [mock_msgs.create_victim_info() for i in range(2)]
+        current_victims = [target]
+        model = mock_msgs.create_world_model(current_victims, visited)
+
+        self.agent.receive_world_model(model)
+        self.assertEqual(self.agent.target_victim.id, target.id)
+        self.assertTrue(self.agent.recognized_victim.is_set())
+
+        target.probability = 0.2
+        current_victims = [target]
+        model = mock_msgs.create_world_model(current_victims, visited)
+
+        self.agent.receive_world_model(model)
+        self.assertEqual(self.agent.target_victim.id, target.id)
+        self.assertFalse(self.agent.recognized_victim.is_set())
 
 
 class TestEndEffector(unittest.TestCase):

@@ -18,55 +18,7 @@ from pandora_fsm import topics
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
 
-
-def create_pose():
-    msg = Pose()
-    msg.position = create_point()
-    msg.orientation = create_quaternion()
-
-    return msg
-
-
-def create_point():
-    msg = Point()
-    msg.x = random() * 10
-    msg.y = random() * 10
-    msg.z = random() * 10
-
-    return msg
-
-
-def create_quaternion():
-    msg = Quaternion()
-    msg.x = random() * 10
-    msg.y = random() * 10
-    msg.z = random() * 10
-    msg.w = random() * 10
-
-    return msg
-
-
-def create_pose_stamped():
-    msg = PoseStamped()
-    msg.header = rospy.Header()
-    msg.pose = create_pose()
-
-    return msg
-
-
-def create_victim_info(id=None, victim_frame_id=None, sensors=None, valid=None,
-                       probability=None):
-    msg = VictimInfoMsg()
-
-    msg.id = id if id else randint(0, 100)
-    msg.victimFrameId = victim_frame_id if victim_frame_id else 'kinect'
-    msg.sensors = sensors if sensors else ['thermal', 'kinect']
-    msg.valid = valid if valid else True
-    msg.probability = probability if probability else random()
-
-    msg.victimPose = create_pose_stamped()
-
-    return msg
+import mock_msgs
 
 
 class WorldModel(object):
@@ -89,14 +41,14 @@ class WorldModel(object):
             msg = self.create_msg()
             self._pub.publish(msg)
             count += 1
-            self._rate.sleep()
+            sleep(1)
             if count > self.frequency:
                 break
 
     def create_msg(self):
         msg = WorldModelMsg()
-        msg.victims = [create_victim_info() for i in range(randint(0, 3))]
-        msg.visitedVictims = [create_victim_info() for i in range(randint(0, 3))]
+        msg.victims = [mock_msgs.create_victim_info() for i in range(randint(1, 3))]
+        msg.visitedVictims = [mock_msgs.create_victim_info() for i in range(randint(1, 3))]
 
         return msg
 
@@ -109,7 +61,7 @@ class WorldModel(object):
     def publish_custom_msg(self, id=None, victim_frame_id=None, sensors=None,
                            valid=None, probability=None):
         msg = WorldModelMsg()
-        msg.victims = [create_victim_info(id, victim_frame_id, sensors, valid,
+        msg.victims = [mock_msgs.create_victim_info(id, victim_frame_id, sensors, valid,
                        probability)]
         rate = rospy.Rate(5)
         timeout_thershold = 7

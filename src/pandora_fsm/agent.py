@@ -154,6 +154,8 @@ class Agent(object):
 
         self.load()
 
+        loginfo('Agent initialized...')
+
     ######################################################
     #                   UTILITIES                        #
     ######################################################
@@ -255,12 +257,15 @@ class Agent(object):
 
         if self.target_victim:
             self.update_target_victim()
-            loginfo(self.target_victim.probability)
 
             if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
                 self.accessible_victim.set()
+            else:
+                self.accessible_victim.clear()
             if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
                 self.recognized_victim.set()
+            else:
+                self.recognized_victim.clear()
         else:
             self.target_victim = self.choose_next_victim()
 
