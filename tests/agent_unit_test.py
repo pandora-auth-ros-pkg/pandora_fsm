@@ -70,7 +70,7 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertTrue(True)
 
 
-class TestCallbacks(unittest.TestCase):
+class TestWorldModelCallback(unittest.TestCase):
     """ Tests for the agent callbacks. """
 
     def setUp(self):
@@ -234,7 +234,6 @@ class TestMoveBase(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-@unittest.skip('debug')
 class TestExplorer(unittest.TestCase):
     """ Tests for the explorer action client """
 
@@ -242,44 +241,30 @@ class TestExplorer(unittest.TestCase):
 
         # Register the mock servers.
         self.explorer_mock = Publisher('mock/explorer', String)
-        self.victim_mock = Publisher(topics.world_model, WorldModelMsg)
         self.agent = Agent(strategy='normal')
 
-    def test_explore(self):
+    def test_preempt_explorer(self):
+        self.explorer_mock.publish(String('abort:4'))
+        self.agent.explore()
+        self.assertEqual(self.agent.explorer.get_state(), GoalStatus.PENDING)
+        self.agent.preempt_exploration()
+        self.assertEqual(self.agent.explorer.get_state(), GoalStatus.ABORTED)
+        self.assertFalse(self.agent.explored.is_set())
+
+    def test_explorer_abort(self):
         self.explorer_mock.publish(String('abort:1'))
         self.agent.explore()
-        sleep(5.0)
-        self.assertEqual(self.agent.explorer.get_state(),
-                         GoalStatus.ABORTED)
+        sleep(3)
+        self.assertEqual(self.agent.explorer.get_state(), GoalStatus.ABORTED)
+        self.assertFalse(self.agent.explored.is_set())
 
+    def test_explorer_success(self):
         self.explorer_mock.publish(String('success:1'))
         self.agent.explore()
-        sleep(5.0)
-        self.assertEqual(self.agent.explorer.get_state(),
-                         GoalStatus.SUCCEEDED)
+        sleep(3)
+        self.assertEqual(self.agent.explorer.get_state(), GoalStatus.SUCCEEDED)
+        self.assertTrue(self.agent.explored.is_set())
 
-
-@unittest.skip('debug')
-class TestUpdateVictim(unittest.TestCase):
-    def setUp(self):
-        self.my_world = Publisher('mock/victim_probability', String)
-        self.agent = Agent(strategy='normal')
-
-    def test_update(self):
-
-        msg = mock.create_victim_info(id=8, probability=0.65)
-        self.agent.target_victim = msg
-        sleep(2)
-        self.assertAlmostEqual(self.agent.target_victim.probability, 0.65)
-        self.my_world.publish('8:0.88')
-        sleep(2)
-        self.agent.update_target_victim()
-        self.assertAlmostEqual(self.agent.target_victim.probability, 0.88)
-        sleep(8.0)
-        self.my_world.publish('8:0.95')
-        sleep(2)
-        self.agent.update_target_victim()
-        self.assertAlmostEqual(self.agent.target_victim.probability, 0.95)
 
 if __name__ == '__main__':
     rospy.init_node('test_agent_units')

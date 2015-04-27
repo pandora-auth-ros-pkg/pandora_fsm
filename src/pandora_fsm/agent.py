@@ -541,11 +541,12 @@ class Agent(object):
         if status == GoalStatus.SUCCEEDED:
             loginfo('Exploration has finished successfully...')
             self.explored.set()
-            self.map_covered()
         elif status == GoalStatus.ABORTED:
             loginfo('Exploration has been aborted...')
+            self.explored.clear()
         elif status == GoalStatus.REJECTED:
             loginfo('Exploration has been rejected...')
+            self.explored.clear()
 
     def victim_callback(self, data):
         """ It's called when a victim is found. """
