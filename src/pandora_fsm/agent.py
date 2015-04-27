@@ -4,7 +4,7 @@
 PKG = 'pandora_fsm'
 
 import os
-import threading
+from threading import Event
 import signal
 import yaml
 from math import pi
@@ -48,7 +48,7 @@ from pandora_end_effector_planner.msg import MoveLinearAction
 
 import topics
 from machine import Machine
-from utils import FAILURE_STATES, Interrupt
+from utils import FAILURE_STATES
 
 
 class Agent(object):
@@ -141,10 +141,10 @@ class Agent(object):
         self.result = ValidateVictimGUIResult()
 
         # Communication between threads (callbacks and the main thread).
-        self.promising_victim = threading.Event()
-        self.accessible_victim = threading.Event()
-        self.recognized_victim = threading.Event()
-        self.explored = threading.Event()
+        self.promising_victim = Event()
+        self.accessible_victim = Event()
+        self.recognized_victim = Event()
+        self.explored = Event()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
@@ -204,8 +204,7 @@ class Agent(object):
         for state in states:
             for transition in state['transitions']:
                 self.machine.add_transition(transition['trigger'],
-                                            state['name'],
-                                            transition['to'],
+                                            state['name'], transition['to'],
                                             before=transition['before'],
                                             after=transition['after'],
                                             conditions=transition['conditions']
@@ -248,13 +247,16 @@ class Agent(object):
         loginfo('World model updated...')
         self.current_victims = model.victims
         self.visited_victims = model.visitedVictims
+
         if self.current_victims:
             self.promising_victim.set()
         else:
             self.promising_victim.clear()
+
         if self.target_victim:
             self.update_target_victim()
             loginfo(self.target_victim.probability)
+
             if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
                 self.accessible_victim.set()
             if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
@@ -285,7 +287,6 @@ class Agent(object):
     #                 AGENT'S ACTIONS                    #
     ######################################################
 
-    @Interrupt(clean_up)
     def boot(self):
         """ Boots up the system. Tests that everything is working properly."""
 

@@ -10,7 +10,7 @@ import rospy
 from rospy import loginfo, sleep, Publisher, Subscriber, Timer, Duration
 import roslib
 roslib.load_manifest('pandora_fsm')
-from std_msgs.msg import String
+from std_msgs.msg import String, Int32
 
 from pandora_fsm import topics
 
@@ -57,31 +57,15 @@ def create_pose_stamped():
 def create_victim_info(id=None, victim_frame_id=None, sensors=None, valid=None,
                        probability=None):
     msg = VictimInfoMsg()
-    if id is None:
-        msg.id = randint(0, 100)
-    else:
-        msg.id = id
 
-    if not victim_frame_id:
-        msg.victimFrameId = 'kinect'
-    else:
-        msg.victimFrameId = victim_frame_id
+    msg.id = id if id else randint(0, 100)
+    msg.victimFrameId = victim_frame_id if victim_frame_id else 'kinect'
+    msg.sensors = sensors if sensors else ['thermal', 'kinect']
+    msg.valid = valid if valid else True
+    msg.probability = probability if probability else random()
 
-    if not sensors:
-        msg.sensors = ['thermal', 'kinect']
-    else:
-        msg.sensors = sensors
-
-    if valid is None:
-        msg.valid = True
-    else:
-        msg.valid = valid
-
-    if probability is None:
-        msg.probability = random()
-    else:
-        msg.probability = probability
     msg.victimPose = create_pose_stamped()
+
     return msg
 
 
@@ -90,12 +74,12 @@ class WorldModel(object):
     def __init__(self, name):
         self._name = name
         self._pub = Publisher(topics.world_model, WorldModelMsg)
-        Subscriber('mock/' + self._name, String, self.receive_commands)
+        Subscriber('mock/' + self._name, Int32, self.receive_commands)
         Subscriber('mock/victim_probability', String, self.receive_probability)
         loginfo('+ Starting ' + self._name)
 
     def receive_commands(self, msg):
-        self.frequency = float(msg.data)
+        self.frequency = msg.data
         self._rate = rospy.Rate(self.frequency)
         self.send()
 
@@ -141,7 +125,6 @@ class WorldModel(object):
         self.flag = False
 
 if __name__ == '__main__':
-
     rospy.init_node('mock_node')
     world = WorldModel('world_model')
 
