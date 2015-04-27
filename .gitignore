@@ -54,3 +54,5 @@ Thumbs.db
 .*.swp
 *.log
 core*
+
+.coverage
