@@ -74,20 +74,24 @@ class WorldModel(object):
     def __init__(self, name):
         self._name = name
         self._pub = Publisher(topics.world_model, WorldModelMsg)
-        Subscriber('mock/' + self._name, Int32, self.receive_commands)
+        Subscriber('mock/' + self._name, String, self.receive_commands)
         Subscriber('mock/victim_probability', String, self.receive_probability)
         loginfo('+ Starting ' + self._name)
 
     def receive_commands(self, msg):
-        self.frequency = msg.data
+        self.frequency = float(msg.data)
         self._rate = rospy.Rate(self.frequency)
         self.send()
 
     def send(self):
+        count = 0
         while not rospy.is_shutdown():
             msg = self.create_msg()
             self._pub.publish(msg)
+            count += 1
             self._rate.sleep()
+            if count > self.frequency:
+                break
 
     def create_msg(self):
         msg = WorldModelMsg()

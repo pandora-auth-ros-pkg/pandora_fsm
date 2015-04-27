@@ -60,12 +60,17 @@ class TestCallbacks(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-        self.world_model = Publisher('mock/world_model', Int32)
+        self.world_model = Publisher('mock/world_model', String, latch=True)
 
     def test_receive_world_model_response(self):
-        self.world_model.publish(2)
+        while not rospy.is_shutdown():
+            self.world_model.publish('2')
+            self.world_model.publish('2')
+            break
+        sleep(3)
         self.assertNotEqual(self.agent.current_victims, [])
         self.assertNotEqual(self.agent.visited_victims, [])
+        self.assertTrue(self.agent.promising_victim.is_set())
 
 
 class TestEndEffector(unittest.TestCase):
