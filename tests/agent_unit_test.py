@@ -21,6 +21,7 @@ from pandora_fsm import Agent, TimeoutException, TimeLimiter, topics
 from pandora_data_fusion_msgs.msg import WorldModelMsg
 
 import mock_msgs
+from pandora_fsm import MachineError
 
 
 class TestROSIndependentMethods(unittest.TestCase):
@@ -265,6 +266,58 @@ class TestExplorer(unittest.TestCase):
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.SUCCEEDED)
         self.assertTrue(self.agent.explored.is_set())
 
+
+class TestWaitForVictim(unittest.TestCase):
+    """ Tests for the wait_for_victim_task. """
+
+    def setUp(self):
+        self.agent = Agent(strategy='normal')
+
+        # Adding a fake state transition for the test, instead of
+        # using the real FSM.
+        self.agent.machine.add_state('test_victim_found')
+        self.agent.machine.add_state('test_map_covered')
+        self.agent.machine.add_transition('victim_found', 'off',
+                                          'test_victim_found')
+        self.agent.machine.add_transition('map_covered', 'off',
+                                          'test_map_covered')
+
+    def send_victim(self, delay):
+        """ Spawn a thread and send a potential victim instead of using a
+            mock Publisher which is not so predictable or easy to configure.
+        """
+        victim = [mock_msgs.create_victim_info()]
+        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+
+        model = mock_msgs.create_world_model(victim, visited)
+        sleep(delay)
+        self.agent.receive_world_model(model)
+
+    def set_map_covered(self, delay):
+        """ Set the event that signals the end of the explorer. """
+
+        sleep(delay)
+        self.agent.explored.set()
+
+    def test_victim_found(self):
+        self.world_model = threading.Thread(target=self.send_victim, args=(1,))
+        self.explorer = threading.Thread(target=self.set_map_covered,
+                                         args=(4,))
+        self.explorer.start()
+        self.world_model.start()
+        self.agent.wait_for_victim()
+
+        self.assertEqual(self.agent.state, 'test_victim_found')
+
+    def test_map_covered(self):
+        self.world_model = threading.Thread(target=self.send_victim, args=(4,))
+        self.explorer = threading.Thread(target=self.set_map_covered,
+                                         args=(1,))
+        self.explorer.start()
+        self.world_model.start()
+        self.agent.wait_for_victim()
+
+        self.assertEqual(self.agent.state, 'test_map_covered')
 
 if __name__ == '__main__':
     rospy.init_node('test_agent_units')

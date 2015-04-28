@@ -48,7 +48,7 @@ from pandora_end_effector_planner.msg import MoveLinearAction
 
 import topics
 from machine import Machine
-from utils import FAILURE_STATES
+from utils import FAILURE_STATES, MultipleEvent
 
 
 class Agent(object):
@@ -409,23 +409,36 @@ class Agent(object):
 
         # Reset because the callback always sets the event even if there is
         # only the target victim.
-        self.explored.clear()
-        self.promising_victim.clear()
-        while not self.promising_victim.is_set():
-            if self.explored.is_set():
-                return
-        sleep(1)
-
-        loginfo('Victim found...')
-
-        # Reseting the flag.
         self.promising_victim.clear()
 
-        # Setting the target victim
-        # self.target_victim = self.choose_next_victim()
+        # Setting up the events to wait for.
+        events_to_wait = {'Victim found': self.promising_victim,
+                          'Exploration done': self.explored}
 
-        # Changing state.
-        self.victim_found()
+        MultipleEvent(events_to_wait).wait()
+
+        if self.promising_victim.is_set():
+            loginfo('Victim found...')
+
+            # Reseting the flag.
+            self.promising_victim.clear()
+
+            # Setting the target victim.
+            self.target_victim = self.choose_next_victim()
+
+            # Changing state.
+            self.victim_found()
+        elif self.explored.is_set():
+            loginfo('The explorer has finished...')
+
+            # Changing state.
+            self.map_covered()
+        else:
+            logerr('> wait_for_victim: None of the events is set but the agent \
+                    passed the wait. Possible error with the MultipleEvent.')
+
+            # Entering again on the current state.
+            getattr(self, 'to_' + self.state)()
 
     def wait_for_verification(self):
         """ Waiting for victim to be verified. """
@@ -464,6 +477,7 @@ class Agent(object):
         """ Exploring the area. """
 
         loginfo('Exploring...')
+        self.explored.clear()
         goal = DoExplorationGoal(exploration_type=self.exploration_mode)
         self.explorer.wait_for_server()
         self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
@@ -584,6 +598,7 @@ class Agent(object):
         self.explorer.wait_for_server()
         self.explorer.cancel_all_goals()
         self.explorer.wait_for_result()
+        self.explorer.clear()
         loginfo('Exploration stopped...')
 
     def preempt_scan(self):
