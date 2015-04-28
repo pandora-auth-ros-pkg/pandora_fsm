@@ -225,8 +225,8 @@ class TestMoveBase(unittest.TestCase):
         # Register the mock servers.
         self.move_base_mock = Publisher('mock/move_base', String)
         self.agent = Agent(strategy='normal')
-        msg = mock_msgs.create_victim_info(id=8, probability=0.65)
-        self.agent.target_victim = msg
+        target = mock_msgs.create_victim_info(id=8, probability=0.65)
+        self.agent.target_victim = target
 
     def test_move_base_abort(self):
         self.move_base_mock.publish(String('abort:1'))
@@ -369,6 +369,25 @@ class TestValidateGui(unittest.TestCase):
         self.agent.to_operator_validation()
         self.assertEqual(self.agent.gui_validate_client.get_state(),
                          GoalStatus.ABORTED)
+
+
+class TestDeleteVictim(unittest.TestCase):
+
+    def setUp(self):
+        self.agent = Agent(strategy='normal')
+        self.delete_victim_mock = Publisher('mock/delete_victim', String)
+        target = mock_msgs.create_victim_info(id=8, probability=0.65)
+        self.agent.target_victim = target
+
+    # this function can't be testes completely autonomously because it triggers
+    # victim_deleted
+    def test_delete_victim(self):
+        self.delete_victim_mock.publish('success:2')
+        self.agent.set_breakpoint('exploration')
+        self.agent.to_victim_deletion()
+        self.assertEqual(self.agent.delete_victim_client.get_state(),
+                         GoalStatus.SUCCEEDED)
+
 
 if __name__ == '__main__':
     rospy.init_node('test_agent_units')
