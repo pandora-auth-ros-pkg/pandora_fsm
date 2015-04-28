@@ -19,11 +19,13 @@ from actionlib_msgs.msg import GoalStatus
 
 from pandora_fsm import Agent, TimeoutException, TimeLimiter, topics
 from pandora_data_fusion_msgs.msg import WorldModelMsg
+import mock_publishers_subscribers
 
 import mock_msgs
 from pandora_fsm import MachineError
 
 
+@unittest.skip('Save time.')
 class TestROSIndependentMethods(unittest.TestCase):
 
     def setUp(self):
@@ -78,6 +80,7 @@ class TestWorldModelCallback(unittest.TestCase):
         self.agent = Agent(strategy='normal')
         self.world_model = Publisher('mock/world_model', String)
 
+    @unittest.skip('Save time.')
     def test_receive_world_model_response(self):
         while not rospy.is_shutdown():
             self.world_model.publish('2')
@@ -154,6 +157,7 @@ class TestWorldModelCallback(unittest.TestCase):
         self.assertFalse(self.agent.recognized_victim.is_set())
 
 
+@unittest.skip('Save time.')
 class TestEndEffector(unittest.TestCase):
     """ Tests for the end effector action client. """
 
@@ -272,7 +276,6 @@ class TestWaitForVictim(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-
         # Adding a fake state transition for the test, instead of
         # using the real FSM.
         self.agent.machine.add_state('test_victim_found')
@@ -318,6 +321,44 @@ class TestWaitForVictim(unittest.TestCase):
         self.agent.wait_for_victim()
 
         self.assertEqual(self.agent.state, 'test_map_covered')
+
+
+class TestValidateGui(unittest.TestCase):
+
+    def setUp(self):
+        self.agent = Agent(strategy='normal')
+        self.validate_gui_mock = Publisher('mock/validate_gui', String)
+        self.set_gui_result = Publisher('mock/gui_result', String)
+
+    def test_validated_true(self):
+        """ The operator has stated this victim isvalid """
+        self.agent.set_breakpoint('fusion_validation')
+        msg = mock_msgs.create_victim_info(id=5)
+        self.agent.target_victim = msg
+        self.set_gui_result.publish(String('True'))
+        self.validate_gui_mock.publish(String('success:2'))
+        self.agent.to_operator_validation()
+        self.assertEqual(self.agent.result.victimValid, True)
+
+    def test_validated_false(self):
+        """ The operator has stated this victim is not valid """
+        self.agent.set_breakpoint('fusion_validation')
+        msg = mock_msgs.create_victim_info(id=5)
+        self.agent.target_victim = msg
+        self.set_gui_result.publish(String('False'))
+        self.validate_gui_mock.publish(String('success:2'))
+        self.agent.to_operator_validation()
+        self.assertEqual(self.agent.result.victimValid, False)
+
+    def test_validation_aborted(self):
+        """ It simulates the timeout """
+        self.agent.set_breakpoint('fusion_validation')
+        self.validate_gui_mock.publish(String('abort:2'))
+        msg = mock_msgs.create_victim_info(id=5)
+        self.agent.target_victim = msg
+        self.agent.to_operator_validation()
+        self.assertEqual(self.agent.gui_validate_client.get_state(),
+                         GoalStatus.ABORTED)
 
 if __name__ == '__main__':
     rospy.init_node('test_agent_units')

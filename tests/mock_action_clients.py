@@ -20,6 +20,7 @@ from pandora_end_effector_planner.msg import MoveLinearAction
 from move_base_msgs.msg import MoveBaseAction
 from pandora_data_fusion_msgs.msg import DeleteVictimAction
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
+from pandora_rqt_gui.msg import ValidateVictimGUIResult
 
 
 class MockActionServer(object):
@@ -33,8 +34,10 @@ class MockActionServer(object):
         self._name = name
         self._action_type = action_type
         self.timeout = 5
+        self.my_result = None
 
         rospy.Subscriber('mock/' + name, String, self.receive_commands)
+        rospy.Subscriber('mock/gui_result', String, self.set_gui_result)
         self._server = ActionServer(self._topic, self._action_type,
                                     self.success, False)
         self._server.start()
@@ -61,7 +64,7 @@ class MockActionServer(object):
 
         loginfo(self._name + ': This goal will succeed.')
         sleep(self.timeout)
-        self._server.set_succeeded()
+        self._server.set_succeeded(self.my_result)
 
     def preempt(self, goal):
         """ Preempts any incoming goal. """
@@ -69,6 +72,14 @@ class MockActionServer(object):
         loginfo(self._name + ': This goal will be preempted.')
         sleep(self.timeout)
         self._server.set_preempted()
+
+    def set_gui_result(self, msg):
+        """ Sets the result of the goal """
+        self.my_result = ValidateVictimGUIResult()
+        self.my_result.victimValid = False
+        if(msg.data == 'True'):
+            self.my_result.victimValid = True
+        loginfo('The result will be: ' + msg.data)
 
 
 if __name__ == '__main__':
