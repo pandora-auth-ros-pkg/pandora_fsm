@@ -217,7 +217,6 @@ class TestEndEffector(unittest.TestCase):
                          GoalStatus.SUCCEEDED)
 
 
-@unittest.skip('Not ready yet.')
 class TestMoveBase(unittest.TestCase):
     """ Tests for the base action client """
 
@@ -226,17 +225,28 @@ class TestMoveBase(unittest.TestCase):
         # Register the mock servers.
         self.move_base_mock = Publisher('mock/move_base', String)
         self.agent = Agent(strategy='normal')
+        msg = mock_msgs.create_victim_info(id=8, probability=0.65)
+        self.agent.target_victim = msg
 
-    def test_move_base(self):
+    def test_move_base_abort(self):
         self.move_base_mock.publish(String('abort:1'))
         self.agent.move_base()
+        self.agent.base_client.wait_for_result()
         self.assertEqual(self.agent.base_client.get_state(),
                          GoalStatus.ABORTED)
 
+    def test_move_base_success(self):
         self.move_base_mock.publish(String('success:1'))
         self.agent.move_base()
+        self.agent.base_client.wait_for_result()
         self.assertEqual(self.agent.base_client.get_state(),
                          GoalStatus.SUCCEEDED)
+
+    def test_move_base_preempt(self):
+        self.agent.move_base()
+        self.agent.preempt_move_base()
+        self.assertEqual(self.agent.base_client.get_state(),
+                         GoalStatus.ABORTED)
 
 
 class TestExplorer(unittest.TestCase):

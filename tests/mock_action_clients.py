@@ -91,7 +91,7 @@ if __name__ == '__main__':
                                 MoveLinearAction)
     explorer = MockActionServer('explorer', topics.do_exploration,
                                 DoExplorationAction)
-    move_base = MockActionServer('move', topics.move_base, MoveBaseAction)
+    move_base = MockActionServer('move_base', topics.move_base, MoveBaseAction)
     validate_victim_gui = MockActionServer('validate_gui',
                                            topics.gui_validation,
                                            ValidateVictimGUIAction)
