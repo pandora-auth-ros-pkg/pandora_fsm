@@ -74,10 +74,11 @@ class MockActionServer(object):
         self._server.set_preempted()
 
     def set_gui_result(self, msg):
-        """ Sets the result of the goal """
+        """ Sets the result of the goal. """
+
         self.my_result = ValidateVictimGUIResult()
         self.my_result.victimValid = False
-        if(msg.data == 'True'):
+        if msg.data == 'True':
             self.my_result.victimValid = True
         loginfo('The result will be: ' + msg.data)
 

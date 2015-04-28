@@ -25,7 +25,6 @@ import mock_msgs
 from pandora_fsm import MachineError
 
 
-@unittest.skip('Save time.')
 class TestROSIndependentMethods(unittest.TestCase):
 
     def setUp(self):
@@ -80,7 +79,6 @@ class TestWorldModelCallback(unittest.TestCase):
         self.agent = Agent(strategy='normal')
         self.world_model = Publisher('mock/world_model', String)
 
-    @unittest.skip('Save time.')
     def test_receive_world_model_response(self):
         while not rospy.is_shutdown():
             self.world_model.publish('2')
@@ -157,7 +155,6 @@ class TestWorldModelCallback(unittest.TestCase):
         self.assertFalse(self.agent.recognized_victim.is_set())
 
 
-@unittest.skip('Save time.')
 class TestEndEffector(unittest.TestCase):
     """ Tests for the end effector action client. """
 
@@ -286,6 +283,7 @@ class TestWaitForVictim(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
+
         # Adding a fake state transition for the test, instead of
         # using the real FSM.
         self.agent.machine.add_state('test_victim_found')
@@ -342,6 +340,7 @@ class TestValidateGui(unittest.TestCase):
 
     def test_validated_true(self):
         """ The operator has stated this victim isvalid """
+
         self.agent.set_breakpoint('fusion_validation')
         msg = mock_msgs.create_victim_info(id=5)
         self.agent.target_victim = msg
@@ -352,6 +351,7 @@ class TestValidateGui(unittest.TestCase):
 
     def test_validated_false(self):
         """ The operator has stated this victim is not valid """
+
         self.agent.set_breakpoint('fusion_validation')
         msg = mock_msgs.create_victim_info(id=5)
         self.agent.target_victim = msg
@@ -362,6 +362,7 @@ class TestValidateGui(unittest.TestCase):
 
     def test_validation_aborted(self):
         """ It simulates the timeout """
+
         self.agent.set_breakpoint('fusion_validation')
         self.validate_gui_mock.publish(String('abort:2'))
         msg = mock_msgs.create_victim_info(id=5)
@@ -379,9 +380,10 @@ class TestDeleteVictim(unittest.TestCase):
         target = mock_msgs.create_victim_info(id=8, probability=0.65)
         self.agent.target_victim = target
 
-    # this function can't be testes completely autonomously because it triggers
-    # victim_deleted
     def test_delete_victim(self):
+
+        # This function can't be tested completely autonomously because
+        # it triggers victim_deleted.
         self.delete_victim_mock.publish('success:2')
         self.agent.set_breakpoint('exploration')
         self.agent.to_victim_deletion()
