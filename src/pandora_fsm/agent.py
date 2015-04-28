@@ -598,7 +598,7 @@ class Agent(object):
         self.explorer.wait_for_server()
         self.explorer.cancel_all_goals()
         self.explorer.wait_for_result()
-        # self.explorer.clear()
+        self.explored.clear()
         loginfo('Exploration stopped...')
 
     def preempt_scan(self):
