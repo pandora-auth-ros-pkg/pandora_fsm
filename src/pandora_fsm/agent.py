@@ -515,7 +515,8 @@ class Agent(object):
         """ Counts the victim if found """
 
         loginfo('Adding another victim...')
-        self.valid_victims += 1
+        if self.result.victimValid:
+            self.valid_victims += 1
 
     def victim_classification(self):
         """ Classifies the victim last attempted to identify """
@@ -634,7 +635,7 @@ class Agent(object):
         """ Preempts the last goal on the end effector planer. """
 
         loginfo('Preempting end effector...')
-        self.end_effector_client.wait_for_server()
+        # self.end_effector_client.wait_for_server()
         self.end_effector_client.cancel_all_goals()
         self.end_effector_client.wait_for_result()
         loginfo('End effector preempted...')

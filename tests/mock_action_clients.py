@@ -77,10 +77,10 @@ class MockActionServer(object):
         """ Sets the result of the goal. """
 
         self.my_result = ValidateVictimGUIResult()
+        loginfo('The result will be: ' + msg.data)
         self.my_result.victimValid = False
         if msg.data == 'True':
             self.my_result.victimValid = True
-        loginfo('The result will be: ' + msg.data)
 
 
 if __name__ == '__main__':
