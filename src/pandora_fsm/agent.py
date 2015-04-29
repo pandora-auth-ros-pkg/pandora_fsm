@@ -531,7 +531,8 @@ class Agent(object):
         if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
             loginfo('Failed to delete victim.')
             self.stay()
-        self.victim_classified()
+        else:
+            self.victim_classified()
 
     def response_from_operator(self, result):
         """ Receives the verification from the operator. """
