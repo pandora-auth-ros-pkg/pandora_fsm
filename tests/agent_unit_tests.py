@@ -20,6 +20,7 @@ from actionlib_msgs.msg import GoalStatus
 from pandora_fsm import Agent, TimeoutException, TimeLimiter, topics
 from pandora_data_fusion_msgs.msg import WorldModelMsg
 import mock_publishers_subscribers
+from pandora_end_effector_planner.msg import MoveEndEffectorGoal
 
 import mock_msgs
 from pandora_fsm import MachineError
@@ -213,6 +214,34 @@ class TestEndEffector(unittest.TestCase):
         self.assertEqual(self.agent.linear_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
+    def test_point_sensors(self):
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.effector_mock.publish(String('abort:1'))
+        self.agent.point_sensors()
+        sleep(3)
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.effector_mock.publish(String('success:1'))
+        self.agent.point_sensors()
+        sleep(3)
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.SUCCEEDED)
+
+    def test_move_linear(self):
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.effector_mock.publish(String('abort:1'))
+        self.agent.move_linear()
+        sleep(3)
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.ABORTED)
+
+        self.effector_mock.publish(String('success:1'))
+        self.agent.move_linear()
+        sleep(3)
+        self.assertEqual(self.agent.end_effector_client.get_state(),
+                         GoalStatus.SUCCEEDED)
+
 
 class TestMoveBase(unittest.TestCase):
     """ Tests for the base action client """
@@ -332,7 +361,7 @@ class TestWaitForVictim(unittest.TestCase):
 
 
 class TestValidateGui(unittest.TestCase):
-
+    """ Tests the validate gui client """
     def setUp(self):
         self.agent = Agent(strategy='normal')
         self.validate_gui_mock = Publisher('mock/validate_gui', String)
@@ -347,7 +376,7 @@ class TestValidateGui(unittest.TestCase):
         self.set_gui_result.publish(String('True'))
         self.validate_gui_mock.publish(String('success:2'))
         self.agent.to_operator_validation()
-        self.assertEqual(self.agent.result.victimValid, True)
+        self.assertTrue(self.agent.result.victimValid)
 
     def test_validated_false(self):
         """ The operator has stated this victim is not valid """
@@ -358,7 +387,7 @@ class TestValidateGui(unittest.TestCase):
         self.set_gui_result.publish(String('False'))
         self.validate_gui_mock.publish(String('success:2'))
         self.agent.to_operator_validation()
-        self.assertEqual(self.agent.result.victimValid, False)
+        self.assertFalse(self.agent.result.victimValid)
 
     def test_validation_aborted(self):
         """ It simulates the timeout """
