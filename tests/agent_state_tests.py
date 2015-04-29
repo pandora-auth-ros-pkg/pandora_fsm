@@ -134,7 +134,28 @@ class TestVictimDeletionState(unittest.TestCase):
     """ Tests for the victim deletion state. """
 
     def setUp(self):
-        pass
+        self.effector_mock = Publisher('mock/effector', String)
+        self.delete_victim_mock = Publisher('mock/delete_victim', String)
+        self.agent = Agent(strategy='normal')
+        target = mock_msgs.create_victim_info(id=8, probability=0.65)
+        self.agent.target_victim = target
+
+    def test_delete_victim_success(self):
+        self.effector_mock.publish(String('success:1'))
+        self.delete_victim_mock.publish('success:2')
+        self.agent.set_breakpoint('exploration')
+        self.agent.to_victim_deletion()
+        self.assertEqual(self.agent.state, 'exploration')
+
+    # in this test we check that the agent correctly stays in the same
+    # state if the delete goal fails
+    def test_delete_victim_fail(self):
+        self.effector_mock.publish(String('success:1'))
+        self.delete_victim_mock.publish('abort:1')
+        self.delete_victim_mock.publish('success:5')
+        self.agent.set_breakpoint('exploration')
+        self.agent.to_victim_deletion()
+        self.assertEqual(self.agent.state, 'exploration')
 
 
 class TestFusionValidationState(unittest.TestCase):
