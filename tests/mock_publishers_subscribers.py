@@ -64,13 +64,13 @@ class WorldModel(object):
         msg.victims = [mock_msgs.create_victim_info(id, victim_frame_id, sensors, valid,
                        probability)]
         rate = rospy.Rate(5)
-        timeout_thershold = 1
+        timeout_threshold = 1
         self._rate = rate
         self.flag = True
 
         # We set the threshold and the rate so that the world model is
         # updated in time for the tests to run smoothly
-        Timer(Duration(timeout_thershold), self.publish_timeout, True)
+        Timer(Duration(timeout_threshold), self.publish_timeout, True)
         while self.flag:
             self._pub.publish(msg)
             self._rate.sleep()
