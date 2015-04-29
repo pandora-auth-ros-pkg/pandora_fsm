@@ -21,6 +21,7 @@ from move_base_msgs.msg import MoveBaseAction
 from pandora_data_fusion_msgs.msg import DeleteVictimAction
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_rqt_gui.msg import ValidateVictimGUIResult
+from pandora_data_fusion_msgs.msg import ValidateVictimAction
 
 
 class MockActionServer(object):
@@ -98,4 +99,6 @@ if __name__ == '__main__':
                                            ValidateVictimGUIAction)
     delete_victim = MockActionServer('delete_victim', topics.delete_victim,
                                      DeleteVictimAction)
+    fusion_validate = MockActionServer('fusion_validate', topics.validate_victim,
+                                       ValidateVictimAction)
     rospy.spin()

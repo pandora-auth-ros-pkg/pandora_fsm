@@ -162,15 +162,56 @@ class TestFusionValidationState(unittest.TestCase):
     """ Tests for the fusion validation state. """
 
     def setUp(self):
-        pass
+        self.agent = Agent(strategy='normal')
+        self.fusion_validate_mock = Publisher('mock/fusion_validate', String)
+        sleep(2)
+
+    def test_to_exploration_instant_success(self):
+        self.agent.set_breakpoint('exploration')
+        self.fusion_validate_mock.publish(String('success:2'))
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.result.victimValid = True
+        self.agent.to_fusion_validation()
+        self.assertEqual(self.agent.state, 'exploration')
+
+        ''' we don't care if it's valid or not transition-wise '''
+        self.fusion_validate_mock.publish(String('success:2'))
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.result.victimValid = False
+        self.agent.to_fusion_validation()
+        self.assertEqual(self.agent.state, 'exploration')
+
+    def test_to_exploration_abort_then_success(self):
+        self.agent.set_breakpoint('exploration')
+        self.fusion_validate_mock.publish(String('abort:1'))
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.result.victimValid = True
+        self.fusion_validate_mock.publish(String('success:1'))
+        self.agent.to_fusion_validation()
+        self.assertEqual(self.agent.state, 'exploration')
 
 
 class TestOperatorValidationState(unittest.TestCase):
-    """ Tests for the fusion validation state. """
+    """ Tests for the operator validation state. """
 
     def setUp(self):
-        pass
+        self.agent = Agent(strategy='normal')
+        self.validate_gui_mock = Publisher('mock/validate_gui', String)
+        self.set_gui_result = Publisher('mock/gui_result', String)
 
+    def test_to_fusion_validation_by_success(self):
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.set_breakpoint('fusion_validation')
+        self.validate_gui_mock.publish(String('success:1'))
+        self.agent.to_operator_validation()
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
+    def test_to_fusion_validation_by_abort(self):
+        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.set_breakpoint('fusion_validation')
+        self.validate_gui_mock.publish(String('success:1'))
+        self.agent.to_operator_validation()
+        self.assertEqual(self.agent.state, 'fusion_validation')
 
 if __name__ == '__main__':
     rospy.init_node('test_agent_states')
