@@ -64,7 +64,7 @@ class WorldModel(object):
         msg.victims = [mock_msgs.create_victim_info(id, victim_frame_id, sensors, valid,
                        probability)]
         rate = rospy.Rate(5)
-        timeout_thershold = 7
+        timeout_thershold = 1
         self._rate = rate
         self.flag = True
 

@@ -15,6 +15,7 @@ from rospy import Subscriber, Publisher, sleep
 from std_msgs.msg import String
 
 from pandora_fsm import Agent, TimeoutException, TimeLimiter
+import mock_msgs
 
 
 """ NORMAL strategy """
@@ -90,7 +91,36 @@ class TestIdentificationState(unittest.TestCase):
     """ Tests for the identification state. """
 
     def setUp(self):
-        pass
+        self.effector_mock = Publisher('mock/effector', String)
+        self.move_base_mock = Publisher('mock/move_base', String)
+        self.victim_mock = Publisher('mock/victim_probability', String)
+        self.agent = Agent(strategy='normal')
+        target = mock_msgs.create_victim_info(id=8, probability=0.4)
+        self.agent.target_victim = target
+
+    def test_to_closeup_move_base_successful(self):
+        self.move_base_mock.publish(String('success:1'))
+        self.effector_mock.publish(String('success:1'))
+        self.victim_mock.publish('8:0.6')
+        self.agent.set_breakpoint('closeup')
+        self.agent.to_identification()
+        self.assertEqual(self.agent.state, 'closeup')
+
+    def test_to_closeup_move_base_aborted(self):
+        self.move_base_mock.publish(String('abort:1'))
+        self.effector_mock.publish(String('success:1'))
+        self.victim_mock.publish('8:0.9')
+        self.agent.set_breakpoint('closeup')
+        self.agent.to_identification()
+        self.assertEqual(self.agent.state, 'closeup')
+
+    def test_to_victim_deletion(self):
+        self.move_base_mock.publish(String('abort:1'))
+        self.effector_mock.publish(String('success:1'))
+        self.victim_mock.publish('8:0.5')
+        self.agent.set_breakpoint('victim_deletion')
+        self.agent.to_identification()
+        self.assertEqual(self.agent.state, 'victim_deletion')
 
 
 class TestCloseupState(unittest.TestCase):
