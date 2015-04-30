@@ -12,18 +12,14 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
 from rospy import Subscriber, Publisher, sleep
-from std_msgs.msg import String, Int32
+from std_msgs.msg import String
 
 from actionlib import SimpleActionClient as Client
 from actionlib_msgs.msg import GoalStatus
 
-from pandora_fsm import Agent, TimeoutException, TimeLimiter, topics
-from pandora_data_fusion_msgs.msg import WorldModelMsg
-import mock_publishers_subscribers
-from pandora_end_effector_planner.msg import MoveEndEffectorGoal
+from pandora_fsm import Agent
 
 import mock_msgs
-from pandora_fsm import MachineError
 
 
 class TestROSIndependentMethods(unittest.TestCase):
@@ -360,10 +356,13 @@ class TestWaitForVictim(unittest.TestCase):
         self.assertEqual(self.agent.state, 'test_map_covered')
 
 
-class TestValidateGui(unittest.TestCase):
+class TestValidateGUI(unittest.TestCase):
     """ Tests the validate gui client """
     def setUp(self):
         self.agent = Agent(strategy='normal')
+        self.agent.machine.add_state('test_validate_gui')
+        self.agent.machine.add_transition('operator_responded', 'off',
+                                          'test_validate_gui')
         self.validate_gui_mock = Publisher('mock/validate_gui', String)
         self.set_gui_result = Publisher('mock/gui_result', String)
         sleep(2)
@@ -376,8 +375,9 @@ class TestValidateGui(unittest.TestCase):
         self.agent.target_victim = msg
         self.set_gui_result.publish(String('True'))
         self.validate_gui_mock.publish(String('success:2'))
-        self.agent.to_operator_validation()
-        self.assertTrue(self.agent.result.victimValid)
+        self.agent.wait_for_operator()
+
+        self.assertTrue(self.agent.gui_result.victimValid)
 
     def test_validated_false(self):
         """ The operator has stated this victim is not valid """
@@ -387,8 +387,9 @@ class TestValidateGui(unittest.TestCase):
         self.agent.target_victim = msg
         self.set_gui_result.publish(String('False'))
         self.validate_gui_mock.publish(String('success:2'))
-        self.agent.to_operator_validation()
-        self.assertFalse(self.agent.result.victimValid)
+        self.agent.wait_for_operator()
+
+        self.assertFalse(self.agent.gui_result.victimValid)
 
     def test_validation_aborted(self):
 
@@ -396,7 +397,8 @@ class TestValidateGui(unittest.TestCase):
         self.validate_gui_mock.publish(String('abort:2'))
         msg = mock_msgs.create_victim_info(id=5)
         self.agent.target_victim = msg
-        self.agent.to_operator_validation()
+        self.agent.wait_for_operator()
+
         self.assertEqual(self.agent.gui_validate_client.get_state(),
                          GoalStatus.ABORTED)
 

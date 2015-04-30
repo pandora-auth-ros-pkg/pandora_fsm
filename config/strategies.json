@@ -152,7 +152,7 @@
         "name": "operator_validation",
         "description": "Waiting validation from the operator",
         "tasks": [
-          "operator_confirmation"
+          "wait_for_operator"
         ],
         "clean": [
           "update_victims"
@@ -163,7 +163,7 @@
             "conditions": [],
             "before": [],
             "after": [],
-            "trigger": "responded"
+            "trigger": "operator_responded"
           }
         ]
       },

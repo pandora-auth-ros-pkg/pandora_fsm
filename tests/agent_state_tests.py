@@ -11,7 +11,7 @@ import rospy
 import roslib
 roslib.load_manifest('pandora_fsm')
 
-from rospy import Subscriber, Publisher, sleep
+from rospy import Publisher, sleep
 from std_msgs.msg import String
 
 from pandora_fsm import Agent, TimeoutException, TimeLimiter
@@ -170,14 +170,14 @@ class TestFusionValidationState(unittest.TestCase):
         self.agent.set_breakpoint('exploration')
         self.fusion_validate_mock.publish(String('success:2'))
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.result.victimValid = True
+        self.agent.gui_result.victimValid = True
         self.agent.to_fusion_validation()
         self.assertEqual(self.agent.state, 'exploration')
 
         ''' we don't care if it's valid or not transition-wise '''
         self.fusion_validate_mock.publish(String('success:2'))
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.result.victimValid = False
+        self.agent.gui_result.victimValid = False
         self.agent.to_fusion_validation()
         self.assertEqual(self.agent.state, 'exploration')
 
@@ -185,7 +185,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.agent.set_breakpoint('exploration')
         self.fusion_validate_mock.publish(String('abort:1'))
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.result.victimValid = True
+        self.agent.gui_result.victimValid = True
         self.fusion_validate_mock.publish(String('success:1'))
         self.agent.to_fusion_validation()
         self.assertEqual(self.agent.state, 'exploration')

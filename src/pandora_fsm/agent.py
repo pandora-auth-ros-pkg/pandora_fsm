@@ -138,7 +138,7 @@ class Agent(object):
         # Between-transition information.
         self.is_timeout = False
         self.gui_verification = False
-        self.result = ValidateVictimGUIResult()
+        self.gui_result = ValidateVictimGUIResult()
 
         # Communication between threads (callbacks and the main thread).
         self.promising_victim = Event()
@@ -495,7 +495,7 @@ class Agent(object):
             self.stay()
         self.victim_deleted()
 
-    def operator_confirmation(self):
+    def wait_for_operator(self):
         """ Waits for operator to confirm the victim. """
 
         loginfo('Waiting for confirmation...')
@@ -508,14 +508,16 @@ class Agent(object):
         self.gui_validate_client.wait_for_server()
         self.gui_validate_client.send_goal(goal)
         self.gui_validate_client.wait_for_result()
-        self.result = self.gui_validate_client.get_result()
-        self.responded()
+        self.gui_result = self.gui_validate_client.get_result()
+
+        # Changing state.
+        self.operator_responded()
 
     def update_victims(self):
         """ Counts the victim if found """
 
         loginfo('Adding another victim...')
-        if self.result.victimValid:
+        if self.gui_result.victimValid:
             self.valid_victims += 1
 
     def victim_classification(self):
@@ -525,7 +527,7 @@ class Agent(object):
 
         goal = ValidateVictimGoal()
         goal.victimId = self.target_victim.id
-        goal.victimValid = self.result.victimValid
+        goal.victimValid = self.gui_result.victimValid
         self.fusion_validate_client.send_goal(goal)
         self.fusion_validate_client.wait_for_result()
         if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
