@@ -17,7 +17,7 @@ from std_msgs.msg import String
 from actionlib import SimpleActionClient as Client
 from actionlib_msgs.msg import GoalStatus
 
-from pandora_fsm import Agent
+from pandora_fsm import Agent, TimeoutException, TimeLimiter
 
 import mock_msgs
 
@@ -407,17 +407,37 @@ class TestDeleteVictim(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
+        self.agent.machine.add_state('test_delete_victim')
+        self.agent.machine.add_transition('victim_deleted', 'off',
+                                          'test_delete_victim')
         self.delete_victim_mock = Publisher('mock/delete_victim', String)
-        target = mock_msgs.create_victim_info(id=8, probability=0.65)
-        self.agent.target_victim = target
+        self.agent.target_victim = mock_msgs.create_victim_info()
 
-    def test_delete_victim(self):
+    def test_delete_victim_with_abort(self):
+        """ If the goal is aborted the agent will keep trying. """
 
-        # This function can't be tested completely autonomously because
-        # it triggers victim_deleted.
-        self.delete_victim_mock.publish('success:2')
-        self.agent.set_breakpoint('exploration')
-        self.agent.to_victim_deletion()
+        while not rospy.is_shutdown():
+            sleep(2)
+            self.delete_victim_mock.publish('abort:1')
+            break
+
+        @TimeLimiter(timeout=7)
+        def infinite_delay():
+            self.agent.delete_victim()
+
+        self.assertRaises(TimeoutException, infinite_delay)
+        self.assertEqual(self.agent.state, 'off')
+
+    def test_delete_victim_success(self):
+
+        while not rospy.is_shutdown():
+            sleep(2)
+            self.delete_victim_mock.publish('success:1')
+            break
+
+        self.agent.delete_victim()
+
+        self.assertEqual(self.agent.state, 'test_delete_victim')
         self.assertEqual(self.agent.delete_victim_client.get_state(),
                          GoalStatus.SUCCEEDED)
 

@@ -12,7 +12,7 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, loginfo, logerr, sleep
+from rospy import Subscriber, Duration, loginfo, logerr, logwarn, sleep
 from rospkg import RosPack
 
 from actionlib import GoalStatus
@@ -486,13 +486,23 @@ class Agent(object):
     def delete_victim(self):
         """ Deletes the victim that failed to be identified. """
 
-        loginfo('Deleting victim...')
         goal = DeleteVictimGoal(victimId=self.target_victim.id)
-        self.delete_victim_client.send_goal(goal)
-        self.delete_victim_client.wait_for_result()
-        if self.delete_victim_client.get_state() == GoalStatus.ABORTED:
-            loginfo("Failed to delete victim")
-            self.stay()
+
+        while True:
+            logwarn('Deleting victim ' + str(goal.victimId))
+
+            self.delete_victim_client.wait_for_server()
+            self.delete_victim_client.send_goal(goal)
+            self.delete_victim_client.wait_for_result()
+            goal_state = self.delete_victim_client.get_state()
+
+            if goal_state is GoalStatus.SUCCEEDED:
+                break
+            logerr('Failed to delete victim')
+            loginfo('Retrying...')
+        loginfo('Victim deletion succeeded.')
+
+        # Changing state.
         self.victim_deleted()
 
     def wait_for_operator(self):

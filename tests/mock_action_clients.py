@@ -4,8 +4,7 @@
     Action client mocks.
 """
 
-import rospy
-from rospy import loginfo, sleep, Subscriber, Timer, Duration
+from rospy import loginfo, logwarn, sleep, Subscriber, init_node, spin
 import roslib
 roslib.load_manifest('pandora_fsm')
 from std_msgs.msg import String
@@ -35,58 +34,58 @@ class MockActionServer(object):
         self._name = name
         self._action_type = action_type
         self.timeout = 5
-        self.my_result = None
+        self.action_result = None
 
-        rospy.Subscriber('mock/' + name, String, self.receive_commands)
-        rospy.Subscriber('mock/gui_result', String, self.set_gui_result)
+        Subscriber('mock/' + name, String, self.receive_commands)
+        Subscriber('mock/gui_result', String, self.set_gui_result)
         self._server = ActionServer(self._topic, self._action_type,
                                     self.success, False)
         self._server.start()
-        loginfo('+ Starting ' + self._name)
+        loginfo('>>> Starting ' + self._name)
 
     def receive_commands(self, msg):
         """ Decides the result of the next call. """
 
-        result, timeout = msg.data.split(':')
+        callback, timeout = msg.data.split(':')
         self.timeout = float(timeout)
-        self._server.execute_callback = getattr(self, result)
-        loginfo(self._name + ': Current callback -> ' + result)
+        self._server.execute_callback = getattr(self, callback)
+        logwarn('>>> ' + self._name + ': Current callback -> ' + callback)
         sleep(1)
 
     def abort(self, goal):
         """ Aborts any incoming goal. """
 
-        loginfo(self._name + ': This goal will be aborted.')
+        logwarn('>>> ' + self._name + ': This goal will be aborted.')
         sleep(self.timeout)
         self._server.set_aborted()
 
     def success(self, goal):
         """ Succeeds any incoming goal. """
 
-        loginfo(self._name + ': This goal will succeed.')
+        logwarn('>>> ' + self._name + ': This goal will succeed.')
         sleep(self.timeout)
-        self._server.set_succeeded(self.my_result)
+        self._server.set_succeeded(self.action_result)
 
     def preempt(self, goal):
         """ Preempts any incoming goal. """
 
-        loginfo(self._name + ': This goal will be preempted.')
+        logwarn('>>> ' + self._name + ': This goal will be preempted.')
         sleep(self.timeout)
         self._server.set_preempted()
 
     def set_gui_result(self, msg):
         """ Sets the result of the goal. """
 
-        self.my_result = ValidateVictimGUIResult()
-        loginfo('The result will be: ' + msg.data)
-        self.my_result.victimValid = False
+        self.action_result = ValidateVictimGUIResult()
+        logwarn('>>> The gui response will be: ' + msg.data)
+        self.action_result.victimValid = False
         if msg.data == 'True':
-            self.my_result.victimValid = True
+            self.action_result.victimValid = True
 
 
 if __name__ == '__main__':
 
-    rospy.init_node('mock_node')
+    init_node('mock_node')
     effector = MockActionServer('effector', topics.move_end_effector_planner,
                                 MoveEndEffectorAction)
     effector = MockActionServer('linear', topics.linear_movement,
@@ -99,6 +98,7 @@ if __name__ == '__main__':
                                            ValidateVictimGUIAction)
     delete_victim = MockActionServer('delete_victim', topics.delete_victim,
                                      DeleteVictimAction)
-    fusion_validate = MockActionServer('fusion_validate', topics.validate_victim,
+    fusion_validate = MockActionServer('fusion_validate',
+                                       topics.validate_victim,
                                        ValidateVictimAction)
-    rospy.spin()
+    spin()
