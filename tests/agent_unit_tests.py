@@ -403,52 +403,6 @@ class TestValidateGUI(unittest.TestCase):
                          GoalStatus.ABORTED)
 
 
-class TestOperatorValidation(unittest.TestCase):
-    """ Tests the operator validation state """
-
-    def setUp(self):
-        self.agent = Agent(strategy='normal')
-        self.validate_gui_mock = Publisher('mock/validate_gui', String)
-        self.set_gui_result = Publisher('mock/gui_result', String)
-        sleep(2)
-
-    def test_update_victims_valid(self):
-        """ Expecting to add the valid victim """
-        previous_victims = self.agent.valid_victims
-        self.agent.set_breakpoint('fusion_validation')
-        self.set_gui_result.publish(String('True'))
-        self.validate_gui_mock.publish(String('success:2'))
-        msg = mock_msgs.create_victim_info(id=5, probability=0.8)
-        self.agent.target_victim = msg
-        self.agent.to_operator_validation()
-        self.assertEqual(self.agent.valid_victims, previous_victims + 1)
-
-    def test_update_victims_invalid(self):
-        """ Expecting to ignore this victim """
-        previous_victims = self.agent.valid_victims
-        self.agent.set_breakpoint('fusion_validation')
-        self.set_gui_result.publish(String('False'))
-        self.validate_gui_mock.publish(String('success:2'))
-        msg = mock_msgs.create_victim_info(id=5, probability=0.2)
-        self.agent.target_victim = msg
-        self.agent.to_operator_validation()
-        self.assertEqual(self.agent.valid_victims, previous_victims)
-
-    def test_update_victims_aborted(self):
-        """ Expecting the number of valid victims to remain the same """
-        previous_victims = self.agent.valid_victims
-        self.agent.set_breakpoint('fusion_validation')
-        self.validate_gui_mock.publish(String('abort:2'))
-        msg = mock_msgs.create_victim_info(id=5, probability=0.2)
-        self.agent.target_victim = msg
-        self.agent.to_operator_validation()
-        self.assertEqual(self.agent.valid_victims, previous_victims)
-
-    def test_operator_confirmation_aborted(self):
-        """ Tested by TestValidateGui for now """
-        self.assertTrue(True)
-
-
 class TestDeleteVictim(unittest.TestCase):
 
     def setUp(self):

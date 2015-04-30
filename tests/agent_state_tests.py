@@ -174,7 +174,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.agent.to_fusion_validation()
         self.assertEqual(self.agent.state, 'exploration')
 
-        ''' we don't care if it's valid or not transition-wise '''
+        # We don't care if it's valid or not transition-wise
         self.fusion_validate_mock.publish(String('success:2'))
         self.agent.target_victim = mock_msgs.create_victim_info()
         self.agent.gui_result.victimValid = False
@@ -198,20 +198,79 @@ class TestOperatorValidationState(unittest.TestCase):
         self.agent = Agent(strategy='normal')
         self.validate_gui_mock = Publisher('mock/validate_gui', String)
         self.set_gui_result = Publisher('mock/gui_result', String)
+        self.agent.set_breakpoint('fusion_validation')
 
     def test_to_fusion_validation_by_success(self):
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.set_breakpoint('fusion_validation')
-        self.validate_gui_mock.publish(String('success:1'))
+        self.validate_gui_mock.publish(String('success:2'))
         self.agent.to_operator_validation()
+
         self.assertEqual(self.agent.state, 'fusion_validation')
 
     def test_to_fusion_validation_by_abort(self):
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.set_breakpoint('fusion_validation')
-        self.validate_gui_mock.publish(String('success:1'))
+        self.validate_gui_mock.publish(String('abort:2'))
         self.agent.to_operator_validation()
+
         self.assertEqual(self.agent.state, 'fusion_validation')
+
+    def test_update_victims_valid(self):
+        """ Expecting to add the valid victim """
+
+        self.agent.valid_victims = 0
+        self.set_gui_result.publish(String('True'))
+        self.validate_gui_mock.publish(String('success:2'))
+        msg = mock_msgs.create_victim_info(id=5, probability=0.8)
+        self.agent.target_victim = msg
+        self.agent.to_operator_validation()
+
+        self.assertEqual(self.agent.valid_victims, 1)
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
+    def test_update_multiple_victims_valid(self):
+        """ Expecting to add the valid victim """
+
+        self.agent.valid_victims = 0
+        self.set_gui_result.publish(String('True'))
+        self.validate_gui_mock.publish(String('success:2'))
+        msg = mock_msgs.create_victim_info(id=5, probability=0.8)
+        self.agent.target_victim = msg
+        self.agent.to_operator_validation()
+
+        self.assertEqual(self.agent.valid_victims, 1)
+
+        msg = mock_msgs.create_victim_info(id=6, probability=0.8)
+        self.agent.target_victim = msg
+        self.agent.to_operator_validation()
+
+        self.assertEqual(self.agent.valid_victims, 2)
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
+    def test_update_victims_invalid(self):
+        """ Expecting to ignore this victim """
+
+        self.agent.valid_victims = 0
+        self.set_gui_result.publish(String('False'))
+        self.validate_gui_mock.publish(String('success:2'))
+        msg = mock_msgs.create_victim_info(id=5, probability=0.2)
+        self.agent.target_victim = msg
+        self.agent.to_operator_validation()
+
+        self.assertEqual(self.agent.valid_victims, 0)
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
+    def test_update_victims_aborted(self):
+        """ Expecting the number of valid victims to remain the same """
+
+        self.agent.valid_victims = 0
+        self.validate_gui_mock.publish(String('abort:2'))
+        msg = mock_msgs.create_victim_info(id=5, probability=0.2)
+        self.agent.target_victim = msg
+        self.agent.to_operator_validation()
+
+        self.assertEqual(self.agent.valid_victims, 0)
+        self.assertEqual(self.agent.state, 'fusion_validation')
+
 
 if __name__ == '__main__':
     rospy.init_node('test_agent_states')
