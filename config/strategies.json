@@ -9,7 +9,7 @@
         "transitions": [
           {
             "to": "init",
-            "conditions": ["mode_autonomous"],
+            "conditions": [],
             "before": [],
             "after": [],
             "trigger": "wake_up"
@@ -20,13 +20,14 @@
         "name": "init",
         "description": "The agent starts the system.",
         "tasks": [
+          "mode_autonomous",
           "boot"
         ],
         "clean": [],
         "transitions": [
           {
             "to": "exploration",
-            "conditions": ["mode_exploration_rescue"],
+            "conditions": [],
             "before": [],
             "after": [],
             "trigger": "booted"
@@ -37,6 +38,7 @@
         "name": "exploration",
         "description": "The agent is exploring the area.",
         "tasks": [
+          "mode_exploration_rescue",
           "scan",
           "explore",
           "wait_for_victim"
@@ -66,6 +68,7 @@
         "name": "identification",
         "description": "Examining the candidate victim",
         "tasks": [
+          "mode_identification",
           "move_base",
           "point_sensors",
           "wait_identification"
@@ -80,7 +83,7 @@
             "trigger": "abort_victim"
           },
           {
-            "to": "closeup",
+            "to": "sensor_hold",
             "conditions": [],
             "before": [],
             "after": [],
@@ -89,9 +92,10 @@
         ]
       },
       {
-        "name": "closeup",
+        "name": "sensor_hold",
         "description": "The agents takes a closer look at the victim.",
         "tasks": [
+          "mode_sensor_hold",
           "move_linear",
           "wait_for_verification"
         ],

@@ -160,8 +160,8 @@ class Agent(object):
     #                   UTILITIES                        #
     ######################################################
 
-    def stay(self):
-        """ It makes the agent stay in the current state.
+    def restart_state(self):
+        """ It makes the agent restart_state in the current state.
             This method should be used when something bad happened and we
             want a second chance. Possibly when a state task fails.
         """
@@ -302,21 +302,21 @@ class Agent(object):
         goal_state = self.end_effector_client.get_state()
         if goal_state in FAILURE_STATES.keys():
             logerr('Test effector failed: ' + FAILURE_STATES[goal_state])
-            self.stay()
+            self.restart_state()
 
         # Park end effector planner.
         self.park_end_effector_planner()
         goal_state = self.end_effector_client.get_state()
         if goal_state in FAILURE_STATES.keys():
             logerr('Park effector failed: ' + FAILURE_STATES[goal_state])
-            self.stay()
+            self.restart_state()
 
         # Test linear motor.
         self.test_linear_motor()
         goal_state = self.linear_client.get_state()
         if goal_state in FAILURE_STATES.keys():
             logerr('Test linear failed: ' + FAILURE_STATES[goal_state])
-            self.stay()
+            self.restart_state()
 
         loginfo('System booted...')
         self.booted()
@@ -542,7 +542,7 @@ class Agent(object):
         self.fusion_validate_client.wait_for_result()
         if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
             loginfo('Failed to delete victim.')
-            self.stay()
+            self.restart_state()
         else:
             self.victim_classified()
 
@@ -641,7 +641,7 @@ class Agent(object):
         self.park_end_effector_planner()
         if self.end_effector_client.get_state() == GoalStatus.ABORTED:
             logerr("Failed to park end effector")
-            self.stay()
+            self.restart_state()
         loginfo('End effector aborted...')
 
     def preempt_end_effector_planner(self):
@@ -662,39 +662,53 @@ class Agent(object):
             MODE 0 -> OFF
         """
         next_state = RobotModeMsg.MODE_OFF
-        return self.state_changer.change_state_and_wait(next_state)
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()
 
     def mode_autonomous(self):
         """ Changes the global robot state to
             MODE 1 -> START_AUTONOMOUS
         """
         next_state = RobotModeMsg.MODE_START_AUTONOMOUS
-        return self.state_changer.change_state_and_wait(next_state)
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()
 
     def mode_exploration_rescue(self):
         """ Changes the global robot state to
             MODE 2 -> EXPLORATION_RESCUE
         """
         next_state = RobotModeMsg.MODE_EXPLORATION_RESCUE
-        return self.state_changer.change_state_and_wait(next_state)
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()
 
     def mode_identification(self):
         """ Changes the global robot state to
             MODE 3 -> MODE_IDENTIFICATION
         """
         next_state = RobotModeMsg.MODE_IDENTIFICATION
-        return self.state_changer.change_state_and_wait(next_state)
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()
 
     def mode_sensor_hold(self):
         """ Changes the global robot state to
             MODE 4 -> MODE_SENSOR_HOLD
         """
         next_state = RobotModeMsg.MODE_SENSOR_HOLD
-        return self.state_changer.change_state_and_wait(next_state)
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()
 
     def mode_exploration_mapping(self):
         """ Changes the global robot state to
             MODE 8 -> MODE_EXPLORATION_MAPPING
         """
         next_state = RobotModeMsg.MODE_EXPLORATION_MAPPING
-        return self.state_changer.change_state_and_wait(next_state)
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()
+
+    def mode_terminating(self):
+        """ Changes the global robot state to
+            MODE 9 -> MODE_TERMINATING
+        """
+        next_state = RobotModeMsg.MODE_TERMINATING
+        if not self.state_changer.change_state_and_wait(next_state):
+            self.restart_state()

@@ -188,21 +188,21 @@ class TestIdentificationState(unittest.TestCase):
         target = mock_msgs.create_victim_info(id=8, probability=0.4)
         self.agent.target_victim = target
 
-    def test_to_closeup_move_base_successful(self):
+    def test_to_sensor_hold_move_base_successful(self):
         self.move_base_mock.publish('success:1')
         self.effector_mock.publish('success:1')
         self.victim_mock.publish('8:0.6')
-        self.agent.set_breakpoint('closeup')
+        self.agent.set_breakpoint('sensor_hold')
         self.agent.to_identification()
-        self.assertEqual(self.agent.state, 'closeup')
+        self.assertEqual(self.agent.state, 'sensor_hold')
 
-    def test_to_closeup_move_base_aborted(self):
+    def test_to_sensor_hold_move_base_aborted(self):
         self.move_base_mock.publish('abort:1')
         self.effector_mock.publish('success:1')
         self.victim_mock.publish('8:0.9')
-        self.agent.set_breakpoint('closeup')
+        self.agent.set_breakpoint('sensor_hold')
         self.agent.to_identification()
-        self.assertEqual(self.agent.state, 'closeup')
+        self.assertEqual(self.agent.state, 'sensor_hold')
 
     def test_to_victim_deletion(self):
         self.move_base_mock.publish('abort:1')
@@ -213,8 +213,8 @@ class TestIdentificationState(unittest.TestCase):
         self.assertEqual(self.agent.state, 'victim_deletion')
 
 
-class TestCloseupState(unittest.TestCase):
-    """ Tests for the closeup state. """
+class TestSensorHoldState(unittest.TestCase):
+    """ Tests for the sensor_hold state. """
 
     def setUp(self):
         pass
