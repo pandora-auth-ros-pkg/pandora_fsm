@@ -167,13 +167,16 @@ class TestExplorationState(unittest.TestCase):
         self.assertRaises(TimeoutException, init_wrapper)
 
     def test_global_state_change(self):
+        """ The global state should be MODE_EXPLORATION_RESCUE """
+
         self.effector_mock.publish('success:20')
         self.explorer.publish('success:5')
         self.agent.set_breakpoint('init')
+        final = RobotModeMsg.MODE_EXPLORATION_RESCUE
         self.agent.to_init()
         self.agent.booted()
 
-        self.assertEqual(self.agent.state_changer.get_current_state(), 2)
+        self.assertEqual(self.agent.state_changer.get_current_state(), final)
         self.assertEqual(self.agent.state, 'end')
 
 
@@ -187,6 +190,20 @@ class TestIdentificationState(unittest.TestCase):
         self.agent = Agent(strategy='normal')
         target = mock_msgs.create_victim_info(id=8, probability=0.4)
         self.agent.target_victim = target
+
+    def test_global_state_change(self):
+        """ The global state should be MODE_IDENTIFICATION. """
+
+        self.move_base_mock.publish('success:3')
+        self.effector_mock.publish('success:3')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('1:0.6')
+        self.agent.set_breakpoint('sensor_hold')
+        final = RobotModeMsg.MODE_IDENTIFICATION
+
+        self.agent.to_identification()
+        self.assertEqual(self.agent.state, 'sensor_hold')
+        self.assertEqual(self.agent.state_changer.get_current_state(), final)
 
     def test_to_sensor_hold_move_base_successful(self):
         self.move_base_mock.publish('success:1')
