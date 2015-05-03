@@ -692,13 +692,6 @@ class Agent(object):
         next_state = RobotModeMsg.MODE_SENSOR_HOLD
         return self.state_changer.change_state_and_wait(next_state)
 
-    def mode_sensor_test(self):
-        """ Changes the global robot state to
-            MODE 7 -> MODE_SENSOR_TEST
-        """
-        next_state = RobotModeMsg.MODE_SENSOR_TEST
-        return self.state_changer.change_state_and_wait(next_state)
-
     def mode_exploration_mapping(self):
         """ Changes the global robot state to
             MODE 8 -> MODE_EXPLORATION_MAPPING
