@@ -26,7 +26,7 @@
         "transitions": [
           {
             "to": "exploration",
-            "conditions": [],
+            "conditions": ["mode_exploration_rescue"],
             "before": [],
             "after": [],
             "trigger": "booted"

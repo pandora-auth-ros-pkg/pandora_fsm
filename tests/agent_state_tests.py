@@ -6,9 +6,11 @@
 """
 
 import unittest
+from threading import Thread
 
 import rospy
 import roslib
+from actionlib import GoalStatus
 roslib.load_manifest('pandora_fsm')
 
 from rospy import Publisher, sleep
@@ -111,7 +113,69 @@ class TestExplorationState(unittest.TestCase):
     """ Tests for the exploration state. """
 
     def setUp(self):
-        pass
+        self.agent = Agent(strategy='normal')
+        self.agent.set_breakpoint('identification')
+        self.agent.set_breakpoint('end')
+        self.agent.set_breakpoint('init')
+        self.effector_mock = Publisher('mock/effector', String)
+        self.explorer = Publisher('mock/explorer', String)
+        self.world_model = Thread(target=self.send_victim, args=(3,))
+
+    def send_victim(self, delay):
+        """ Spawn a thread and send a potential victim instead of using a
+            mock Publisher which is not so predictable or easy to configure.
+        """
+        victim = [mock_msgs.create_victim_info()]
+        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+
+        model = mock_msgs.create_world_model(victim, visited)
+        sleep(delay)
+        self.agent.receive_world_model(model)
+
+    def test_to_identification(self):
+
+        # Long goals that will not affect the test.
+        self.effector_mock.publish('success:10')
+        self.explorer.publish('success:10')
+
+        self.world_model.start()
+        self.agent.to_exploration()
+
+        self.assertEqual(self.agent.state, 'identification')
+
+        # The event is cleared after success.
+        self.assertFalse(self.agent.promising_victim.is_set())
+
+    def test_to_end(self):
+        self.effector_mock.publish('success:10')
+
+        # This goal will move the agent to the end state.
+        self.explorer.publish('success:1')
+
+        self.agent.to_exploration()
+
+        self.assertEqual(self.agent.state, 'end')
+
+    def test_long_wait_for_victim(self):
+
+        # Long goals that will not affect the test.
+        self.effector_mock.publish('success:20')
+        self.explorer.publish('success:20')
+
+        @TimeLimiter(timeout=5)
+        def init_wrapper():
+            self.agent.to_exploration()
+        self.assertRaises(TimeoutException, init_wrapper)
+
+    def test_global_state_change(self):
+        self.effector_mock.publish('success:20')
+        self.explorer.publish('success:5')
+        self.agent.set_breakpoint('init')
+        self.agent.to_init()
+        self.agent.booted()
+
+        self.assertEqual(self.agent.state_changer.get_current_state(), 2)
+        self.assertEqual(self.agent.state, 'end')
 
 
 class TestIdentificationState(unittest.TestCase):
