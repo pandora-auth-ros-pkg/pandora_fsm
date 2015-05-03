@@ -12,7 +12,7 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 import rospy
 from rospy import Subscriber, Publisher, sleep
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 
 from actionlib import SimpleActionClient as Client
 from actionlib_msgs.msg import GoalStatus
@@ -164,61 +164,61 @@ class TestEndEffector(unittest.TestCase):
 
     def test_park_end_effector(self):
 
-        self.effector_mock.publish(String('abort:1'))
+        self.effector_mock.publish('abort:1')
         self.agent.park_end_effector_planner()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.ABORTED)
 
-        self.effector_mock.publish(String('success:1'))
+        self.effector_mock.publish('success:1')
         self.agent.park_end_effector_planner()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_end_effector(self):
 
-        self.effector_mock.publish(String('abort:1'))
+        self.effector_mock.publish('abort:1')
         self.agent.test_end_effector_planner()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.ABORTED)
 
-        self.effector_mock.publish(String('success:1'))
+        self.effector_mock.publish('success:1')
         self.agent.test_end_effector_planner()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_scan(self):
-        self.effector_mock.publish(String('abort:1'))
+        self.effector_mock.publish('abort:1')
         self.agent.scan()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.ABORTED)
 
-        self.effector_mock.publish(String('success:1'))
+        self.effector_mock.publish('success:1')
         self.agent.scan()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_linear(self):
-        self.linear_mock.publish(String('abort:1'))
+        self.linear_mock.publish('abort:1')
         self.agent.test_linear_motor()
         self.assertEqual(self.agent.linear_client.get_state(),
                          GoalStatus.ABORTED)
 
-        self.linear_mock.publish(String('success:1'))
+        self.linear_mock.publish('success:1')
         self.agent.test_linear_motor()
         self.assertEqual(self.agent.linear_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_point_sensors(self):
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.effector_mock.publish(String('abort:1'))
+        self.effector_mock.publish('abort:1')
         self.agent.point_sensors()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.ABORTED)
 
-        self.effector_mock.publish(String('success:1'))
+        self.effector_mock.publish('success:1')
         self.agent.point_sensors()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
@@ -226,13 +226,13 @@ class TestEndEffector(unittest.TestCase):
 
     def test_move_linear(self):
         self.agent.target_victim = mock_msgs.create_victim_info()
-        self.effector_mock.publish(String('abort:1'))
+        self.effector_mock.publish('abort:1')
         self.agent.move_linear()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.ABORTED)
 
-        self.effector_mock.publish(String('success:1'))
+        self.effector_mock.publish('success:1')
         self.agent.move_linear()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
@@ -251,14 +251,14 @@ class TestMoveBase(unittest.TestCase):
         self.agent.target_victim = target
 
     def test_move_base_abort(self):
-        self.move_base_mock.publish(String('abort:1'))
+        self.move_base_mock.publish('abort:1')
         self.agent.move_base()
         self.agent.base_client.wait_for_result()
         self.assertEqual(self.agent.base_client.get_state(),
                          GoalStatus.ABORTED)
 
     def test_move_base_success(self):
-        self.move_base_mock.publish(String('success:1'))
+        self.move_base_mock.publish('success:1')
         self.agent.move_base()
         self.agent.base_client.wait_for_result()
         self.assertEqual(self.agent.base_client.get_state(),
@@ -281,7 +281,7 @@ class TestExplorer(unittest.TestCase):
         self.agent = Agent(strategy='normal')
 
     def test_preempt_explorer(self):
-        self.explorer_mock.publish(String('abort:4'))
+        self.explorer_mock.publish('abort:4')
         self.agent.explore()
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.PENDING)
         self.agent.preempt_exploration()
@@ -289,14 +289,14 @@ class TestExplorer(unittest.TestCase):
         self.assertFalse(self.agent.explored.is_set())
 
     def test_explorer_abort(self):
-        self.explorer_mock.publish(String('abort:1'))
+        self.explorer_mock.publish('abort:1')
         self.agent.explore()
         sleep(3)
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.ABORTED)
         self.assertFalse(self.agent.explored.is_set())
 
     def test_explorer_success(self):
-        self.explorer_mock.publish(String('success:1'))
+        self.explorer_mock.publish('success:1')
         self.agent.explore()
         sleep(3)
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.SUCCEEDED)
@@ -364,7 +364,7 @@ class TestValidateGUI(unittest.TestCase):
         self.agent.machine.add_transition('operator_responded', 'off',
                                           'test_validate_gui')
         self.validate_gui_mock = Publisher('mock/validate_gui', String)
-        self.set_gui_result = Publisher('mock/gui_result', String)
+        self.gui_result = Publisher('mock/gui_result', Bool)
         sleep(2)
 
     def test_validated_true(self):
@@ -373,8 +373,8 @@ class TestValidateGUI(unittest.TestCase):
         self.agent.set_breakpoint('fusion_validation')
         msg = mock_msgs.create_victim_info(id=5)
         self.agent.target_victim = msg
-        self.set_gui_result.publish(String('True'))
-        self.validate_gui_mock.publish(String('success:2'))
+        self.gui_result.publish(True)
+        self.validate_gui_mock.publish('success:2')
         self.agent.wait_for_operator()
 
         self.assertTrue(self.agent.gui_result.victimValid)
@@ -385,8 +385,8 @@ class TestValidateGUI(unittest.TestCase):
         self.agent.set_breakpoint('fusion_validation')
         msg = mock_msgs.create_victim_info(id=5)
         self.agent.target_victim = msg
-        self.set_gui_result.publish(String('False'))
-        self.validate_gui_mock.publish(String('success:2'))
+        self.gui_result.publish(False)
+        self.validate_gui_mock.publish('success:2')
         self.agent.wait_for_operator()
 
         self.assertFalse(self.agent.gui_result.victimValid)
@@ -394,7 +394,7 @@ class TestValidateGUI(unittest.TestCase):
     def test_validation_aborted(self):
 
         self.agent.set_breakpoint('fusion_validation')
-        self.validate_gui_mock.publish(String('abort:2'))
+        self.validate_gui_mock.publish('abort:2')
         msg = mock_msgs.create_victim_info(id=5)
         self.agent.target_victim = msg
         self.agent.wait_for_operator()

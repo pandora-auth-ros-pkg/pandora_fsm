@@ -7,7 +7,7 @@
 from rospy import loginfo, logwarn, sleep, Subscriber, init_node, spin
 import roslib
 roslib.load_manifest('pandora_fsm')
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 
 from actionlib import SimpleActionServer as ActionServer
 from pandora_fsm import topics
@@ -37,7 +37,7 @@ class MockActionServer(object):
         self.action_result = None
 
         Subscriber('mock/' + name, String, self.receive_commands)
-        Subscriber('mock/gui_result', String, self.set_gui_result)
+        Subscriber('mock/gui_result', Bool, self.set_gui_result)
         self._server = ActionServer(self._topic, self._action_type,
                                     self.success, False)
         self._server.start()
@@ -77,10 +77,8 @@ class MockActionServer(object):
         """ Sets the result of the goal. """
 
         self.action_result = ValidateVictimGUIResult()
-        logwarn('>>> The gui response will be: ' + msg.data)
-        self.action_result.victimValid = False
-        if msg.data == 'True':
-            self.action_result.victimValid = True
+        logwarn('>>> The gui response will be: ' + str(msg.data))
+        self.action_result.victimValid = msg.data
 
 
 if __name__ == '__main__':
