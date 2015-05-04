@@ -571,8 +571,10 @@ class Agent(object):
         loginfo('Received result..')
 
     def print_results(self):
-        """ Prints results of the mission """
-        pass
+        """ Prints results of the mission. """
+
+        loginfo('The agent is shutting down...')
+        self.sleep()
 
     ######################################################
     #              ACTION'S CALLBACKS                    #

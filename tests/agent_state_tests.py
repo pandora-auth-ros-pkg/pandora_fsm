@@ -36,6 +36,20 @@ class TestOffState(unittest.TestCase):
         self.assertEqual(self.agent.state, 'init')
 
 
+class TestEndState(unittest.TestCase):
+    """ Tests for the end state. """
+
+    def setUp(self):
+        self.agent = Agent(strategy='normal')
+
+    def test_global_state_change(self):
+        final = RobotModeMsg.MODE_TERMINATING
+        self.agent.to_end()
+
+        self.assertEqual(self.agent.state_changer.get_current_state(), final)
+        self.assertEqual(self.agent.state, 'off')
+
+
 class TestInitState(unittest.TestCase):
     """ Tests for the init state. """
 

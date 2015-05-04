@@ -176,11 +176,20 @@
         "name": "end",
         "description": "Job done!",
         "tasks": [
+          "mode_terminating",
           "preempt_scan",
           "print_results"
         ],
         "clean": [],
-        "transitions": {}
+        "transitions": [
+          {
+            "to": "off",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "sleep"
+          }
+        ]
       }
     ]
   },
