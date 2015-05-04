@@ -128,7 +128,7 @@ class Agent(object):
         self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
 
         # Victim information.
-        self.valid_victims = 0
+        self.victims_found = 0
         self.aborted_victims_ = []
         self.current_victims = []
         self.visited_victims = []
@@ -299,6 +299,12 @@ class Agent(object):
     #                 AGENT'S ACTIONS                    #
     ######################################################
 
+    def reset_environment(self):
+        """ Sets the environment ready for the next exploration. """
+
+        self.gui_result.victimValid = False
+        self.target_victim = None
+
     def boot(self):
         """ Boots up the system. Tests that everything is working properly."""
 
@@ -395,16 +401,18 @@ class Agent(object):
         self.linear_feedback = False
         self.end_effector_client.send_goal(goal)
 
+        loginfo('Send new goal to linear...')
+
     def wait_identification(self):
         """ Examine if the robot can reach the target victim. """
 
         loginfo('Examining suspected victim...')
-        self.promising_victim.clear()
         self.base_client.wait_for_result()
         if self.base_client.get_state() == GoalStatus.SUCCEEDED:
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
             if self.promising_victim.is_set():
+                self.promising_victim.clear()
                 self.valid_victim()
             else:
                 self.abort_victim()
@@ -413,10 +421,6 @@ class Agent(object):
         """ The agent stops until a candidate victim is found."""
 
         loginfo('Waiting for victim...')
-
-        # Reset because the callback always sets the event even if there is
-        # only the target victim.
-        self.potential_victim.clear()
 
         # Setting up the events to wait for.
         events_to_wait = {'Victim found': self.potential_victim,
@@ -428,6 +432,7 @@ class Agent(object):
             loginfo('Victim found...')
 
             # Reseting the flag.
+            # FIXME
             self.potential_victim.clear()
 
             # Setting the target victim.
@@ -448,13 +453,14 @@ class Agent(object):
             getattr(self, 'to_' + self.state)()
 
     def wait_for_verification(self):
-        """ Waiting for victim to be verified. """
+        """ Expect probability of the target victim to increase. """
 
-        loginfo('Victim is being verified...')
+        loginfo("Wait for the victim's probability to increase...")
         self.recognized_victim.clear()
         if self.recognized_victim.wait(self.VERIFICATION_TIMEOUT):
             self.verified()
         else:
+            self.gui_result.victimValid = False
             self.timeout()
 
     def move_base(self):
@@ -495,6 +501,7 @@ class Agent(object):
 
         goal = DeleteVictimGoal(victimId=self.target_victim.id)
 
+        # FIXME Abort after 5 retries
         while True:
             logwarn('Deleting victim ' + str(goal.victimId))
 
@@ -535,16 +542,21 @@ class Agent(object):
 
         loginfo('Adding another victim...')
         if self.gui_result.victimValid:
-            self.valid_victims += 1
+            self.victims_found += 1
 
     def victim_classification(self):
-        """ Classifies the victim last attempted to identify """
+        """ Send info about the target victim to data fusion, to
+            updated its registry. If the victim has been validated
+            from the operator, the target will be marked as visited/valid.
+            On the other hand the victim will be marked as visited/invalid.
+        """
 
-        loginfo('Classifying victim...')
+        loginfo('Sending victim info to data fusion...')
 
         goal = ValidateVictimGoal()
         goal.victimId = self.target_victim.id
         goal.victimValid = self.gui_result.victimValid
+        self.fusion_validate_client.wait_for_server()
         self.fusion_validate_client.send_goal(goal)
         self.fusion_validate_client.wait_for_result()
         if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
@@ -599,7 +611,7 @@ class Agent(object):
         """ Update the current victim """
 
         for victim in self.current_victims:
-            if (victim.id == self.target_victim.id):
+            if victim.id == self.target_victim.id:
                 self.target_victim = victim
 
     def choose_next_victim(self):
