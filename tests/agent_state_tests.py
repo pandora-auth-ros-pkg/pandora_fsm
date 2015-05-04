@@ -143,7 +143,7 @@ class TestExplorationState(unittest.TestCase):
         self.assertEqual(self.agent.state, 'identification')
 
         # The event is cleared after success.
-        self.assertFalse(self.agent.promising_victim.is_set())
+        self.assertFalse(self.agent.potential_victim.is_set())
 
     def test_to_end(self):
         self.effector_mock.publish('success:10')

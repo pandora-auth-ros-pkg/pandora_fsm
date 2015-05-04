@@ -51,12 +51,12 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsInstance(self.agent.linear_sub, Subscriber)
 
         # Make sure the threading.Events are initialized.
+        self.assertIsInstance(self.agent.potential_victim, threading._Event)
         self.assertIsInstance(self.agent.promising_victim, threading._Event)
-        self.assertIsInstance(self.agent.accessible_victim, threading._Event)
         self.assertIsInstance(self.agent.recognized_victim, threading._Event)
         self.assertIsInstance(self.agent.explored, threading._Event)
+        self.assertFalse(self.agent.potential_victim.is_set())
         self.assertFalse(self.agent.promising_victim.is_set())
-        self.assertFalse(self.agent.accessible_victim.is_set())
         self.assertFalse(self.agent.recognized_victim.is_set())
 
         # Empty variables
@@ -83,7 +83,7 @@ class TestWorldModelCallback(unittest.TestCase):
         sleep(3)
         self.assertNotEqual(self.agent.current_victims, [])
         self.assertNotEqual(self.agent.visited_victims, [])
-        self.assertTrue(self.agent.promising_victim.is_set())
+        self.assertTrue(self.agent.potential_victim.is_set())
 
     def test_receive_world_model_with_target(self):
         """ Tests that the target is updated. """
@@ -103,10 +103,10 @@ class TestWorldModelCallback(unittest.TestCase):
         self.agent.receive_world_model(model)
         self.assertEqual(self.agent.target_victim.id, target.id)
         self.assertEqual(self.agent.target_victim.probability, 0.8)
-        self.assertTrue(self.agent.promising_victim.is_set())
+        self.assertTrue(self.agent.potential_victim.is_set())
 
     def test_receive_world_model_identification_threshold(self):
-        """ Tests that the accessible_victim event is set. """
+        """ Tests that the promising_victim event is set. """
 
         self.agent.IDENTIFICATION_THRESHOLD = 0.5
         target = mock_msgs.create_victim_info(probability=0.7)
@@ -118,7 +118,7 @@ class TestWorldModelCallback(unittest.TestCase):
 
         self.agent.receive_world_model(model)
         self.assertEqual(self.agent.target_victim.id, target.id)
-        self.assertTrue(self.agent.accessible_victim.is_set())
+        self.assertTrue(self.agent.promising_victim.is_set())
 
         target.probability = 0.2
         current_victims = [target]
@@ -126,7 +126,7 @@ class TestWorldModelCallback(unittest.TestCase):
 
         self.agent.receive_world_model(model)
         self.assertEqual(self.agent.target_victim.id, target.id)
-        self.assertFalse(self.agent.accessible_victim.is_set())
+        self.assertFalse(self.agent.promising_victim.is_set())
 
     def test_receive_world_model_verification_threshold(self):
         """ Tests that the recognized_victim event is set. """

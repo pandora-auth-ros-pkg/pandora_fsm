@@ -141,8 +141,15 @@ class Agent(object):
         self.gui_result = ValidateVictimGUIResult()
 
         # Communication between threads (callbacks and the main thread).
+
+        # Is set when an unidentified victim is present in the world model.
+        self.potential_victim = Event()
+
+        # Is set when the robot cant reach the target victim, but it has
+        # high probability.
         self.promising_victim = Event()
-        self.accessible_victim = Event()
+
+        # Is set when the operator validates the target victim.
         self.recognized_victim = Event()
         self.explored = Event()
 
@@ -251,17 +258,17 @@ class Agent(object):
         self.visited_victims = model.visitedVictims
 
         if self.current_victims:
-            self.promising_victim.set()
+            self.potential_victim.set()
         else:
-            self.promising_victim.clear()
+            self.potential_victim.clear()
 
         if self.target_victim:
             self.update_target_victim()
 
             if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
-                self.accessible_victim.set()
+                self.promising_victim.set()
             else:
-                self.accessible_victim.clear()
+                self.promising_victim.clear()
             if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
                 self.recognized_victim.set()
             else:
@@ -389,15 +396,15 @@ class Agent(object):
         self.end_effector_client.send_goal(goal)
 
     def wait_identification(self):
-        """ Examines if there is a victim. """
+        """ Examine if the robot can reach the target victim. """
 
         loginfo('Examining suspected victim...')
-        self.accessible_victim.clear()
+        self.promising_victim.clear()
         self.base_client.wait_for_result()
         if self.base_client.get_state() == GoalStatus.SUCCEEDED:
             self.valid_victim()
         elif self.base_client.get_state() == GoalStatus.ABORTED:
-            if self.accessible_victim.is_set():
+            if self.promising_victim.is_set():
                 self.valid_victim()
             else:
                 self.abort_victim()
@@ -409,19 +416,19 @@ class Agent(object):
 
         # Reset because the callback always sets the event even if there is
         # only the target victim.
-        self.promising_victim.clear()
+        self.potential_victim.clear()
 
         # Setting up the events to wait for.
-        events_to_wait = {'Victim found': self.promising_victim,
+        events_to_wait = {'Victim found': self.potential_victim,
                           'Exploration done': self.explored}
 
         MultipleEvent(events_to_wait).wait()
 
-        if self.promising_victim.is_set():
+        if self.potential_victim.is_set():
             loginfo('Victim found...')
 
             # Reseting the flag.
-            self.promising_victim.clear()
+            self.potential_victim.clear()
 
             # Setting the target victim.
             self.target_victim = self.choose_next_victim()
