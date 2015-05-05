@@ -636,15 +636,6 @@ class Agent(object):
         self.explored.clear()
         loginfo('Exploration stopped...')
 
-    def preempt_scan(self):
-        """ Preempts scan. """
-
-        loginfo('Stopping scanning...')
-        self.end_effector_client.wait_for_server()
-        self.end_effector_client.cancel_all_goals()
-        self.end_effector_client.wait_for_result()
-        loginfo('Scan stopped...')
-
     def preempt_move_base(self):
         """ Stops any move base goals. """
 

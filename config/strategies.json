@@ -45,7 +45,7 @@
         ],
         "clean": [
           "preempt_exploration",
-          "preempt_scan"
+          "preempt_end_effector_planner"
         ],
         "transitions": [
           {
@@ -177,7 +177,7 @@
         "description": "Job done!",
         "tasks": [
           "mode_terminating",
-          "preempt_scan",
+          "preempt_end_effector_planner",
           "print_results"
         ],
         "clean": [],
