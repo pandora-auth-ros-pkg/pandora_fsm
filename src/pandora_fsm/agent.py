@@ -259,22 +259,22 @@ class Agent(object):
 
         if self.current_victims:
             self.potential_victim.set()
+            if self.target_victim:
+                self.update_target_victim()
+
+                if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
+                    self.promising_victim.set()
+                else:
+                    self.promising_victim.clear()
+                if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
+                    self.recognized_victim.set()
+                else:
+                    self.recognized_victim.clear()
+            else:
+                self.target_victim = self.choose_next_victim()
         else:
             self.potential_victim.clear()
 
-        if self.target_victim:
-            self.update_target_victim()
-
-            if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
-                self.promising_victim.set()
-            else:
-                self.promising_victim.clear()
-            if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
-                self.recognized_victim.set()
-            else:
-                self.recognized_victim.clear()
-        else:
-            self.target_victim = self.choose_next_victim()
 
     def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
