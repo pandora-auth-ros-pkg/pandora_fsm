@@ -59,6 +59,18 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertFalse(self.agent.promising_victim.is_set())
         self.assertFalse(self.agent.recognized_victim.is_set())
 
+        # Make sure global state transition functios have been generated.
+        self.assertIsNotNone(self.agent.mode_off)
+        self.assertIsNotNone(self.agent.mode_start_autonomous)
+        self.assertIsNotNone(self.agent.mode_exploration_rescue)
+        self.assertIsNotNone(self.agent.mode_identification)
+        self.assertIsNotNone(self.agent.mode_sensor_hold)
+        self.assertIsNotNone(self.agent.mode_semi_autonomous)
+        self.assertIsNotNone(self.agent.mode_teleoperated_locomotion)
+        self.assertIsNotNone(self.agent.mode_sensor_test)
+        self.assertIsNotNone(self.agent.mode_exploration_mapping)
+        self.assertIsNotNone(self.agent.mode_terminating)
+
         # Empty variables
         self.assertEqual(self.agent.current_victims, [])
         self.assertEqual(self.agent.visited_victims, [])

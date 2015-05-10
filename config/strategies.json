@@ -20,7 +20,7 @@
         "name": "init",
         "description": "The agent starts the system.",
         "tasks": [
-          "mode_autonomous",
+          "mode_start_autonomous",
           "boot"
         ],
         "clean": [],

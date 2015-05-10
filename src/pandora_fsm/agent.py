@@ -5,6 +5,8 @@ PKG = 'pandora_fsm'
 
 import sys
 import os
+import inspect
+from functools import partial
 from threading import Event
 import signal
 import yaml
@@ -111,8 +113,10 @@ class Agent(object):
         self.linear_client = Client(topics.linear_movement, MoveLinearAction)
 
         # State client
+        loginfo('Connecting to state manager.')
         self.state_changer = StateClient()
         self.state_changer.client_initialize()
+        loginfo('Connection established.')
         self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
 
         # Attributes to help in the decision making.
@@ -159,7 +163,10 @@ class Agent(object):
         self.IDENTIFICATION_THRESHOLD = 0.65
         self.VERIFICATION_THRESHOLD = 0.75
         self.VERIFICATION_TIMEOUT = 10
+        self.STATE_CHANGE_TIMEOUT = 20
         self.END_EFFECTOR_TIMEOUT = Duration(10)
+
+        self.generate_global_state_transitions()
 
         self.load()
 
@@ -226,6 +233,8 @@ class Agent(object):
                                             )
         # Sets up the initial state
         self.machine.set_state(self.states[0])
+
+        loginfo('FSM has been loaded.')
 
     def clean_up(self):
         """ Kills agent and cleans the environment. """
@@ -580,7 +589,6 @@ class Agent(object):
         """ Prints results of the mission. """
 
         loginfo('The agent is shutting down...')
-        self.sleep()
 
     ######################################################
     #              ACTION'S CALLBACKS                    #
@@ -675,58 +683,35 @@ class Agent(object):
     #               GLOBAL STATE TRANSITIONS             #
     ######################################################
 
-    def mode_off(self):
-        """ Changes the global robot state to
-            MODE 0 -> OFF
-        """
-        next_state = RobotModeMsg.MODE_OFF
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
+    def generate_global_state_transitions(self):
+        """ Generates a function for every global state. The agent will
+            be able to call this function in order to change the
+            global state.
 
-    def mode_autonomous(self):
-        """ Changes the global robot state to
-            MODE 1 -> START_AUTONOMOUS
+            Reads all the available modes from the RobotModeMsg and creates
+            a function with the same name.
         """
-        next_state = RobotModeMsg.MODE_START_AUTONOMOUS
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
 
-    def mode_exploration_rescue(self):
-        """ Changes the global robot state to
-            MODE 2 -> EXPLORATION_RESCUE
-        """
-        next_state = RobotModeMsg.MODE_EXPLORATION_RESCUE
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
+        for member, value in inspect.getmembers(RobotModeMsg):
+            if member.startswith('MODE_'):
+                func = partial(self.global_state_transition, mode=value)
+                setattr(self, member.lower(), func)
 
-    def mode_identification(self):
-        """ Changes the global robot state to
-            MODE 3 -> MODE_IDENTIFICATION
-        """
-        next_state = RobotModeMsg.MODE_IDENTIFICATION
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
+        loginfo('Global state transitions have been generated.')
 
-    def mode_sensor_hold(self):
-        """ Changes the global robot state to
-            MODE 4 -> MODE_SENSOR_HOLD
-        """
-        next_state = RobotModeMsg.MODE_SENSOR_HOLD
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
+    def global_state_transition(self, mode=0):
+        """ Is used to generate state_transition functions.
+            Given a desired mode the state_client will will try to change
+            the global state.
 
-    def mode_exploration_mapping(self):
-        """ Changes the global robot state to
-            MODE 8 -> MODE_EXPLORATION_MAPPING
+            :param :mode A global mode from RobotModeMsg.
         """
-        next_state = RobotModeMsg.MODE_EXPLORATION_MAPPING
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
+        params = (mode, self.STATE_CHANGE_TIMEOUT)
 
-    def mode_terminating(self):
-        """ Changes the global robot state to
-            MODE 9 -> MODE_TERMINATING
-        """
-        next_state = RobotModeMsg.MODE_TERMINATING
-        if not self.state_changer.change_state_and_wait(next_state):
-            self.restart_state()
+        while True:
+            success = self.state_changer.change_state_and_wait(*params)
+            if success:
+                break
+            sleep(2)
+            logerr('Failed to change the global state [%d]. Retrying...',
+                   mode)
