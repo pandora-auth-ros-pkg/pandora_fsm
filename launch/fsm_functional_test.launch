@@ -1,7 +1,0 @@
-<launch>
-  <node pkg="state_manager" type="state_server" name="StateServer" output="screen"/>
-
-  <node pkg="pandora_fsm" type="robocup_fsm.py" name="fsm" output="screen"/>
-
-  <node pkg="pandora_fsm" type="fsm_functional_test.py" name="test_fsm" output="screen"/>
-</launch>
