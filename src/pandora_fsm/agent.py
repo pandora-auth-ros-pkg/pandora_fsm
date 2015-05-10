@@ -194,6 +194,22 @@ class Agent(object):
         setattr(self, 'test_linear', func)
         loginfo('Synchronous transactions have been generated.')
 
+        # Generate preempts partials.
+        func = partial(self.preempt_current_goals,
+                       client=self.end_effector_client,
+                       msg='end effector')
+        setattr(self, 'preempt_end_effector', func)
+
+        func = partial(self.preempt_current_goals,
+                       client=self.base_client,
+                       msg='move base')
+        setattr(self, 'preempt_move_base', func)
+
+        func = partial(self.preempt_current_goals,
+                       client=self.explorer,
+                       msg='explorer')
+        setattr(self, 'preempt_exploration', func)
+
         self.load()
 
         loginfo('Agent initialized...')
@@ -377,7 +393,7 @@ class Agent(object):
     def point_sensors(self):
         """ Points end effector to the target. """
 
-        self.preempt_end_effector_planner()
+        self.preempt_end_effector()
         goal = MoveEndEffectorGoal()
         goal.command = MoveEndEffectorGoal.TRACK
         goal.point_of_interest = self.target_victim.victimFrameId
@@ -386,21 +402,22 @@ class Agent(object):
         self.end_effector_client.send_goal(goal)
 
     def scan(self):
-        """ Scans the area. """
+        """ Sends the SCAN goal to end effector planner. """
 
-        loginfo('Start scanning...')
-
-        self.preempt_end_effector_planner()
+        self.preempt_end_effector()
+        loginfo('Send SCAN goal to end effector planner...')
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
         self.end_effector_client.wait_for_server()
-        self.end_effector_client.send_goal(goal)
+        self.end_effector_client.send_goal(goal,
+                                           done_cb=self.end_effector_done,
+                                           feedback_cb=self.end_effector_feed)
 
     def move_linear(self):
         """ Moving linear to identify the victim. """
 
         loginfo('Moving linear...')
 
-        self.preempt_end_effector_planner()
+        self.preempt_end_effector()
         goal = MoveEndEffectorGoal()
         goal.command = MoveEndEffectorGoal.LAX_TRACK
         goal.point_of_interest = self.target_victim.victimFrameId
@@ -494,10 +511,9 @@ class Agent(object):
         self.base_client.send_goal(goal, feedback_cb=self.base_feedback)
 
     def explore(self):
-        """ Exploring the area. """
+        """ Starts the explorer. """
 
-        loginfo('Exploring...')
-        self.explored.clear()
+        loginfo('Sending exploration goal...')
         goal = DoExplorationGoal(exploration_type=self.exploration_mode)
         self.explorer.wait_for_server()
         self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
@@ -611,6 +627,12 @@ class Agent(object):
         """ Receives action feedback from the move base server. """
         pass
 
+    def end_effector_done(self, status, result):
+        pass
+
+    def end_effector_feed(self, status, result):
+        pass
+
     ######################################################
     #                  AGENT LOGIC                       #
     ######################################################
@@ -631,45 +653,22 @@ class Agent(object):
     #               PREEMPTS AND ABORTS                  #
     ######################################################
 
-    def preempt_exploration(self):
-        """ Preempts exploration. """
+    def preempt_current_goals(self, client=None, msg=''):
+        """ Meta function to generate partial that will cancel all
+            running goals on a given action server.
+        """
 
-        loginfo('Stopping exploration...')
-        self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
-        self.explorer.wait_for_server()
-        self.explorer.cancel_all_goals()
-        self.explorer.wait_for_result()
-        self.explored.clear()
-        loginfo('Exploration stopped...')
-
-    def preempt_move_base(self):
-        """ Stops any move base goals. """
-
-        loginfo('Stopping base...')
-        self.base_client.wait_for_server()
-        self.base_client.cancel_all_goals()
-        self.base_client.wait_for_result()
-        loginfo('Base stopped...')
-
-    def abort_end_effector(self):
-        """ Stops the end effector and starts exploring again. """
-
-        loginfo('Aborting end effector...')
-        self.preempt_end_effector_planner()
-        self.park_end_effector_planner()
-        if self.end_effector_client.get_state() == GoalStatus.ABORTED:
-            logerr("Failed to park end effector")
-            self.restart_state()
-        loginfo('End effector aborted...')
-
-    def preempt_end_effector_planner(self):
-        """ Preempts the last goal on the end effector planer. """
-
-        loginfo('Preempting end effector...')
-        # self.end_effector_client.wait_for_server()
-        self.end_effector_client.cancel_all_goals()
-        self.end_effector_client.wait_for_result()
-        loginfo('End effector preempted...')
+        loginfo('Cancelling all goals on %s...', msg)
+        while True:
+            client.wait_for_server()
+            client.cancel_all_goals()
+            success = client.wait_for_result()
+            active_goal = client.get_state() == GoalStatus.ACTIVE
+            if success or not active_goal:
+                break
+            logerr('%s was not preempted.', msg)
+            loginfo('Retrying...')
+            sleep(2)
 
     ######################################################
     #               GLOBAL STATE TRANSITIONS             #

@@ -76,6 +76,11 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsNotNone(self.agent.park_end_effector)
         self.assertIsNotNone(self.agent.test_linear)
 
+        # Make sure partials for preempts are present.
+        self.assertIsNotNone(self.agent.preempt_end_effector)
+        self.assertIsNotNone(self.agent.preempt_move_base)
+        self.assertIsNotNone(self.agent.preempt_exploration)
+
         # Empty variables
         self.assertEqual(self.agent.current_victims, [])
         self.assertEqual(self.agent.visited_victims, [])
@@ -182,24 +187,28 @@ class TestEndEffector(unittest.TestCase):
     def test_park_end_effector(self):
 
         self.effector_mock.publish('abort:1')
-        self.agent.park_end_effector_planner()
-        self.assertEqual(self.agent.end_effector_client.get_state(),
-                         GoalStatus.ABORTED)
+
+        @TimeLimiter(timeout=5)
+        def infinite_delay():
+            self.agent.park_end_effector()
+
+        self.assertRaises(TimeoutException, infinite_delay)
 
         self.effector_mock.publish('success:1')
-        self.agent.park_end_effector_planner()
+        self.agent.park_end_effector()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_end_effector(self):
 
-        self.effector_mock.publish('abort:1')
-        self.agent.test_end_effector_planner()
-        self.assertEqual(self.agent.end_effector_client.get_state(),
-                         GoalStatus.ABORTED)
+        @TimeLimiter(timeout=5)
+        def infinite_delay():
+            self.agent.test_end_effector()
+
+        self.assertRaises(TimeoutException, infinite_delay)
 
         self.effector_mock.publish('success:1')
-        self.agent.test_end_effector_planner()
+        self.agent.test_end_effector()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
@@ -218,12 +227,15 @@ class TestEndEffector(unittest.TestCase):
 
     def test_linear(self):
         self.linear_mock.publish('abort:1')
-        self.agent.test_linear_motor()
-        self.assertEqual(self.agent.linear_client.get_state(),
-                         GoalStatus.ABORTED)
+
+        @TimeLimiter(timeout=5)
+        def infinite_delay():
+            self.agent.test_linear()
+
+        self.assertRaises(TimeoutException, infinite_delay)
 
         self.linear_mock.publish('success:1')
-        self.agent.test_linear_motor()
+        self.agent.test_linear()
         self.assertEqual(self.agent.linear_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
