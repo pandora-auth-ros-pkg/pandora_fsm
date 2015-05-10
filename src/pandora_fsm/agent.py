@@ -168,6 +168,32 @@ class Agent(object):
 
         self.generate_global_state_transitions()
 
+        # Generate synchronous transactions to test the action servers.
+        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
+        func = partial(self.test_action_server,
+                       client=self.end_effector_client,
+                       goal=goal,
+                       timeout=self.END_EFFECTOR_TIMEOUT,
+                       msg='End effector test')
+        setattr(self, 'test_end_effector', func)
+
+        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
+        func = partial(self.test_action_server,
+                       client=self.end_effector_client,
+                       goal=goal,
+                       timeout=self.END_EFFECTOR_TIMEOUT,
+                       msg='Park end effector')
+        setattr(self, 'park_end_effector', func)
+
+        goal = MoveLinearGoal(command=MoveLinearGoal.TEST)
+        func = partial(self.test_action_server,
+                       client=self.linear_client,
+                       goal=goal,
+                       timeout=self.END_EFFECTOR_TIMEOUT,
+                       msg='Linear test')
+        setattr(self, 'test_linear', func)
+        loginfo('Synchronous transactions have been generated.')
+
         self.load()
 
         loginfo('Agent initialized...')
@@ -320,67 +346,33 @@ class Agent(object):
         self.gui_result.victimValid = False
         self.target_victim = None
 
-    def boot(self):
-        """ Boots up the system. Tests that everything is working properly."""
+    def test_action_server(self, client=None, goal=None, timeout=0, msg=''):
+        """ Meta function that creates partials to test action servers.
 
-        loginfo('Starting system boot!')
-
-        # Test end effector planner.
-        self.test_end_effector_planner()
-        goal_state = self.end_effector_client.get_state()
-        if goal_state in FAILURE_STATES.keys():
-            logerr('Test effector failed: ' + FAILURE_STATES[goal_state])
-            self.restart_state()
-
-        # Park end effector planner.
-        self.park_end_effector_planner()
-        goal_state = self.end_effector_client.get_state()
-        if goal_state in FAILURE_STATES.keys():
-            logerr('Park effector failed: ' + FAILURE_STATES[goal_state])
-            self.restart_state()
-
-        # Test linear motor.
-        self.test_linear_motor()
-        goal_state = self.linear_client.get_state()
-        if goal_state in FAILURE_STATES.keys():
-            logerr('Test linear failed: ' + FAILURE_STATES[goal_state])
-            self.restart_state()
-
-        loginfo('System booted...')
-        self.booted()
-
-    def test_end_effector_planner(self):
-        """ Tests end effector with action client.
-
-        :param :timeout The amount of time that the agent will wait
-                        for a repsonse.
+        :param :client The instance of the client we will use for the test.
+        :param :goal The goal we will send to the action server.
+        :param :timeout The amount of time the client will wait before
+                        attempts a retry.
+        :param :msg A text for debugging.
         """
-        loginfo('Testing end effector...')
-        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
-        self.end_effector_client.wait_for_server()
-        self.end_effector_client.send_goal(goal)
-        if not self.end_effector_client.wait_for_result(self.END_EFFECTOR_TIMEOUT):
-            loginfo("Couldn't test end effector in time...")
 
-    def park_end_effector_planner(self):
-        """ Parks end effector with action client. """
+        loginfo(msg)
+        while True:
+            client.wait_for_server()
+            client.send_goal(goal)
+            success = client.wait_for_result(timeout=timeout)
+            goal_state = client.get_state()
 
-        loginfo('Trying to park end effector...')
-        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-        self.end_effector_client.wait_for_server()
-        self.end_effector_client.send_goal(goal)
-        if not self.end_effector_client.wait_for_result(self.END_EFFECTOR_TIMEOUT):
-            loginfo("Couldn't park end effector in time...")
-
-    def test_linear_motor(self):
-        """ Tests linear motor. """
-
-        loginfo('Testing linear motor...')
-        goal = MoveLinearGoal(command=MoveLinearGoal.TEST)
-        self.linear_client.wait_for_server()
-        self.linear_client.send_goal(goal)
-        if not self.linear_client.wait_for_result(self.END_EFFECTOR_TIMEOUT):
-            loginfo("Couldn't test linear motor in time...")
+            if success:
+                if goal_state not in FAILURE_STATES.keys():
+                    break
+                else:
+                    verbose_err = FAILURE_STATES[goal_state]
+                    logerr('%s responded with %s', msg, verbose_err)
+            else:
+                logerr("Couldn't test %s in time...", msg)
+            sleep(2)
+            loginfo('Retrying...')
 
     def point_sensors(self):
         """ Points end effector to the target. """

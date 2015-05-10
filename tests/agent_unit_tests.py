@@ -71,6 +71,11 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsNotNone(self.agent.mode_exploration_mapping)
         self.assertIsNotNone(self.agent.mode_terminating)
 
+        # Make sure partials for testing action servers are present.
+        self.assertIsNotNone(self.agent.test_end_effector)
+        self.assertIsNotNone(self.agent.park_end_effector)
+        self.assertIsNotNone(self.agent.test_linear)
+
         # Empty variables
         self.assertEqual(self.agent.current_victims, [])
         self.assertEqual(self.agent.visited_victims, [])

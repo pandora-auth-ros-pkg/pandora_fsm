@@ -21,7 +21,10 @@
         "description": "The agent starts the system.",
         "tasks": [
           "mode_start_autonomous",
-          "boot"
+          "test_end_effector",
+          "park_end_effector",
+          "test_linear",
+          "booted"
         ],
         "clean": [],
         "transitions": [
