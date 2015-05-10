@@ -3,6 +3,7 @@
 
 PKG = 'pandora_fsm'
 
+import sys
 import os
 from threading import Event
 import signal
@@ -12,7 +13,8 @@ from math import pi
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, loginfo, logerr, logwarn, sleep
+from rospy import Subscriber, Duration, sleep
+from rospy import loginfo, logerr, logwarn, logfatal
 from rospkg import RosPack
 
 from actionlib import GoalStatus
@@ -195,7 +197,11 @@ class Agent(object):
         except IOError, err:
             raise err
 
-        states = data[self.strategy]['states']
+        try:
+            states = data[self.strategy]['states']
+        except KeyError, err:
+            logfatal('%s is not a valid strategy.', self.strategy)
+            sys.exit(1)
 
         # Setting up the FSM
         self.machine = Machine(model=self)
