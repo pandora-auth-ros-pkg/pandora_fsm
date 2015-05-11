@@ -52,7 +52,7 @@ from pandora_end_effector_planner.msg import MoveLinearAction
 
 import topics
 from machine import Machine
-from utils import FAILURE_STATES, MultipleEvent
+from utils import FAILURE_STATES, ACTION_STATES
 
 
 class Agent(object):
@@ -149,7 +149,7 @@ class Agent(object):
         # Communication between threads (callbacks and the main thread).
 
         # Is set when an unidentified victim is present in the world model.
-        self.potential_victim = Event()
+        self.point_of_interest = Event()
 
         # Is set when the robot cant reach the target victim, but it has
         # high probability.
@@ -157,7 +157,9 @@ class Agent(object):
 
         # Is set when the operator validates the target victim.
         self.recognized_victim = Event()
-        self.explored = Event()
+        self.exploration_done = Event()
+        self.retry_exploration = Event()
+        self.leaving_exploration = Event()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
@@ -315,7 +317,6 @@ class Agent(object):
         self.visited_victims = model.visitedVictims
 
         if self.current_victims:
-            self.potential_victim.set()
             if self.target_victim:
                 self.update_target_victim()
 
@@ -329,8 +330,11 @@ class Agent(object):
                     self.recognized_victim.clear()
             else:
                 self.target_victim = self.choose_next_victim()
+            if self.state == 'exploration':
+                self.point_of_interest.set()
+                self.leaving_exploration.set()
         else:
-            self.potential_victim.clear()
+            self.point_of_interest.clear()
 
 
     def receive_linear_feedback(self, msg):
@@ -441,40 +445,44 @@ class Agent(object):
             else:
                 self.abort_victim()
 
-    def wait_for_victim(self):
-        """ The agent stops until a candidate victim is found."""
+    def wait_for_POI(self):
+        """ The agent stops until a point of interest is found."""
 
-        loginfo('Waiting for victim...')
+        self.leaving_exploration.clear()
+        self.point_of_interest.clear()
+        if self.current_victims:
+            self.point_of_interest.set()
+            self.leaving_exploration.set()
 
-        # Setting up the events to wait for.
-        events_to_wait = {'Victim found': self.potential_victim,
-                          'Exploration done': self.explored}
+        while True:
+            loginfo('Waiting for POI...')
+            self.leaving_exploration.wait()
+            if self.point_of_interest.is_set() or self.exploration_done.is_set():
+                # We can leave the exploration state.
+                break
+            elif self.retry_exploration.is_set():
+                # If the exploration goal has failed we keep trying.
+                status = self.explorer.get_state()
+                logerr('Explorer responded with -> %s', ACTION_STATES[status])
+                loginfo('Retrying...')
+                sleep(2)
+                self.explore()
+            sleep(2)
 
-        MultipleEvent(events_to_wait).wait()
-
-        if self.potential_victim.is_set():
-            loginfo('Victim found...')
-
-            # Reseting the flag.
-            # FIXME
-            self.potential_victim.clear()
+        # Finding a point of interest is more important, so we check first.
+        if self.point_of_interest.is_set():
+            logwarn('A POI has been discovered...')
 
             # Setting the target victim.
             self.target_victim = self.choose_next_victim()
 
             # Changing state.
-            self.victim_found()
-        elif self.explored.is_set():
-            loginfo('The explorer has finished...')
+            self.point_of_interest_found()
+        elif self.exploration_done.is_set():
+            logwarn('The explorer has finished...')
 
             # Changing state.
             self.map_covered()
-        else:
-            logerr('> wait_for_victim: None of the events is set but the agent \
-                    passed the wait. Possible error with the MultipleEvent.')
-
-            # Entering again on the current state.
-            getattr(self, 'to_' + self.state)()
 
     def wait_for_verification(self):
         """ Expect probability of the target victim to increase. """
@@ -514,6 +522,8 @@ class Agent(object):
         """ Starts the explorer. """
 
         loginfo('Sending exploration goal...')
+        self.exploration_done.clear()
+        self.retry_exploration.clear()
         goal = DoExplorationGoal(exploration_type=self.exploration_mode)
         self.explorer.wait_for_server()
         self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
@@ -609,15 +619,18 @@ class Agent(object):
     def explorer_done(self, status, result):
         """ Results from the exploration. """
 
+        # If the exploration is done we stop waiting on leaving_exploration
+        # and depending on exploratino_done and possible_victim we move on.
         if status == GoalStatus.SUCCEEDED:
             loginfo('Exploration has finished successfully...')
-            self.explored.set()
-        elif status == GoalStatus.ABORTED:
-            loginfo('Exploration has been aborted...')
-            self.explored.clear()
-        elif status == GoalStatus.REJECTED:
-            loginfo('Exploration has been rejected...')
-            self.explored.clear()
+            self.leaving_exploration.set()
+            self.exploration_done.set()
+        elif status in FAILURE_STATES.keys():
+            logerr('Exploration goal failed.')
+            self.retry_exploration.set()
+            self.leaving_exploration.set()
+        else:
+            logwarn('Exploration goal -> %s', ACTION_STATES[status])
 
     def victim_callback(self, data):
         """ It's called when a victim is found. """

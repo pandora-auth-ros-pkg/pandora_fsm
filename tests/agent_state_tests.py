@@ -156,8 +156,7 @@ class TestExplorationState(unittest.TestCase):
 
         self.assertEqual(self.agent.state, 'identification')
 
-        # The event is cleared after success.
-        self.assertFalse(self.agent.potential_victim.is_set())
+        self.assertTrue(self.agent.point_of_interest.is_set())
 
     def test_to_end(self):
         self.effector_mock.publish('success:10')
@@ -179,6 +178,26 @@ class TestExplorationState(unittest.TestCase):
         def init_wrapper():
             self.agent.to_exploration()
         self.assertRaises(TimeoutException, init_wrapper)
+
+    def test_retry_on_explorer_abort(self):
+        """ The agent will keep sending goals if the explorer fails. """
+
+        self.explorer.publish('abort:4')
+
+        @TimeLimiter(timeout=10)
+        def infinite_delay():
+            self.agent.to_exploration()
+        self.assertRaises(TimeoutException, infinite_delay)
+
+    def test_retry_on_explorer_reject(self):
+        """ The agent will keep sending goals if the explorer fails. """
+
+        self.explorer.publish('reject:4')
+
+        @TimeLimiter(timeout=10)
+        def infinite_delay():
+            self.agent.to_exploration()
+        self.assertRaises(TimeoutException, infinite_delay)
 
     def test_global_state_change(self):
         """ The global state should be MODE_EXPLORATION_RESCUE """

@@ -43,7 +43,8 @@
         "tasks": [
           "mode_exploration_rescue",
           "scan",
-          "explore"
+          "explore",
+          "wait_for_POI"
         ],
         "clean": [
           "preempt_exploration",
@@ -55,7 +56,7 @@
             "conditions": [],
             "before": [],
             "after": [],
-            "trigger": "victim_found"
+            "trigger": "point_of_interest_found"
           },
           {
             "to": "end",
@@ -123,7 +124,7 @@
         "name": "victim_deletion",
         "description": "Data fusion deletes the victim",
         "tasks": [
-          "abort_end_effector",
+          "preempt_end_effector",
           "delete_victim"
         ],
         "clean": [],
@@ -180,7 +181,8 @@
         "tasks": [
           "mode_terminating",
           "preempt_end_effector",
-          "print_results"
+          "print_results",
+          "sleep"
         ],
         "clean": [],
         "transitions": [

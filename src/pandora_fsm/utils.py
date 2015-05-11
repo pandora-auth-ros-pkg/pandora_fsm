@@ -10,7 +10,19 @@ from rospy import logerr, loginfo
 FAILURE_STATES = {2: 'PREEMPTED',
                   4: 'ABORTED',
                   5: 'REJECTED',
+                  8: 'RECALLED',
                   9: 'LOST'}
+
+ACTION_STATES = {0: 'PENDING',
+                 1: 'ACTIVE',
+                 2: 'PREEMPTED',
+                 3: 'SUCCEEDED',
+                 4: 'ABORTED',
+                 5: 'REJECTED',
+                 6: 'PREEMPTING',
+                 7: 'RECALLING',
+                 8: 'RECALLED',
+                 9: 'LOST'}
 
 
 def listify(obj):
@@ -101,69 +113,3 @@ class Interrupt(object):
     def interrupt_handler(self, signum, frame):
         msg = '%s is interrupted by %s' % (self.task.__name__, self.after.__name__)
         raise InterruptException(msg)
-
-
-class MultipleEvent(object):
-    """ MultipleEvent object will wait for a number of different
-        threading.Events. The MultipleEvent will be set if any of the events is
-        set.
-    """
-
-    def __init__(self, events):
-        self.events = events
-        self.or_event = threading.Event()
-
-        # Wait for all the events on separate threads.
-        for name, event in self.events.items():
-            threading.Thread(target=self.wait_on, args=(name, event,)).start()
-            time.sleep(0.05)
-
-        for _, event in self.events.items():
-            self.wrap_event(event, self.changed)
-
-        self.changed()
-
-    def changed(self):
-        """ Checks if any of the events is set and notifies the multi_handler
-            properly.
-        """
-        bools = [event.is_set() for _, event in self.events.items()]
-        if any(bools):
-            self.or_event.set()
-        else:
-            self.or_event.clear()
-
-    def wait(self):
-        """ Waits for the multiple event. """
-
-        self.or_event.wait()
-
-    def wrap_event(self, event, changed_callback):
-        """ Wraps the Event objects with new set and clear functions
-            to be able to notify the multi_handler, when the state
-            of an event changes.
-        """
-        event._set = event.set
-        event._clear = event.clear
-        event.changed = changed_callback
-        event.set = lambda: self.wrap_set(event)
-        event.clear = lambda: self.wrap_clear(event)
-
-    def wrap_set(self, event):
-        """ Event.set() wrapper to notify the multi_handler. """
-
-        event._set()
-        self.changed()
-
-    def wrap_clear(self, event):
-        """ Event.clear() wrapper to notify the multi_handler. """
-
-        event._clear()
-        self.changed()
-
-    def wait_on(self, name, event):
-        """ Debugging info for an event. """
-
-        print "Waiting on %s..." % (name,)
-        event.wait()
-        print "%s fired!" % (name,)
