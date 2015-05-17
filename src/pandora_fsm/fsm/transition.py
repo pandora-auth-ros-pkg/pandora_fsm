@@ -1,6 +1,6 @@
 """ Module about the transition """
 
-from utils import listify
+from pandora_fsm.utils import listify
 
 
 class Transition(object):

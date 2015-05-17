@@ -41,13 +41,15 @@
         "name": "exploration",
         "description": "The agent is exploring the area.",
         "tasks": [
+          "deny_transitions",
           "mode_exploration_rescue",
           "scan",
           "explore",
-          "wait_for_POI"
+          "allow_transitions"
         ],
         "clean": [
-          "preempt_exploration",
+          "deny_transitions",
+          "preempt_explorer",
           "preempt_end_effector"
         ],
         "transitions": [
@@ -71,12 +73,13 @@
         "name": "identification",
         "description": "Examining the candidate victim",
         "tasks": [
+          "deny_transitions",
           "mode_identification",
           "move_base",
           "point_sensors",
-          "wait_identification"
+          "allow_transitions"
         ],
-        "clean": [],
+        "clean": ["deny_transitions"],
         "transitions": [
           {
             "to": "victim_deletion",
@@ -180,8 +183,8 @@
         "description": "Job done!",
         "tasks": [
           "mode_terminating",
-          "preempt_end_effector",
           "print_results",
+          "clean_up",
           "sleep"
         ],
         "clean": [],

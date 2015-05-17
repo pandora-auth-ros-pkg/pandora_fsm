@@ -4,7 +4,7 @@
 from functools import partial
 from collections import OrderedDict
 
-from utils import listify
+from pandora_fsm.utils import listify
 from state import State
 from event import Event
 from transition import Transition

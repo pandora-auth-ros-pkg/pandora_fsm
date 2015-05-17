@@ -1,6 +1,6 @@
 """ Module with functions and classes related to the state object """
 
-from utils import listify
+from pandora_fsm.utils import listify
 
 
 class State(object):

@@ -21,6 +21,9 @@ from pandora_fsm import Agent, TimeoutException, TimeLimiter
 
 import mock_msgs
 
+from pandora_fsm import (Navigation, Control, DataFusion, GUI, LinearMotor,
+                         Effector, LinearMotor)
+
 
 class TestROSIndependentMethods(unittest.TestCase):
 
@@ -34,27 +37,22 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertEqual(self.agent.victims_found, 0)
 
         # Make sure the action clients are instantiated.
-        self.assertIsInstance(self.agent.explorer, Client)
-        self.assertIsInstance(self.agent.base_client, Client)
-        self.assertIsInstance(self.agent.delete_victim_client, Client)
-        self.assertIsInstance(self.agent.fusion_validate_client, Client)
-        self.assertIsInstance(self.agent.gui_validate_client, Client)
-        self.assertIsInstance(self.agent.end_effector_client, Client)
-        self.assertIsInstance(self.agent.linear_client, Client)
+        self.assertIsInstance(self.agent.explorer, Navigation)
+        self.assertIsInstance(self.agent.control_base, Control)
+        self.assertIsInstance(self.agent.data_fusion, DataFusion)
+        self.assertIsInstance(self.agent.gui_client, GUI)
+        self.assertIsInstance(self.agent.effector, Effector)
+        self.assertIsInstance(self.agent.linear, LinearMotor)
 
         # Make sure the subscribers are instantiated.
-        self.assertIsInstance(self.agent.arena_sub, Subscriber)
         self.assertIsInstance(self.agent.score_sub, Subscriber)
         self.assertIsInstance(self.agent.qr_sub, Subscriber)
-        self.assertIsInstance(self.agent.area_coverage_sub, Subscriber)
         self.assertIsInstance(self.agent.world_model_sub, Subscriber)
-        self.assertIsInstance(self.agent.linear_sub, Subscriber)
 
         # Make sure the threading.Events are initialized.
         self.assertIsInstance(self.agent.point_of_interest, threading._Event)
         self.assertIsInstance(self.agent.promising_victim, threading._Event)
         self.assertIsInstance(self.agent.recognized_victim, threading._Event)
-        self.assertIsInstance(self.agent.exploration_done, threading._Event)
         self.assertFalse(self.agent.point_of_interest.is_set())
         self.assertFalse(self.agent.promising_victim.is_set())
         self.assertFalse(self.agent.recognized_victim.is_set())
@@ -70,16 +68,6 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsNotNone(self.agent.mode_sensor_test)
         self.assertIsNotNone(self.agent.mode_exploration_mapping)
         self.assertIsNotNone(self.agent.mode_terminating)
-
-        # Make sure partials for testing action servers are present.
-        self.assertIsNotNone(self.agent.test_end_effector)
-        self.assertIsNotNone(self.agent.park_end_effector)
-        self.assertIsNotNone(self.agent.test_linear)
-
-        # Make sure partials for preempts are present.
-        self.assertIsNotNone(self.agent.preempt_end_effector)
-        self.assertIsNotNone(self.agent.preempt_move_base)
-        self.assertIsNotNone(self.agent.preempt_exploration)
 
         # Empty variables
         self.assertEqual(self.agent.current_victims, [])
@@ -291,21 +279,21 @@ class TestMoveBase(unittest.TestCase):
     def test_move_base_abort(self):
         self.move_base_mock.publish('abort:1')
         self.agent.move_base()
-        self.agent.base_client.wait_for_result()
-        self.assertEqual(self.agent.base_client.get_state(),
+        self.agent.control_base.wait_for_result()
+        self.assertEqual(self.agent.control_base.get_state(),
                          GoalStatus.ABORTED)
 
     def test_move_base_success(self):
         self.move_base_mock.publish('success:1')
         self.agent.move_base()
-        self.agent.base_client.wait_for_result()
-        self.assertEqual(self.agent.base_client.get_state(),
+        self.agent.control_base.wait_for_result()
+        self.assertEqual(self.agent.control_base.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_move_base_preempt(self):
         self.agent.move_base()
         self.agent.preempt_move_base()
-        self.assertEqual(self.agent.base_client.get_state(),
+        self.assertEqual(self.agent.control_base.get_state(),
                          GoalStatus.ABORTED)
 
 
@@ -384,7 +372,7 @@ class TestValidateGUI(unittest.TestCase):
         self.agent.target_victim = msg
         self.agent.wait_for_operator()
 
-        self.assertEqual(self.agent.gui_validate_client.get_state(),
+        self.assertEqual(self.agent.gui_client.get_state(),
                          GoalStatus.ABORTED)
 
 
@@ -423,7 +411,7 @@ class TestDeleteVictim(unittest.TestCase):
         self.agent.delete_victim()
 
         self.assertEqual(self.agent.state, 'test_delete_victim')
-        self.assertEqual(self.agent.delete_victim_client.get_state(),
+        self.assertEqual(self.agent.data_fusion.get_state(),
                          GoalStatus.SUCCEEDED)
 
 

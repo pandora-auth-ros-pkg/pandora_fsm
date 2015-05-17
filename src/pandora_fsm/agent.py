@@ -4,55 +4,39 @@
 PKG = 'pandora_fsm'
 
 import sys
-import os
+from pymitter import EventEmitter
 import inspect
 from functools import partial
 from threading import Event
-import signal
 import yaml
-from math import pi
 
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, Duration, sleep
+from rospy import Subscriber, sleep
 from rospy import loginfo, logerr, logwarn, logfatal
 from rospkg import RosPack
 
 from actionlib import GoalStatus
-from actionlib import SimpleActionClient as Client
 
-from std_msgs.msg import Int32, Float32, String
+from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped
 
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
 
-from tf.transformations import euler_from_quaternion, quaternion_from_euler
-
-from pandora_navigation_msgs.msg import ArenaTypeMsg
-from pandora_navigation_msgs.msg import DoExplorationAction, DoExplorationGoal
+from pandora_navigation_msgs.msg import DoExplorationGoal
 
 from pandora_data_fusion_msgs.msg import WorldModelMsg
 from pandora_data_fusion_msgs.msg import QrNotificationMsg
-from pandora_data_fusion_msgs.msg import ValidateVictimAction
-from pandora_data_fusion_msgs.msg import ValidateVictimGoal
-from pandora_data_fusion_msgs.msg import DeleteVictimAction, DeleteVictimGoal
 
-from move_base_msgs.msg import MoveBaseGoal, MoveBaseAction
-
-from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
 from pandora_rqt_gui.msg import ValidateVictimGUIResult
 
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
-from pandora_end_effector_planner.msg import MoveEndEffectorGoal
-from pandora_end_effector_planner.msg import MoveLinearActionFeedback
-from pandora_end_effector_planner.msg import MoveLinearFeedback, MoveLinearGoal
-from pandora_end_effector_planner.msg import MoveLinearAction
+from pandora_end_effector_planner.msg import MoveLinearFeedback
 
 import topics
-from machine import Machine
-from utils import FAILURE_STATES, ACTION_STATES
+import clients
+from fsm import Machine
 
 
 class Agent(object):
@@ -77,40 +61,30 @@ class Agent(object):
         # Configuration folder
         config_dir = RosPack().get_path(PKG) + '/config/'
         self.name = name
-
         self.strategy = strategy
-
         self.config = config_dir + config
 
+        # Dispatcher for event based communication.
+        self.dispatcher = EventEmitter()
+        self.dispatcher.on('exploration.success', self.exploration_success)
+        self.dispatcher.on('exploration.retry', self.exploration_retry)
+        self.dispatcher.on('poi.found', self.poi_found)
+
         # SUBSCRIBERS.
-        self.arena_sub = Subscriber(topics.arena_type, ArenaTypeMsg,
-                                    self.receive_arena_type)
         self.score_sub = Subscriber(topics.robocup_score, Int32,
                                     self.receive_score)
         self.qr_sub = Subscriber(topics.qr_notification, QrNotificationMsg,
                                  self.receive_qr_notifications)
-        self.area_coverage_sub = Subscriber(topics.area_covered, Float32,
-                                            self.receive_area_covered)
         self.world_model_sub = Subscriber(topics.world_model, WorldModelMsg,
                                           self.receive_world_model)
-        self.linear_sub = Subscriber(topics.linear_movement_action_feedback,
-                                     MoveLinearActionFeedback,
-                                     self.receive_linear_feedback)
-        self.interrupts = Subscriber(topics.agent_interrupt, String,
-                                     self.receive_interrupts)
 
         # ACTION CLIENTS.
-        self.explorer = Client(topics.do_exploration, DoExplorationAction)
-        self.base_client = Client(topics.move_base, MoveBaseAction)
-        self.delete_victim_client = Client(topics.delete_victim,
-                                           DeleteVictimAction)
-        self.gui_validate_client = Client(topics.gui_validation,
-                                          ValidateVictimGUIAction)
-        self.fusion_validate_client = Client(topics.validate_victim,
-                                             ValidateVictimAction)
-        self.end_effector_client = Client(topics.move_end_effector_planner,
-                                          MoveEndEffectorAction)
-        self.linear_client = Client(topics.linear_movement, MoveLinearAction)
+        self.explorer = clients.Navigation(self.dispatcher)
+        self.data_fusion = clients.DataFusion()
+        self.control_base = clients.Control(self.dispatcher)
+        self.gui_client = clients.GUI()
+        self.effector = clients.Effector()
+        self.linear = clients.LinearMotor()
 
         # State client
         loginfo('Connecting to state manager.')
@@ -118,13 +92,6 @@ class Agent(object):
         self.state_changer.client_initialize()
         loginfo('Connection established.')
         self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
-
-        # Attributes to help in the decision making.
-
-        # Arena information.
-        self.current_arena = ArenaTypeMsg.TYPE_YELLOW
-        self.yellow_arena_area_explored = False
-        self.yellow_black_arena_area_explored = False
 
         # General information.
         self.QRs = []
@@ -138,7 +105,7 @@ class Agent(object):
         self.aborted_victims_ = []
         self.current_victims = []
         self.visited_victims = []
-        self.target_victim = None
+        self.target = None
         self.valid_victim_probability = 0
 
         # Between-transition information.
@@ -146,71 +113,23 @@ class Agent(object):
         self.gui_verification = False
         self.gui_result = ValidateVictimGUIResult()
 
-        # Communication between threads (callbacks and the main thread).
-
-        # Is set when an unidentified victim is present in the world model.
-        self.point_of_interest = Event()
-
-        # Is set when the robot cant reach the target victim, but it has
-        # high probability.
-        self.promising_victim = Event()
-
-        # Is set when the operator validates the target victim.
-        self.recognized_victim = Event()
-        self.exploration_done = Event()
-        self.retry_exploration = Event()
-        self.leaving_exploration = Event()
+        self.state_can_change = Event()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
         self.VERIFICATION_THRESHOLD = 0.75
         self.VERIFICATION_TIMEOUT = 10
         self.STATE_CHANGE_TIMEOUT = 20
-        self.END_EFFECTOR_TIMEOUT = Duration(10)
+
+        # Expose client methods to class
+        setattr(self, 'test_end_effector', self.effector.test)
+        setattr(self, 'park_end_effector', self.effector.park)
+        setattr(self, 'preempt_end_effector', self.effector.cancel_all_goals)
+        setattr(self, 'preempt_explorer', self.explorer.cancel_all_goals)
+        setattr(self, 'test_linear', self.linear.test)
+        setattr(self, 'scan', self.effector.scan)
 
         self.generate_global_state_transitions()
-
-        # Generate synchronous transactions to test the action servers.
-        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
-        func = partial(self.test_action_server,
-                       client=self.end_effector_client,
-                       goal=goal,
-                       timeout=self.END_EFFECTOR_TIMEOUT,
-                       msg='End effector test')
-        setattr(self, 'test_end_effector', func)
-
-        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.PARK)
-        func = partial(self.test_action_server,
-                       client=self.end_effector_client,
-                       goal=goal,
-                       timeout=self.END_EFFECTOR_TIMEOUT,
-                       msg='Park end effector')
-        setattr(self, 'park_end_effector', func)
-
-        goal = MoveLinearGoal(command=MoveLinearGoal.TEST)
-        func = partial(self.test_action_server,
-                       client=self.linear_client,
-                       goal=goal,
-                       timeout=self.END_EFFECTOR_TIMEOUT,
-                       msg='Linear test')
-        setattr(self, 'test_linear', func)
-        loginfo('Synchronous transactions have been generated.')
-
-        # Generate preempts partials.
-        func = partial(self.preempt_current_goals,
-                       client=self.end_effector_client,
-                       msg='end effector')
-        setattr(self, 'preempt_end_effector', func)
-
-        func = partial(self.preempt_current_goals,
-                       client=self.base_client,
-                       msg='move base')
-        setattr(self, 'preempt_move_base', func)
-
-        func = partial(self.preempt_current_goals,
-                       client=self.explorer,
-                       msg='explorer')
-        setattr(self, 'preempt_exploration', func)
 
         self.load()
 
@@ -245,12 +164,13 @@ class Agent(object):
             # Read the configuration file.
             with open(self.config) as file_handler:
                 data = yaml.load(file_handler)
-        except IOError, err:
-            raise err
+        except IOError:
+            logfatal('Could not read configuration file.')
+            sys.exit(1)
 
         try:
             states = data[self.strategy]['states']
-        except KeyError, err:
+        except KeyError:
             logfatal('%s is not a valid strategy.', self.strategy)
             sys.exit(1)
 
@@ -284,16 +204,58 @@ class Agent(object):
         """ Kills agent and cleans the environment. """
 
         self.explorer.cancel_all_goals()
-        self.base_client.cancel_all_goals()
-        self.linear_client.cancel_all_goals()
-        self.end_effector_client.cancel_all_goals()
-        self.fusion_validate_client.cancel_all_goals()
-        self.gui_validate_client.cancel_all_goals()
-        self.delete_victim_client.cancel_all_goals()
-
-        self.to_off()
+        self.control_base.cancel_all_goals()
+        self.linear.cancel_all_goals()
+        self.effector.cancel_all_goals()
+        self.gui_client.cancel_all_goals()
 
         loginfo('Agent is sleeping...')
+
+    def allow_callbacks(self):
+        self.state_can_change.set()
+
+    def deny_callbacks(self):
+        self.state_can_change.clear()
+
+    ######################################################
+    #               DISPATCHER'S CALLBACKS               #
+    ######################################################
+
+    def exploration_success(self):
+        """ Called on 'exploration.success' event. The event is triggered from
+            the navigation client when the current goal has succeeded.
+            Enables the agent to move from the exploration state to end.
+        """
+        on_exploration = self.state == 'exploration'
+        if self.state_can_change.is_set() and on_exploration:
+            logwarn('Map covered!.')
+            self.state_can_change.clear()
+            self.map_covered()
+        else:
+            logwarn('Exploration success too soon.')
+
+    def exploration_retry(self):
+        """ Called on 'exploration.retry' event. The event is triggered from
+            the navigation client when the current goal has failed and the
+            agent sends again a goal.
+        """
+        if self.state == 'exploration':
+            logwarn('Retrying exploration goal.')
+            self.explore()
+        else:
+            logwarn('Exploration failure while not on exploration state.')
+
+    def poi_found(self):
+        """ Called on 'poi.found' event. The event is triggered when there are
+            available points of interest on the received world model. Enables
+            the agent to move from the exploration state to identification.
+        """
+        if self.state == 'exploration' and self.state_can_change.is_set():
+            logwarn('A point of interest has been discovered.')
+            self.state_can_change.clear()
+            self.point_of_interest_found()
+        else:
+            logerr('Found POI outside of exploration.')
 
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
@@ -312,49 +274,39 @@ class Agent(object):
     def receive_world_model(self, model):
         """ Receives the world model from data fusion. """
 
-        loginfo('World model updated...')
         self.current_victims = model.victims
         self.visited_victims = model.visitedVictims
 
         if self.current_victims:
-            if self.target_victim:
+            loginfo('@ Available POIs: ')
+        for victim in self.current_victims:
+            loginfo('=> #%d   (%.2f)', victim.id, victim.probability)
+
+        if self.visited_victims:
+            loginfo('@ Visited POIs: ')
+        for victim in self.visited_victims:
+            valid = 'valid' if victim.valid else 'not valid'
+            loginfo('=> #%d   (%.2f) %s', victim.id, victim.probability, valid)
+
+        if self.current_victims:
+            if self.target:
                 self.update_target_victim()
-
-                if self.target_victim.probability > self.IDENTIFICATION_THRESHOLD:
-                    self.promising_victim.set()
-                else:
-                    self.promising_victim.clear()
-                if self.target_victim.probability > self.VERIFICATION_THRESHOLD:
-                    self.recognized_victim.set()
-                else:
-                    self.recognized_victim.clear()
+                loginfo('@ Target: #%d, (%.2f)', self.target.id,
+                        self.target.probability)
+                if self.target.probability > self.IDENTIFICATION_THRESHOLD:
+                    self.dispatcher.emit('victim.discovered')
+                if self.target.probability > self.VERIFICATION_THRESHOLD:
+                    self.dispatcher.emit('victim.verified')
             else:
-                self.target_victim = self.choose_next_victim()
+                self.target = self.choose_next_victim()
+                logwarn('Target acquired => #%d.', self.target.id)
             if self.state == 'exploration':
-                self.point_of_interest.set()
-                self.leaving_exploration.set()
-        else:
-            self.point_of_interest.clear()
-
+                self.dispatcher.emit('poi.found')
 
     def receive_linear_feedback(self, msg):
         """ Receives feedback from the linear motor. """
 
         self.linear_feedback = msg.feedback.linear_command_converged
-
-    def receive_area_covered(self, msg):
-        """ Receives notifications about the covered area. """
-        pass
-
-    def receive_arena_type(self, msg):
-        """ Receives the type of the arena. """
-        pass
-
-    def receive_interrupts(self, msg):
-        """ Receives interrupt commands. Stops the current task and
-            executes another.
-        """
-        os.kill(os.getpid(), signal.SIGINT)
 
     ######################################################
     #                 AGENT'S ACTIONS                    #
@@ -364,72 +316,7 @@ class Agent(object):
         """ Sets the environment ready for the next exploration. """
 
         self.gui_result.victimValid = False
-        self.target_victim = None
-
-    def test_action_server(self, client=None, goal=None, timeout=0, msg=''):
-        """ Meta function that creates partials to test action servers.
-
-        :param :client The instance of the client we will use for the test.
-        :param :goal The goal we will send to the action server.
-        :param :timeout The amount of time the client will wait before
-                        attempts a retry.
-        :param :msg A text for debugging.
-        """
-
-        loginfo(msg)
-        while True:
-            client.wait_for_server()
-            client.send_goal(goal)
-            success = client.wait_for_result(timeout=timeout)
-            goal_state = client.get_state()
-
-            if success:
-                if goal_state not in FAILURE_STATES.keys():
-                    break
-                else:
-                    verbose_err = FAILURE_STATES[goal_state]
-                    logerr('%s responded with %s', msg, verbose_err)
-            else:
-                logerr("Couldn't test %s in time...", msg)
-            sleep(2)
-            loginfo('Retrying...')
-
-    def point_sensors(self):
-        """ Points end effector to the target. """
-
-        self.preempt_end_effector()
-        goal = MoveEndEffectorGoal()
-        goal.command = MoveEndEffectorGoal.TRACK
-        goal.point_of_interest = self.target_victim.victimFrameId
-        goal.center_point = 'kinect_frame'
-        self.end_effector_client.wait_for_server()
-        self.end_effector_client.send_goal(goal)
-
-    def scan(self):
-        """ Sends the SCAN goal to end effector planner. """
-
-        self.preempt_end_effector()
-        loginfo('Send SCAN goal to end effector planner...')
-        goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.SCAN)
-        self.end_effector_client.wait_for_server()
-        self.end_effector_client.send_goal(goal,
-                                           done_cb=self.end_effector_done,
-                                           feedback_cb=self.end_effector_feed)
-
-    def move_linear(self):
-        """ Moving linear to identify the victim. """
-
-        loginfo('Moving linear...')
-
-        self.preempt_end_effector()
-        goal = MoveEndEffectorGoal()
-        goal.command = MoveEndEffectorGoal.LAX_TRACK
-        goal.point_of_interest = self.target_victim.victimFrameId
-        goal.center_point = "kinect_frame"
-        self.linear_feedback = False
-        self.end_effector_client.send_goal(goal)
-
-        loginfo('Send new goal to linear...')
+        self.target = None
 
     def wait_identification(self):
         """ Examine if the robot can reach the target victim. """
@@ -445,45 +332,6 @@ class Agent(object):
             else:
                 self.abort_victim()
 
-    def wait_for_POI(self):
-        """ The agent stops until a point of interest is found."""
-
-        self.leaving_exploration.clear()
-        self.point_of_interest.clear()
-        if self.current_victims:
-            self.point_of_interest.set()
-            self.leaving_exploration.set()
-
-        while True:
-            loginfo('Waiting for POI...')
-            self.leaving_exploration.wait()
-            if self.point_of_interest.is_set() or self.exploration_done.is_set():
-                # We can leave the exploration state.
-                break
-            elif self.retry_exploration.is_set():
-                # If the exploration goal has failed we keep trying.
-                status = self.explorer.get_state()
-                logerr('Explorer responded with -> %s', ACTION_STATES[status])
-                loginfo('Retrying...')
-                sleep(2)
-                self.explore()
-            sleep(2)
-
-        # Finding a point of interest is more important, so we check first.
-        if self.point_of_interest.is_set():
-            logwarn('A POI has been discovered...')
-
-            # Setting the target victim.
-            self.target_victim = self.choose_next_victim()
-
-            # Changing state.
-            self.point_of_interest_found()
-        elif self.exploration_done.is_set():
-            logwarn('The explorer has finished...')
-
-            # Changing state.
-            self.map_covered()
-
     def wait_for_verification(self):
         """ Expect probability of the target victim to increase. """
 
@@ -495,81 +343,6 @@ class Agent(object):
             self.gui_result.victimValid = False
             self.timeout()
 
-    def move_base(self):
-        """ Moves base to a point of intereset. """
-
-        # FIXME Improve the structure of the function
-        loginfo('Moving base...')
-        victim = self.target_victim.victimPose
-        roll, pitch, yaw = euler_from_quaternion([victim.pose.orientation.x,
-                                                  victim.pose.orientation.y,
-                                                  victim.pose.orientation.z,
-                                                  victim.pose.orientation.w])
-
-        transformed_orientation = quaternion_from_euler(roll, pitch, yaw + pi)
-        victim.pose.orientation.x = transformed_orientation[0]
-        victim.pose.orientation.y = transformed_orientation[1]
-        victim.pose.orientation.z = transformed_orientation[2]
-        victim.pose.orientation.w = transformed_orientation[3]
-
-        victim.pose.position.z = 0
-
-        goal = MoveBaseGoal(target_pose=victim)
-        self.base_client.wait_for_server()
-        self.base_client.send_goal(goal, feedback_cb=self.base_feedback)
-
-    def explore(self):
-        """ Starts the explorer. """
-
-        loginfo('Sending exploration goal...')
-        self.exploration_done.clear()
-        self.retry_exploration.clear()
-        goal = DoExplorationGoal(exploration_type=self.exploration_mode)
-        self.explorer.wait_for_server()
-        self.explorer.send_goal(goal, feedback_cb=self.explorer_feedback,
-                                done_cb=self.explorer_done)
-
-    def delete_victim(self):
-        """ Deletes the victim that failed to be identified. """
-
-        goal = DeleteVictimGoal(victimId=self.target_victim.id)
-
-        # FIXME Abort after 5 retries
-        while True:
-            logwarn('Deleting victim ' + str(goal.victimId))
-
-            self.delete_victim_client.wait_for_server()
-            self.delete_victim_client.send_goal(goal)
-            self.delete_victim_client.wait_for_result()
-            goal_state = self.delete_victim_client.get_state()
-
-            if goal_state is GoalStatus.SUCCEEDED:
-                break
-            logerr('Failed to delete victim')
-            loginfo('Retrying...')
-        loginfo('Victim deletion succeeded.')
-
-        # Changing state.
-        self.victim_deleted()
-
-    def wait_for_operator(self):
-        """ Waits for operator to confirm the victim. """
-
-        loginfo('Waiting for confirmation...')
-        goal = ValidateVictimGUIGoal()
-        goal.victimFoundx = self.target_victim.victimPose.pose.position.x
-        goal.victimFoundy = self.target_victim.victimPose.pose.position.y
-        goal.probability = self.target_victim.probability
-        goal.sensorIDsFound = self.target_victim.sensors
-
-        self.gui_validate_client.wait_for_server()
-        self.gui_validate_client.send_goal(goal)
-        self.gui_validate_client.wait_for_result()
-        self.gui_result = self.gui_validate_client.get_result()
-
-        # Changing state.
-        self.operator_responded()
-
     def update_victims(self):
         """ Counts the victim if found """
 
@@ -577,74 +350,13 @@ class Agent(object):
         if self.gui_result.victimValid:
             self.victims_found += 1
 
-    def victim_classification(self):
-        """ Send info about the target victim to data fusion, to
-            updated its registry. If the victim has been validated
-            from the operator, the target will be marked as visited/valid.
-            On the other hand the victim will be marked as visited/invalid.
-        """
-
-        loginfo('Sending victim info to data fusion...')
-
-        goal = ValidateVictimGoal()
-        goal.victimId = self.target_victim.id
-        goal.victimValid = self.gui_result.victimValid
-        self.fusion_validate_client.wait_for_server()
-        self.fusion_validate_client.send_goal(goal)
-        self.fusion_validate_client.wait_for_result()
-        if self.fusion_validate_client.get_state() == GoalStatus.ABORTED:
-            loginfo('Failed to delete victim.')
-            self.restart_state()
-        else:
-            self.victim_classified()
-
-    def response_from_operator(self, result):
-        """ Receives the verification from the operator. """
-
-        loginfo('Received result..')
+    def explore(self):
+        self.explorer.explore(exploration_type=self.exploration_mode)
 
     def print_results(self):
         """ Prints results of the mission. """
 
         loginfo('The agent is shutting down...')
-
-    ######################################################
-    #              ACTION'S CALLBACKS                    #
-    ######################################################
-
-    def explorer_feedback(self, feedback):
-        """ Position feedback. """
-        self.current_robot_pose = feedback.base_position
-
-    def explorer_done(self, status, result):
-        """ Results from the exploration. """
-
-        # If the exploration is done we stop waiting on leaving_exploration
-        # and depending on exploratino_done and possible_victim we move on.
-        if status == GoalStatus.SUCCEEDED:
-            loginfo('Exploration has finished successfully...')
-            self.leaving_exploration.set()
-            self.exploration_done.set()
-        elif status in FAILURE_STATES.keys():
-            logerr('Exploration goal failed.')
-            self.retry_exploration.set()
-            self.leaving_exploration.set()
-        else:
-            logwarn('Exploration goal -> %s', ACTION_STATES[status])
-
-    def victim_callback(self, data):
-        """ It's called when a victim is found. """
-        pass
-
-    def base_feedback(self, feedback):
-        """ Receives action feedback from the move base server. """
-        pass
-
-    def end_effector_done(self, status, result):
-        pass
-
-    def end_effector_feed(self, status, result):
-        pass
 
     ######################################################
     #                  AGENT LOGIC                       #
@@ -654,34 +366,13 @@ class Agent(object):
         """ Update the current victim """
 
         for victim in self.current_victims:
-            if victim.id == self.target_victim.id:
-                self.target_victim = victim
+            if victim.id == self.target.id:
+                self.target = victim
 
     def choose_next_victim(self):
         """ Choose the next possible victim """
 
         return self.current_victims[0]
-
-    ######################################################
-    #               PREEMPTS AND ABORTS                  #
-    ######################################################
-
-    def preempt_current_goals(self, client=None, msg=''):
-        """ Meta function to generate partial that will cancel all
-            running goals on a given action server.
-        """
-
-        loginfo('Cancelling all goals on %s...', msg)
-        while True:
-            client.wait_for_server()
-            client.cancel_all_goals()
-            success = client.wait_for_result()
-            active_goal = client.get_state() == GoalStatus.ACTIVE
-            if success or not active_goal:
-                break
-            logerr('%s was not preempted.', msg)
-            loginfo('Retrying...')
-            sleep(2)
 
     ######################################################
     #               GLOBAL STATE TRANSITIONS             #

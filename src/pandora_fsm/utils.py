@@ -5,7 +5,7 @@ import signal
 import threading
 import time
 
-from rospy import logerr, loginfo
+from rospy import logerr, loginfo, Duration, sleep
 
 FAILURE_STATES = {2: 'PREEMPTED',
                   4: 'ABORTED',
@@ -23,6 +23,12 @@ ACTION_STATES = {0: 'PENDING',
                  7: 'RECALLING',
                  8: 'RECALLED',
                  9: 'LOST'}
+
+TERMINAL_STATES = {2: 'PREEMPTED',
+                   3: 'SUCCEEDED',
+                   4: 'ABORTED',
+                   5: 'REJECTED',
+                   8: 'RECALLED'}
 
 
 def listify(obj):
@@ -111,5 +117,35 @@ class Interrupt(object):
         return wrapper
 
     def interrupt_handler(self, signum, frame):
-        msg = '%s is interrupted by %s' % (self.task.__name__, self.after.__name__)
+        msg = '%s is interrupted by %s' % (self.task.__name__,
+                                           self.after.__name__)
         raise InterruptException(msg)
+
+
+def retry_action(client=None, goal=None, timeout=0, msg=''):
+        """ Meta function that creates partials to test action servers.
+
+        :param :client The instance of the client we will use for the test.
+        :param :goal The goal we will send to the action server.
+        :param :timeout The amount of time the client will wait before
+                        attempts a retry.
+        :param :msg A text for debugging.
+        """
+        timeout = Duration(timeout)
+        loginfo(msg)
+        while True:
+            client.wait_for_server()
+            client.send_goal(goal)
+            success = client.wait_for_result(timeout=timeout)
+            goal_state = client.get_state()
+
+            if success:
+                if goal_state not in FAILURE_STATES.keys():
+                    break
+                else:
+                    verbose_err = FAILURE_STATES[goal_state]
+                    logerr('%s responded with %s', msg, verbose_err)
+            else:
+                logerr("Couldn't test %s in time...", msg)
+            sleep(2)
+            loginfo('Retrying...')

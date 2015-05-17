@@ -22,3 +22,5 @@ if __name__ == '__main__':
 
     # Start the agent.
     agent.wake_up()
+
+    rospy.spin()

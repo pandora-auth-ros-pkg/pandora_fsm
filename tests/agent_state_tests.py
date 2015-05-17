@@ -8,6 +8,8 @@
 import unittest
 from threading import Thread
 
+from mock import patch
+
 import rospy
 import roslib
 roslib.load_manifest('pandora_fsm')
@@ -19,6 +21,9 @@ from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent, TimeoutException, TimeLimiter
 import mock_msgs
 
+# The sleep is necessary because the time needed for the agent to communicate
+# with the action servers is not always the same. We pick a big enough
+# number to be safe.
 
 """ NORMAL strategy """
 
@@ -138,8 +143,8 @@ class TestExplorationState(unittest.TestCase):
         """ Spawn a thread and send a potential victim instead of using a
             mock Publisher which is not so predictable or easy to configure.
         """
-        victim = [mock_msgs.create_victim_info()]
         visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+        victim = [mock_msgs.create_victim_info()]
 
         model = mock_msgs.create_world_model(victim, visited)
         sleep(delay)
@@ -148,69 +153,95 @@ class TestExplorationState(unittest.TestCase):
     def test_to_identification(self):
 
         # Long goals that will not affect the test.
-        self.effector_mock.publish('success:10')
-        self.explorer.publish('success:10')
-
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.effector_mock.publish('success:20')
+            self.explorer.publish('success:20')
         self.world_model.start()
         self.agent.to_exploration()
-
+        sleep(10)
         self.assertEqual(self.agent.state, 'identification')
+        self.assertFalse(self.agent.state_can_change.is_set())
 
-        self.assertTrue(self.agent.point_of_interest.is_set())
+    def test_race_condition(self):
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:1')
+            self.world_model.start()
+        self.agent.to_exploration()
+        sleep(10)
+        self.assertFalse(self.agent.state_can_change.is_set())
+        self.assertEqual(self.agent.state, 'end')
 
     def test_to_end(self):
         self.effector_mock.publish('success:10')
 
         # This goal will move the agent to the end state.
-        self.explorer.publish('success:1')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:1')
 
         self.agent.to_exploration()
-
+        sleep(15)
         self.assertEqual(self.agent.state, 'end')
+        self.assertFalse(self.agent.state_can_change.is_set())
 
     def test_long_wait_for_victim(self):
 
         # Long goals that will not affect the test.
-        self.effector_mock.publish('success:20')
-        self.explorer.publish('success:20')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.effector_mock.publish('success:20')
+            self.explorer.publish('success:40')
 
-        @TimeLimiter(timeout=5)
-        def init_wrapper():
-            self.agent.to_exploration()
-        self.assertRaises(TimeoutException, init_wrapper)
+        self.agent.to_exploration()
+        sleep(20)
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertTrue(self.agent.state_can_change.is_set())
 
     def test_retry_on_explorer_abort(self):
         """ The agent will keep sending goals if the explorer fails. """
 
-        self.explorer.publish('abort:4')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('abort:1')
+            self.explorer.publish('abort:1')
 
-        @TimeLimiter(timeout=10)
-        def infinite_delay():
+        with patch.object(self.agent.explorer.dispatcher, 'emit') as mock:
             self.agent.to_exploration()
-        self.assertRaises(TimeoutException, infinite_delay)
+            sleep(7)
+        mock.assert_called_with('exploration.retry')
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertTrue(self.agent.state_can_change.is_set())
 
     def test_retry_on_explorer_reject(self):
         """ The agent will keep sending goals if the explorer fails. """
 
-        self.explorer.publish('reject:4')
-
-        @TimeLimiter(timeout=10)
-        def infinite_delay():
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('reject:1')
+            self.explorer.publish('reject:1')
+        with patch.object(self.agent.explorer.dispatcher, 'emit') as mock:
             self.agent.to_exploration()
-        self.assertRaises(TimeoutException, infinite_delay)
+            sleep(7)
+        mock.assert_called_with('exploration.retry')
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertTrue(self.agent.state_can_change.is_set())
 
     def test_global_state_change(self):
         """ The global state should be MODE_EXPLORATION_RESCUE """
 
-        self.effector_mock.publish('success:20')
-        self.explorer.publish('success:5')
-        self.agent.set_breakpoint('init')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.effector_mock.publish('success:20')
+            self.explorer.publish('success:1')
         final = RobotModeMsg.MODE_EXPLORATION_RESCUE
-        self.agent.to_init()
-        self.agent.booted()
+        self.agent.to_exploration()
+        sleep(10)
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
         self.assertEqual(self.agent.state, 'end')
+        self.assertFalse(self.agent.state_can_change.is_set())
 
 
 class TestIdentificationState(unittest.TestCase):
