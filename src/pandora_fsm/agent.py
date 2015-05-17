@@ -211,10 +211,10 @@ class Agent(object):
 
         loginfo('Agent is sleeping...')
 
-    def allow_callbacks(self):
+    def allow_transitions(self):
         self.state_can_change.set()
 
-    def deny_callbacks(self):
+    def deny_transitions(self):
         self.state_can_change.clear()
 
     ######################################################
