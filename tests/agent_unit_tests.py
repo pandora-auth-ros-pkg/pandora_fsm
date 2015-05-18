@@ -13,19 +13,17 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 from rospy import Subscriber, Publisher, sleep
 from std_msgs.msg import String, Bool
+from geometry_msgs.msg import PoseStamped
 
-from actionlib import SimpleActionClient as Client
 from actionlib_msgs.msg import GoalStatus
 
-from pandora_fsm import Agent, TimeoutException, TimeLimiter
-
 import mock_msgs
+from pandora_fsm.utils import distance_2d, distance_3d
+from pandora_fsm import (Agent, TimeLimiter, Navigation, Control,
+                         DataFusion, GUI, LinearMotor, Effector, LinearMotor)
 
-from pandora_fsm import (Navigation, Control, DataFusion, GUI, LinearMotor,
-                         Effector, LinearMotor)
 
-
-class TestROSIndependentMethods(unittest.TestCase):
+class TestUtils(unittest.TestCase):
 
     def setUp(self):
         """ Initialization """
@@ -49,14 +47,6 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertIsInstance(self.agent.qr_sub, Subscriber)
         self.assertIsInstance(self.agent.world_model_sub, Subscriber)
 
-        # Make sure the threading.Events are initialized.
-        self.assertIsInstance(self.agent.point_of_interest, threading._Event)
-        self.assertIsInstance(self.agent.promising_victim, threading._Event)
-        self.assertIsInstance(self.agent.recognized_victim, threading._Event)
-        self.assertFalse(self.agent.point_of_interest.is_set())
-        self.assertFalse(self.agent.promising_victim.is_set())
-        self.assertFalse(self.agent.recognized_victim.is_set())
-
         # Make sure global state transition functios have been generated.
         self.assertIsNotNone(self.agent.mode_off)
         self.assertIsNotNone(self.agent.mode_start_autonomous)
@@ -77,6 +67,30 @@ class TestROSIndependentMethods(unittest.TestCase):
     def test_load(self):
         # TODO Write test with full functionality
         self.assertTrue(True)
+
+    def test_distance_2d(self):
+        a = PoseStamped()
+        b = PoseStamped()
+        a.pose.position.x = -7
+        a.pose.position.y = -4
+        b.pose.position.x = 17
+        b.pose.position.y = 6.5
+
+        self.assertAlmostEqual(distance_2d(a.pose, b.pose), 26.19637379)
+
+    def test_distance_3d(self):
+        a = PoseStamped()
+        b = PoseStamped()
+
+        a.pose.position.x = -7
+        a.pose.position.y = -4
+        a.pose.position.z = 3
+
+        b.pose.position.x = 17
+        b.pose.position.y = 6
+        b.pose.position.z = 2.5
+
+        self.assertAlmostEqual(distance_3d(a.pose, b.pose), 26.0048072)
 
 
 class TestWorldModelCallback(unittest.TestCase):

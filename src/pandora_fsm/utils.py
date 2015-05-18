@@ -37,20 +37,28 @@ def listify(obj):
     return obj if isinstance(obj, (list, type(None))) else [obj]
 
 
-def distance_2d(point_a, point_b):
-    """ Calculates euclidean distance between two points in the plane. """
+def distance_2d(pose_a, pose_b):
+    """ Calculates euclidean distance between two points in the plane.
 
-    a = (point_a.x, point_a.y)
-    b = (point_b.x, point_b.y)
+    :param :pose_a The first Pose object.
+    :param :pose_b The second Pose object.
+    """
+
+    a = numpy.array([pose_a.position.x, pose_a.position.y])
+    b = numpy.array([pose_b.position.x, pose_b.position.y])
 
     return numpy.linalg.norm(a - b)
 
 
-def distance_3d(point_a, point_b):
-    """ Calculates euclidean distance between two points in space. """
+def distance_3d(pose_a, pose_b):
+    """ Calculates euclidean distance between two points in space.
 
-    a = (point_a.x, point_a.y, point_a.z)
-    b = (point_b.x, point_b.y, point_a.z)
+    :param :pose_a The first Pose object.
+    :param :pose_b The second Pose object.
+    """
+
+    a = numpy.array([pose_a.position.x, pose_a.position.y, pose_a.position.z])
+    b = numpy.array([pose_b.position.x, pose_b.position.y, pose_b.position.z])
 
     return numpy.linalg.norm(a - b)
 
