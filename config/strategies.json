@@ -75,8 +75,7 @@
         "tasks": [
           "deny_transitions",
           "mode_identification",
-          "move_base",
-          "point_sensors",
+          "approach_target",
           "allow_transitions"
         ],
         "clean": ["deny_transitions"],
