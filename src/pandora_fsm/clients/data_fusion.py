@@ -44,7 +44,7 @@ class DataFusion(object):
             logerr('## Victim deletion failed with %s.', verbose_status)
             return False
 
-    def validate_victim(self, victim_id, valid):
+    def validate_victim(self, victim_id, valid=False):
         """ Updates the data fusion registry with valid or not victims.
 
         :param :victim_id The number of the victim's ID.

@@ -408,6 +408,15 @@ class Agent(object):
 
         self.linear.move(self.target.victimFrameId)
 
+    def validate_victim(self):
+        """ Sends information about the current target.  """
+
+        if self.target:
+            self.data_fusion.validate_victim(self.target.id,
+                                             self.gui_result.victimValid)
+        else:
+            logerr('Reached data fusion validation without target.')
+
     def delete_victim(self):
         """ Send deleletion request to DataFusion about the current
             target victim.

@@ -422,32 +422,30 @@ class TestFusionValidationState(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-        self.fusion_validate_mock = Publisher('mock/fusion_validate', String)
-        sleep(2)
-
-    def test_to_exploration_instant_success(self):
+        self.fusion_validate = Publisher('mock/fusion_validate', String)
+        self.target = mock_msgs.create_victim_info(id=1, probability=0.65)
         self.agent.set_breakpoint('exploration')
-        self.fusion_validate_mock.publish('success:2')
-        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.target = self.target
+
+    def test_valid_victim(self):
+
+        self.fusion_validate.publish('success:1')
         self.agent.gui_result.victimValid = True
         self.agent.to_fusion_validation()
-        self.assertEqual(self.agent.state, 'exploration')
 
-        # We don't care if it's valid or not transition-wise
-        self.fusion_validate_mock.publish('success:2')
-        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertFalse(self.agent.gui_result.victimValid)
+        self.assertIsNone(self.agent.target)
+
+    def test_invalid_victim(self):
+
+        self.fusion_validate.publish('abort:1')
         self.agent.gui_result.victimValid = False
         self.agent.to_fusion_validation()
-        self.assertEqual(self.agent.state, 'exploration')
 
-    def test_to_exploration_abort_then_success(self):
-        self.agent.set_breakpoint('exploration')
-        self.fusion_validate_mock.publish('abort:1')
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.gui_result.victimValid = True
-        self.fusion_validate_mock.publish('success:1')
-        self.agent.to_fusion_validation()
         self.assertEqual(self.agent.state, 'exploration')
+        self.assertFalse(self.agent.gui_result.victimValid)
+        self.assertIsNone(self.agent.target)
 
 
 class TestOperatorValidationState(unittest.TestCase):

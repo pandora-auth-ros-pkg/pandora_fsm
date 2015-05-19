@@ -144,8 +144,9 @@
         "name": "fusion_validation",
         "description": "Data fusion validates the victim",
         "tasks": [
-          "victim_classification",
-          "reset_environment"
+          "validate_victim",
+          "reset_environment",
+          "victim_classified"
         ],
         "clean": [],
         "transitions": [
