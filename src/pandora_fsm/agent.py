@@ -402,6 +402,11 @@ class Agent(object):
         self.gui_result.victimValid = False
         self.target = None
 
+    def move_linear(self):
+        """ Moves the linear motor the target victim. """
+
+        self.linear.move(self.target.victimFrameId)
+
     def wait_identification(self):
         """ Examine if the robot can reach the target victim. """
 
@@ -420,10 +425,13 @@ class Agent(object):
         """ Expect probability of the target victim to increase. """
 
         loginfo("Wait for the victim's probability to increase...")
-        self.recognized_victim.clear()
-        if self.recognized_victim.wait(self.VERIFICATION_TIMEOUT):
+        self.victim_verified.clear()
+        if self.victim_verified.wait(self.VERIFICATION_TIMEOUT):
+            logwarn('Victim verified.')
             self.verified()
         else:
+            logwarn('Victims failed to be verified within %d secs.',
+                    self.VERIFICATION_TIMEOUT)
             self.gui_result.victimValid = False
             self.timeout()
 

@@ -338,34 +338,41 @@ class TestSensorHoldState(unittest.TestCase):
         self.agent.receive_world_model(model)
 
     def test_to_operator_validation(self):
-        """ The probability of the victim is higher than the
-            VERIFICATION_THRESHOLD.
-        """
-        self.agent.VERIFICATION_TIMEOUT = 7
-        self.agent.VERIFICATION_THRESHOLD = 0.5
+        """ The probability is higher than the VERIFICATION_THRESHOLD. """
+
+        self.agent.VERIFICATION_THRESHOLD = 0.6
+        victim = mock_msgs.create_victim_info(id=1, probability=0.5)
+        self.agent.target = victim
         self.world_model.start()
         self.agent.to_sensor_hold()
 
         self.assertEqual(self.agent.state, 'operator_validation')
+        self.assertTrue(self.agent.victim_verified.is_set())
 
     def test_to_fusion_validation(self):
-        """ The probability of the vicitm is lower than the
-            VERIFICATION_THRESHOLD.
-        """
+        """ The probability is lower than the VERIFICATION_THRESHOLD. """
+
         self.agent.VERIFICATION_THRESHOLD = 0.9
+        victim = mock_msgs.create_victim_info(id=1, probability=0.5)
+        self.agent.target = victim
         self.world_model.start()
         self.agent.to_sensor_hold()
 
         self.assertEqual(self.agent.state, 'fusion_validation')
+        self.assertFalse(self.agent.victim_verified.is_set())
 
     def test_global_state_change(self):
         """ The global state should be MODE_SENSOR_HOLD """
 
         final = RobotModeMsg.MODE_SENSOR_HOLD
+        self.agent.VERIFICATION_THRESHOLD = 0.6
+        victim = mock_msgs.create_victim_info(id=1, probability=0.5)
+        self.agent.target = victim
         self.world_model.start()
         self.agent.to_sensor_hold()
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
+        self.assertEqual(self.agent.state, 'operator_validation')
 
 
 class TestVictimDeletionState(unittest.TestCase):

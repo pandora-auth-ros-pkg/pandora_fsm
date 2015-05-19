@@ -31,9 +31,14 @@ class LinearMotor(object):
         sleep(3)
 
     def move(self, target, center='kinect_frame'):
+        """ Moves the linear motor to a specified target.
+
+        :param :target The victimFrameId of the target.
+        :param :center The center point of the target.
+        """
 
         goal = MoveLinearGoal()
-        goal.command = MoveLinearGoal.TRACK
+        goal.command = MoveLinearGoal.MOVE
         goal.point_of_interest = target
         goal.center_point = center
         loginfo('$$ Waiting for linear motor action server.')
