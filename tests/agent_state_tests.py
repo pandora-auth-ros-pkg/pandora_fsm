@@ -249,48 +249,70 @@ class TestIdentificationState(unittest.TestCase):
 
     def setUp(self):
         self.effector_mock = Publisher('mock/effector', String)
-        self.move_base_mock = Publisher('mock/move_base', String)
+        self.move_base_mock = Publisher('mock/feedback_move_base', String)
         self.victim_mock = Publisher('mock/victim_probability', String)
         self.agent = Agent(strategy='normal')
+        self.agent.set_breakpoint('victim_deletion')
+        self.agent.set_breakpoint('sensor_hold')
         target = mock_msgs.create_victim_info(id=8, probability=0.4)
         self.agent.target_victim = target
 
     def test_global_state_change(self):
         """ The global state should be MODE_IDENTIFICATION. """
 
-        self.move_base_mock.publish('success:3')
-        self.effector_mock.publish('success:3')
+        self.move_base_mock.publish('success:2')
         if not rospy.is_shutdown():
-            self.victim_mock.publish('1:0.6')
-        self.agent.set_breakpoint('sensor_hold')
+            self.victim_mock.publish('5:0.6')
         final = RobotModeMsg.MODE_IDENTIFICATION
-
         self.agent.to_identification()
+        sleep(5)
+
         self.assertEqual(self.agent.state, 'sensor_hold')
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
 
-    def test_to_sensor_hold_move_base_successful(self):
+    def test_found_victim(self):
+        """ The base has moved to the victim's pose. """
+
         self.move_base_mock.publish('success:1')
-        self.effector_mock.publish('success:1')
-        self.victim_mock.publish('8:0.6')
-        self.agent.set_breakpoint('sensor_hold')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('3:0.6')
         self.agent.to_identification()
+        sleep(5)
         self.assertEqual(self.agent.state, 'sensor_hold')
 
-    def test_to_sensor_hold_move_base_aborted(self):
-        self.move_base_mock.publish('abort:1')
-        self.effector_mock.publish('success:1')
-        self.victim_mock.publish('8:0.9')
-        self.agent.set_breakpoint('sensor_hold')
-        self.agent.to_identification()
-        self.assertEqual(self.agent.state, 'sensor_hold')
+    def test_abort_with_high_probability(self):
+        """ The move_base has failed but the victim has high probability. """
 
-    def test_to_victim_deletion(self):
-        self.move_base_mock.publish('abort:1')
-        self.effector_mock.publish('success:1')
-        self.victim_mock.publish('8:0.5')
-        self.agent.set_breakpoint('victim_deletion')
+        self.agent.IDENTIFICATION_THRESHOLD = 0.6
+        self.move_base_mock.publish('abort:2')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('5:0.9')
         self.agent.to_identification()
+        sleep(15)
+
+        self.assertEqual(self.agent.state, 'sensor_hold')
+        self.assertTrue(self.agent.probable_victim.is_set())
+
+    def test_abort_with_convergence(self):
+        """ The agent is close enough to the victim to be identified. """
+
+        self.move_base_mock.publish('abort_feedback:2')
+        self.agent.IDENTIFICATION_THRESHOLD = 0.7
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('5:0.6')
+        self.agent.to_identification()
+        sleep(20)
+
+        self.assertEqual(self.agent.state, 'sensor_hold')
+        self.assertTrue(self.agent.base_converged.is_set())
+
+    def test_abort_victim(self):
+        self.move_base_mock.publish('abort:1')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('8:0.5')
+        self.agent.to_identification()
+        sleep(10)
+
         self.assertEqual(self.agent.state, 'victim_deletion')
 
 

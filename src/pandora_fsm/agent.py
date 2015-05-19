@@ -36,6 +36,7 @@ from pandora_end_effector_planner.msg import MoveLinearFeedback
 
 import topics
 import clients
+from utils import ACTION_STATES, distance_2d
 from fsm import Machine
 
 
@@ -69,6 +70,9 @@ class Agent(object):
         self.dispatcher.on('exploration.success', self.exploration_success)
         self.dispatcher.on('exploration.retry', self.exploration_retry)
         self.dispatcher.on('poi.found', self.poi_found)
+        self.dispatcher.on('move_base.success', self.move_base_success)
+        self.dispatcher.on('move_base.retry', self.move_base_retry)
+        self.dispatcher.on('move_base.feedback', self.move_base_feedback)
 
         # SUBSCRIBERS.
         self.score_sub = Subscriber(topics.robocup_score, Int32,
@@ -99,6 +103,8 @@ class Agent(object):
         self.current_robot_pose = PoseStamped()
         self.linear_feedback = MoveLinearFeedback()
         self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
+        self.current_pose = PoseStamped()
+        self.last_pose_goal = PoseStamped()
 
         # Victim information.
         self.victims_found = 0
@@ -114,12 +120,18 @@ class Agent(object):
         self.gui_result = ValidateVictimGUIResult()
 
         self.state_can_change = Event()
+        self.base_converged = Event()
+        self.probable_victim = Event()
+        self.victim_verified = Event()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
         self.VERIFICATION_THRESHOLD = 0.75
         self.VERIFICATION_TIMEOUT = 10
         self.STATE_CHANGE_TIMEOUT = 20
+        self.MOVE_BASE_RETRIES = 0
+        self.MOVE_BASE_RETRY_LIMIT = 3
+        self.BASE_THRESHOLD = 0.2
 
         # Expose client methods to class
         setattr(self, 'test_end_effector', self.effector.test)
@@ -257,6 +269,78 @@ class Agent(object):
         else:
             logerr('Found POI outside of exploration.')
 
+    def move_base_success(self, result):
+        """ The event is triggered from the move_base client when the
+            current goal has succeeded.
+
+            :param :result The result of the action.
+        """
+        on_identification = self.state == 'identification'
+        self.MOVE_BASE_RETRIES = 0
+        if not self.state_can_change.is_set():
+            logerr('Received move base success before lock release.')
+            return
+        elif not on_identification:
+            logerr('Received move base success outside identification.')
+            return
+
+        logwarn('Approached potential victim.')
+        self.state_can_change.clear()
+        self.valid_victim()
+
+    def move_base_retry(self, status):
+        """ The event is triggered from the move_base client when the
+            current goal has failed and the agent will send again the goal.
+            After a number of failures the agent will change state and delete
+            the current victim.
+
+            :param :status The goal status.
+        """
+        on_identification = self.state == 'identification'
+        if not self.state_can_change.is_set():
+            logerr('Received move_base retry event before lock release.')
+            return
+        elif not on_identification:
+            logerr('Received move_base retry event outside identification.')
+            return
+
+        if self.MOVE_BASE_RETRIES < self.MOVE_BASE_RETRY_LIMIT:
+            # The agent tries again.
+            logwarn('Retrying...%s goal', ACTION_STATES[status])
+            remain = self.MOVE_BASE_RETRY_LIMIT - self.MOVE_BASE_RETRIES
+            logwarn('%d remaining before aborting the current target.', remain)
+            self.MOVE_BASE_RETRIES += 1
+            self.control_base.move_base(self.target.victimPose)
+        else:
+            self.MOVE_BASE_RETRIES = 0
+            # The agent changes state.
+            if self.probable_victim.is_set():
+                # The target is valid and the next state is hold_sensors.
+                logwarn('Victim with high probability identified.')
+                self.valid_victim()
+            elif self.base_converged.is_set():
+                logwarn('Base is close enough to the target.')
+                self.valid_victim()
+            else:
+                # The target is not valid and we delete it.
+                logwarn('Victim has been aborted.')
+                self.abort_victim()
+
+    def move_base_feedback(self, current, goal):
+        """ The event is triggered from the move_base client when the
+            action server sends feedback with the current pose. Given
+            the goal and the current pose the agent checks if it is
+            close enough to the point of interest. This will work if the
+            move_base server takes too long to succeed.
+
+            :param :current The current pose received from the action client.
+            :param :goal The goal pose of the current action.
+        """
+        base = current.base_position
+        if distance_2d(goal.pose, base.pose) < self.BASE_THRESHOLD:
+            logwarn('Base converged')
+            self.base_converged.set()
+
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
     ######################################################
@@ -294,9 +378,9 @@ class Agent(object):
                 loginfo('@ Target: #%d, (%.2f)', self.target.id,
                         self.target.probability)
                 if self.target.probability > self.IDENTIFICATION_THRESHOLD:
-                    self.dispatcher.emit('victim.discovered')
+                    self.probable_victim.set()
                 if self.target.probability > self.VERIFICATION_THRESHOLD:
-                    self.dispatcher.emit('victim.verified')
+                    self.victim_verified.set()
             else:
                 self.target = self.choose_next_victim()
                 logwarn('Target acquired => #%d.', self.target.id)
@@ -350,6 +434,20 @@ class Agent(object):
         if self.gui_result.victimValid:
             self.victims_found += 1
 
+    def approach_target(self):
+        """ The agent will try to approach the target's location and point
+            all sensors to its direction.
+        """
+        loginfo('@ Approaching victim...')
+
+        self.base_converged.clear()
+
+        # Move base to the target.
+        self.control_base.move_base(self.target.victimPose)
+
+        # Point sensors to the target.
+        self.effector.point_to(self.target.victimFrameId)
+
     def explore(self):
         self.explorer.explore(exploration_type=self.exploration_mode)
 
@@ -371,6 +469,9 @@ class Agent(object):
 
     def choose_next_victim(self):
         """ Choose the next possible victim """
+
+        self.probable_victim.clear()
+        self.victim_verified.clear()
 
         return self.current_victims[0]
 

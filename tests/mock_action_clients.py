@@ -90,6 +90,7 @@ class MoveBaseServer(MockActionServer):
         self._feedback = move_base_msgs.msg.MoveBaseFeedback()
         self._result = move_base_msgs.msg.MoveBaseResult()
 
+        self.abort_with_feedback = False
         self._topic = topic
         Subscriber('mock/feedback_' + name, String, self.receive_commands)
         self._server = ActionServer(self._topic, MoveBaseAction, self.execute,
@@ -100,18 +101,30 @@ class MoveBaseServer(MockActionServer):
     def receive_commands(self, msg):
         callback, timeout = msg.data.split(':')
         self.timeout = float(timeout)
-        self._server.execute_callback = getattr(self, callback)
-        logwarn('>>> ' + self._name + ': Current callback -> ' + callback)
+        if callback == 'abort_feedback':
+            self.abort_with_feedback = True
+            self._server.execute_callback = getattr(self, 'execute')
+        else:
+            self.abort_with_feedback = False
+            self._server.execute_callback = getattr(self, callback)
+            logwarn('>>> ' + self._name + ': Current callback -> ' + callback)
         sleep(1)
 
     def execute(self, goal):
         success = True
-
         start_x = 0
         start_y = 0
         goal_x = goal.target_pose.pose.position.x
         goal_y = goal.target_pose.pose.position.y
         loginfo('Goal -> x(%d), y(%d).', goal_x, goal_y)
+        if self.abort_with_feedback:
+            sleep(self.timeout)
+            self._feedback.base_position.pose.position.x = goal_x + 0.05
+            self._feedback.base_position.pose.position.y = goal_y + 0.05
+            self._server.publish_feedback(self._feedback)
+            sleep(self.timeout)
+            self._server.set_aborted()
+            return
         while True:
             # Make a move.
             if start_x < goal_x:
