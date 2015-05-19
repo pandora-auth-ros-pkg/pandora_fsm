@@ -255,7 +255,7 @@ class TestIdentificationState(unittest.TestCase):
         self.agent.set_breakpoint('victim_deletion')
         self.agent.set_breakpoint('sensor_hold')
         target = mock_msgs.create_victim_info(id=8, probability=0.4)
-        self.agent.target_victim = target
+        self.agent.target = target
 
     def test_global_state_change(self):
         """ The global state should be MODE_IDENTIFICATION. """
@@ -324,7 +324,7 @@ class TestSensorHoldState(unittest.TestCase):
         self.agent.set_breakpoint('fusion_validation')
         self.agent.set_breakpoint('operator_validation')
         self.world_model = Thread(target=self.send_victim, args=(5,))
-        self.agent.target_victim = mock_msgs.create_victim_info(id=1)
+        self.agent.target = mock_msgs.create_victim_info(id=1)
 
     def send_victim(self, delay):
         """ Spawn a thread and send a potential victim instead of using a
@@ -453,20 +453,20 @@ class TestOperatorValidationState(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-        self.validate_gui_mock = Publisher('mock/validate_gui', String)
+        self.gui = Publisher('mock/validate_gui', String)
         self.gui_result = Publisher('mock/gui_result', Bool)
         self.agent.set_breakpoint('fusion_validation')
 
     def test_to_fusion_validation_by_success(self):
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.validate_gui_mock.publish('success:2')
+        self.agent.target = mock_msgs.create_victim_info()
+        self.gui.publish('success:1')
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.state, 'fusion_validation')
 
     def test_to_fusion_validation_by_abort(self):
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.validate_gui_mock.publish('abort:2')
+        self.agent.target = mock_msgs.create_victim_info()
+        self.gui.publish('abort:1')
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.state, 'fusion_validation')
@@ -476,9 +476,9 @@ class TestOperatorValidationState(unittest.TestCase):
 
         self.agent.victims_found = 0
         self.gui_result.publish(True)
-        self.validate_gui_mock.publish('success:2')
+        self.gui.publish('success:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.8)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 1)
@@ -489,15 +489,15 @@ class TestOperatorValidationState(unittest.TestCase):
 
         self.agent.victims_found = 0
         self.gui_result.publish(True)
-        self.validate_gui_mock.publish('success:2')
+        self.gui.publish('success:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.8)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 1)
 
         msg = mock_msgs.create_victim_info(id=6, probability=0.8)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 2)
@@ -508,9 +508,9 @@ class TestOperatorValidationState(unittest.TestCase):
 
         self.agent.victims_found = 0
         self.gui_result.publish(False)
-        self.validate_gui_mock.publish('success:2')
+        self.gui.publish('success:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.2)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 0)
@@ -520,9 +520,9 @@ class TestOperatorValidationState(unittest.TestCase):
         """ Expecting the number of valid victims to remain the same """
 
         self.agent.victims_found = 0
-        self.validate_gui_mock.publish('abort:2')
+        self.gui.publish('abort:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.2)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 0)

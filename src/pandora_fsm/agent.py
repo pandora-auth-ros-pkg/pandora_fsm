@@ -462,6 +462,12 @@ class Agent(object):
             self.gui_result.victimValid = False
             self.timeout()
 
+    def wait_for_operator(self):
+        if self.gui_client.send_request(self.target):
+            self.gui_result = self.gui_client.result()
+        else:
+            self.gui_result.victimValid = False
+
     def update_victims(self):
         """ Counts the victim if found """
 

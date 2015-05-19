@@ -163,7 +163,8 @@
         "name": "operator_validation",
         "description": "Waiting validation from the operator",
         "tasks": [
-          "wait_for_operator"
+          "wait_for_operator",
+          "operator_responded"
         ],
         "clean": [
           "update_victims"

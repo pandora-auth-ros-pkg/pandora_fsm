@@ -1,10 +1,12 @@
-from rospy import loginfo, sleep
+from rospy import loginfo, sleep, logerr
 
 from actionlib import SimpleActionClient as Client
+from actionlib import GoalStatus
 
 from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
 
 from pandora_fsm import topics
+from pandora_fsm.utils import ACTION_STATES
 
 
 class GUI(object):
@@ -13,6 +15,7 @@ class GUI(object):
 
     def __init__(self, verbose=False):
         self.verbose = verbose
+        self.gui_result = None
         self.client = Client(topics.gui_validation, ValidateVictimGUIAction)
 
     def cancel_all_goals(self):
@@ -28,17 +31,29 @@ class GUI(object):
         :param :target A target to be validated.
         """
         goal = ValidateVictimGUIGoal()
-        goal.victimFoundx = target.VictimPose.pose.position.x
-        goal.victimFoundy = target.VictimPose.pose.position.y
+        goal.victimFoundx = target.victimPose.pose.position.x
+        goal.victimFoundy = target.victimPose.pose.position.y
         goal.probability = target.probability
         goal.sensorIDsFound = target.sensors
 
         loginfo('^^ Waiting for the GUI action server.')
         self.client.wait_for_server()
-        loginfo('^^ Sending validation request for: ')
-        loginfo(target)
+        loginfo('^^ Sending validation request.')
+        if self.verbose:
+            loginfo(target)
         self.client.send_goal(goal)
         loginfo('^^ Waiting for response.')
         self.client.wait_for_result()
 
-        return self.client.get_result()
+        status = self.client.get_state()
+        verbose_status = ACTION_STATES[status]
+        if status == GoalStatus.SUCCEEDED:
+            loginfo('^^ Validation request succeded!')
+            self.gui_result = self.client.get_result()
+            return True
+        else:
+            logerr('^^ Validation request failed with %s.', verbose_status)
+            return False
+
+    def result(self):
+        return self.gui_result
