@@ -379,28 +379,42 @@ class TestVictimDeletionState(unittest.TestCase):
     """ Tests for the victim deletion state. """
 
     def setUp(self):
-        self.effector_mock = Publisher('mock/effector', String)
         self.delete_victim_mock = Publisher('mock/delete_victim', String)
         self.agent = Agent(strategy='normal')
-        target = mock_msgs.create_victim_info(id=8, probability=0.65)
-        self.agent.target_victim = target
+        self.agent.set_breakpoint('exploration')
+        self.world_model = Thread(target=self.send_victim, args=(5,))
+        self.target = mock_msgs.create_victim_info(id=1, probability=0.65)
+        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+        self.agent.visited_victims = visited
+        self.agent.current_victims.append(self.target)
+        self.agent.target = self.target
+
+    def send_victim(self, delay):
+        """ Spawn a thread and send a potential victim instead of using a
+            mock Publisher which is not so predictable or easy to configure.
+        """
+        victim = [mock_msgs.create_victim_info(id=1, probability=0.7)]
+        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+
+        model = mock_msgs.create_world_model(victim, visited)
+        sleep(delay)
+        self.agent.receive_world_model(model)
 
     def test_delete_victim_success(self):
-        self.effector_mock.publish('success:1')
-        self.delete_victim_mock.publish('success:2')
-        self.agent.set_breakpoint('exploration')
+        self.delete_victim_mock.publish('success:1')
         self.agent.to_victim_deletion()
-        self.assertEqual(self.agent.state, 'exploration')
 
-    # in this test we check that the agent correctly stays in the same
-    # state if the delete goal fails
-    def test_delete_victim_fail(self):
-        self.effector_mock.publish('success:1')
-        self.delete_victim_mock.publish('abort:1')
-        self.delete_victim_mock.publish('success:5')
-        self.agent.set_breakpoint('exploration')
-        self.agent.to_victim_deletion()
         self.assertEqual(self.agent.state, 'exploration')
+        self.assertIsNone(self.agent.target)
+        self.assertIn(self.target, self.agent.deleted_victims)
+
+    def test_delete_victim_fail(self):
+        self.delete_victim_mock.publish('abort:1')
+        self.agent.to_victim_deletion()
+
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertIsNone(self.agent.target)
+        self.assertIn(self.target, self.agent.deleted_victims)
 
 
 class TestFusionValidationState(unittest.TestCase):

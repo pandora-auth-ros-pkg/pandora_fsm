@@ -111,6 +111,7 @@ class Agent(object):
         self.aborted_victims_ = []
         self.current_victims = []
         self.visited_victims = []
+        self.deleted_victims = []
         self.target = None
         self.valid_victim_probability = 0
 
@@ -407,6 +408,23 @@ class Agent(object):
 
         self.linear.move(self.target.victimFrameId)
 
+    def delete_victim(self):
+        """ Send deleletion request to DataFusion about the current
+            target victim.
+        """
+        self.data_fusion.delete_victim(self.target.id)
+        self.update_victim_registry()
+        self.victim_deleted()
+
+    def update_victim_registry(self):
+        if self.current_victims:
+            for idx, item in enumerate(self.current_victims):
+                if item.id == self.target.id:
+                    break
+            del self.current_victims[idx]
+            self.deleted_victims.append(self.target)
+            self.target = None
+
     def wait_identification(self):
         """ Examine if the robot can reach the target victim. """
 
@@ -476,12 +494,14 @@ class Agent(object):
                 self.target = victim
 
     def choose_next_victim(self):
-        """ Choose the next possible victim """
+        """ Choose the next possible victim. """
 
         self.probable_victim.clear()
         self.victim_verified.clear()
 
-        return self.current_victims[0]
+        for victim in self.current_victims:
+            if victim not in self.deleted_victims:
+                return victim
 
     ######################################################
     #               GLOBAL STATE TRANSITIONS             #
