@@ -13,14 +13,10 @@ generate_dynamic_reconfigure_options(
 )
 
 catkin_package(
-  DEPENDS
   CATKIN_DEPENDS
     rospy
     actionlib
     dynamic_reconfigure
-    roslint
-  INCLUDE_DIRS
-  LIBRARIES
 )
 
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
