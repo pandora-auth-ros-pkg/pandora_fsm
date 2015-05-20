@@ -4,6 +4,7 @@
 PKG = 'pandora_fsm'
 
 import sys
+from threading import Timer
 from pymitter import EventEmitter
 import inspect
 from functools import partial
@@ -48,7 +49,7 @@ class Agent(object):
     """
 
     def __init__(self, config='strategies.json', strategy='normal',
-                 name='Pandora'):
+                 name='Pandora', verbose=False):
         """ Initializes the agent.
 
         :param :name The name of the agent. Defaults to Pandora.
@@ -62,6 +63,7 @@ class Agent(object):
         # Configuration folder
         config_dir = RosPack().get_path(PKG) + '/config/'
         self.name = name
+        self.verbose = verbose
         self.strategy = strategy
         self.config = config_dir + config
 
@@ -85,7 +87,7 @@ class Agent(object):
         # ACTION CLIENTS.
         self.explorer = clients.Navigation(self.dispatcher)
         self.data_fusion = clients.DataFusion()
-        self.control_base = clients.Control(self.dispatcher)
+        self.control_base = clients.Control(self.dispatcher, verbose=True)
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
         self.linear = clients.LinearMotor()
@@ -133,6 +135,9 @@ class Agent(object):
         self.MOVE_BASE_RETRIES = 0
         self.MOVE_BASE_RETRY_LIMIT = 3
         self.BASE_THRESHOLD = 0.2
+        self.MOVE_BASE_TIMEOUT = 120
+
+        self.move_base_timer = Timer(self.MOVE_BASE_TIMEOUT, self.timer_handler)
 
         # Expose client methods to class
         setattr(self, 'test_end_effector', self.effector.test)
@@ -286,6 +291,7 @@ class Agent(object):
             return
 
         logwarn('Approached potential victim.')
+        self.move_base_timer.cancel()
         self.state_can_change.clear()
         self.valid_victim()
 
@@ -314,6 +320,8 @@ class Agent(object):
             self.control_base.move_base(self.target.victimPose)
         else:
             self.MOVE_BASE_RETRIES = 0
+            self.move_base_timer.cancel()
+
             # The agent changes state.
             if self.probable_victim.is_set():
                 # The target is valid and the next state is hold_sensors.
@@ -362,16 +370,17 @@ class Agent(object):
         self.current_victims = model.victims
         self.visited_victims = model.visitedVictims
 
-        if self.current_victims:
-            loginfo('@ Available POIs: ')
-        for victim in self.current_victims:
-            loginfo('=> #%d   (%.2f)', victim.id, victim.probability)
+        if self.verbose:
+            if self.current_victims:
+                loginfo('@ Available POIs: ')
+            for victim in self.current_victims:
+                loginfo('=> #%d   (%.2f)', victim.id, victim.probability)
 
-        if self.visited_victims:
-            loginfo('@ Visited POIs: ')
-        for victim in self.visited_victims:
-            valid = 'valid' if victim.valid else 'not valid'
-            loginfo('=> #%d   (%.2f) %s', victim.id, victim.probability, valid)
+            if self.visited_victims:
+                loginfo('@ Visited POIs: ')
+            for victim in self.visited_victims:
+                valid = 'valid' if victim.valid else 'not valid'
+                loginfo('=> #%d   (%.2f) %s', victim.id, victim.probability, valid)
 
         if self.current_victims:
             if self.target:
@@ -489,8 +498,20 @@ class Agent(object):
         # Point sensors to the target.
         self.effector.point_to(self.target.victimFrameId)
 
+        # Start timer to cancel all goals if the move base is unresponsive.
+        self.move_base_timer.start()
+
     def explore(self):
         self.explorer.explore(exploration_type=self.exploration_mode)
+
+    def timer_handler(self):
+        if self.agent.state == 'identification':
+            logwarn('Move base is unresponsive or it takes too long.')
+            self.control_base.cancel_all_goals()
+            self.move_base_timer.cancel()
+            self.abort_victim()
+        else:
+            logerr('Timer fired outside of identification state.')
 
     def print_results(self):
         """ Prints results of the mission. """
