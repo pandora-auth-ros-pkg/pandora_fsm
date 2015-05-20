@@ -49,7 +49,7 @@ class Agent(object):
     """
 
     def __init__(self, config='strategies.json', strategy='normal',
-                 name='Pandora'):
+                 name='Pandora', verbose=False):
         """ Initializes the agent.
 
         :param :name The name of the agent. Defaults to Pandora.
@@ -63,6 +63,7 @@ class Agent(object):
         # Configuration folder
         config_dir = RosPack().get_path(PKG) + '/config/'
         self.name = name
+        self.verbose = verbose
         self.strategy = strategy
         self.config = config_dir + config
 
@@ -86,7 +87,7 @@ class Agent(object):
         # ACTION CLIENTS.
         self.explorer = clients.Navigation(self.dispatcher)
         self.data_fusion = clients.DataFusion()
-        self.control_base = clients.Control(self.dispatcher)
+        self.control_base = clients.Control(self.dispatcher, verbose=True)
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
         self.linear = clients.LinearMotor()
@@ -369,16 +370,17 @@ class Agent(object):
         self.current_victims = model.victims
         self.visited_victims = model.visitedVictims
 
-        if self.current_victims:
-            loginfo('@ Available POIs: ')
-        for victim in self.current_victims:
-            loginfo('=> #%d   (%.2f)', victim.id, victim.probability)
+        if self.verbose:
+            if self.current_victims:
+                loginfo('@ Available POIs: ')
+            for victim in self.current_victims:
+                loginfo('=> #%d   (%.2f)', victim.id, victim.probability)
 
-        if self.visited_victims:
-            loginfo('@ Visited POIs: ')
-        for victim in self.visited_victims:
-            valid = 'valid' if victim.valid else 'not valid'
-            loginfo('=> #%d   (%.2f) %s', victim.id, victim.probability, valid)
+            if self.visited_victims:
+                loginfo('@ Visited POIs: ')
+            for victim in self.visited_victims:
+                valid = 'valid' if victim.valid else 'not valid'
+                loginfo('=> #%d   (%.2f) %s', victim.id, victim.probability, valid)
 
         if self.current_victims:
             if self.target:
