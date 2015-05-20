@@ -15,24 +15,22 @@
 
   <build_depend>roslint</build_depend>
 
-  <exec_depend>rospy</exec_depend>
-  <exec_depend>pymitter</exec_depend>
-  <exec_depend>move_base_msgs</exec_depend>
-  <exec_depend>pandora_data_fusion_msgs</exec_depend>
-  <exec_depend>pandora_navigation_msgs</exec_depend>
-  <exec_depend>state_manager</exec_depend>
-  <exec_depend>state_manager_msgs</exec_depend>
-  <exec_depend>actionlib</exec_depend>
-  <exec_depend>actionlib_msgs</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>pandora_rqt_gui</exec_depend>
-  <exec_depend>pandora_end_effector_planner</exec_depend>
+  <depend>rospy</depend>
+  <depend>move_base_msgs</depend>
+  <depend>pandora_data_fusion_msgs</depend>
+  <depend>pandora_navigation_msgs</depend>
+  <depend>state_manager</depend>
+  <depend>state_manager_msgs</depend>
+  <depend>actionlib</depend>
+  <depend>actionlib_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>pandora_rqt_gui</depend>
+  <depend>pandora_end_effector_planner</depend>
 
   <depend>dynamic_reconfigure</depend>
 
 
   <test_depend>rostest</test_depend>
-  <test_depend>mock</test_depend>
 
   <export>
     <rosdoc config="rosdoc.yaml" />
