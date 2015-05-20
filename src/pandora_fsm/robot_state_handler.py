@@ -13,7 +13,6 @@ from dynamic_reconfigure import find_reconfigure_services
 from dynamic_reconfigure.server import Server as ParamServer
 from state_manager_msgs.msg import RobotModeMsg, RobotModeAction
 
-from pandora_fsm.cfg import FSMParamsConfig
 import topics
 
 

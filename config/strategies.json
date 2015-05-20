@@ -20,8 +20,11 @@
         "name": "init",
         "description": "The agent starts the system.",
         "tasks": [
-          "mode_autonomous",
-          "boot"
+          "mode_start_autonomous",
+          "test_end_effector",
+          "park_end_effector",
+          "test_linear",
+          "booted"
         ],
         "clean": [],
         "transitions": [
@@ -38,14 +41,16 @@
         "name": "exploration",
         "description": "The agent is exploring the area.",
         "tasks": [
+          "deny_transitions",
           "mode_exploration_rescue",
           "scan",
           "explore",
-          "wait_for_victim"
+          "allow_transitions"
         ],
         "clean": [
-          "preempt_exploration",
-          "preempt_end_effector_planner"
+          "deny_transitions",
+          "preempt_explorer",
+          "preempt_end_effector"
         ],
         "transitions": [
           {
@@ -53,7 +58,7 @@
             "conditions": [],
             "before": [],
             "after": [],
-            "trigger": "victim_found"
+            "trigger": "point_of_interest_found"
           },
           {
             "to": "end",
@@ -68,12 +73,12 @@
         "name": "identification",
         "description": "Examining the candidate victim",
         "tasks": [
+          "deny_transitions",
           "mode_identification",
-          "move_base",
-          "point_sensors",
-          "wait_identification"
+          "approach_target",
+          "allow_transitions"
         ],
-        "clean": [],
+        "clean": ["deny_transitions"],
         "transitions": [
           {
             "to": "victim_deletion",
@@ -121,7 +126,7 @@
         "name": "victim_deletion",
         "description": "Data fusion deletes the victim",
         "tasks": [
-          "abort_end_effector",
+          "preempt_end_effector",
           "delete_victim"
         ],
         "clean": [],
@@ -139,8 +144,9 @@
         "name": "fusion_validation",
         "description": "Data fusion validates the victim",
         "tasks": [
-          "victim_classification",
-          "reset_environment"
+          "validate_victim",
+          "reset_environment",
+          "victim_classified"
         ],
         "clean": [],
         "transitions": [
@@ -157,7 +163,8 @@
         "name": "operator_validation",
         "description": "Waiting validation from the operator",
         "tasks": [
-          "wait_for_operator"
+          "wait_for_operator",
+          "operator_responded"
         ],
         "clean": [
           "update_victims"
@@ -177,8 +184,9 @@
         "description": "Job done!",
         "tasks": [
           "mode_terminating",
-          "preempt_end_effector_planner",
-          "print_results"
+          "print_results",
+          "clean_up",
+          "sleep"
         ],
         "clean": [],
         "transitions": [

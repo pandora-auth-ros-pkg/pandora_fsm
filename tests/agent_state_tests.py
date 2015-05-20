@@ -8,6 +8,8 @@
 import unittest
 from threading import Thread
 
+from mock import patch
+
 import rospy
 import roslib
 roslib.load_manifest('pandora_fsm')
@@ -19,6 +21,9 @@ from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent, TimeoutException, TimeLimiter
 import mock_msgs
 
+# The sleep is necessary because the time needed for the agent to communicate
+# with the action servers is not always the same. We pick a big enough
+# number to be safe.
 
 """ NORMAL strategy """
 
@@ -138,8 +143,8 @@ class TestExplorationState(unittest.TestCase):
         """ Spawn a thread and send a potential victim instead of using a
             mock Publisher which is not so predictable or easy to configure.
         """
-        victim = [mock_msgs.create_victim_info()]
         visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+        victim = [mock_msgs.create_victim_info()]
 
         model = mock_msgs.create_world_model(victim, visited)
         sleep(delay)
@@ -148,50 +153,95 @@ class TestExplorationState(unittest.TestCase):
     def test_to_identification(self):
 
         # Long goals that will not affect the test.
-        self.effector_mock.publish('success:10')
-        self.explorer.publish('success:10')
-
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.effector_mock.publish('success:20')
+            self.explorer.publish('success:20')
         self.world_model.start()
         self.agent.to_exploration()
-
+        sleep(10)
         self.assertEqual(self.agent.state, 'identification')
+        self.assertFalse(self.agent.state_can_change.is_set())
 
-        # The event is cleared after success.
-        self.assertFalse(self.agent.potential_victim.is_set())
+    def test_race_condition(self):
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:1')
+            self.world_model.start()
+        self.agent.to_exploration()
+        sleep(10)
+        self.assertFalse(self.agent.state_can_change.is_set())
+        self.assertEqual(self.agent.state, 'end')
 
     def test_to_end(self):
         self.effector_mock.publish('success:10')
 
         # This goal will move the agent to the end state.
-        self.explorer.publish('success:1')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:1')
 
         self.agent.to_exploration()
-
+        sleep(15)
         self.assertEqual(self.agent.state, 'end')
+        self.assertFalse(self.agent.state_can_change.is_set())
 
     def test_long_wait_for_victim(self):
 
         # Long goals that will not affect the test.
-        self.effector_mock.publish('success:20')
-        self.explorer.publish('success:20')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.effector_mock.publish('success:20')
+            self.explorer.publish('success:40')
 
-        @TimeLimiter(timeout=5)
-        def init_wrapper():
+        self.agent.to_exploration()
+        sleep(20)
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertTrue(self.agent.state_can_change.is_set())
+
+    def test_retry_on_explorer_abort(self):
+        """ The agent will keep sending goals if the explorer fails. """
+
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('abort:1')
+            self.explorer.publish('abort:1')
+
+        with patch.object(self.agent.explorer.dispatcher, 'emit') as mock:
             self.agent.to_exploration()
-        self.assertRaises(TimeoutException, init_wrapper)
+            sleep(7)
+        mock.assert_called_with('exploration.retry')
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertTrue(self.agent.state_can_change.is_set())
+
+    def test_retry_on_explorer_reject(self):
+        """ The agent will keep sending goals if the explorer fails. """
+
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('reject:1')
+            self.explorer.publish('reject:1')
+        with patch.object(self.agent.explorer.dispatcher, 'emit') as mock:
+            self.agent.to_exploration()
+            sleep(7)
+        mock.assert_called_with('exploration.retry')
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertTrue(self.agent.state_can_change.is_set())
 
     def test_global_state_change(self):
         """ The global state should be MODE_EXPLORATION_RESCUE """
 
-        self.effector_mock.publish('success:20')
-        self.explorer.publish('success:5')
-        self.agent.set_breakpoint('init')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.effector_mock.publish('success:20')
+            self.explorer.publish('success:1')
         final = RobotModeMsg.MODE_EXPLORATION_RESCUE
-        self.agent.to_init()
-        self.agent.booted()
+        self.agent.to_exploration()
+        sleep(10)
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
         self.assertEqual(self.agent.state, 'end')
+        self.assertFalse(self.agent.state_can_change.is_set())
 
 
 class TestIdentificationState(unittest.TestCase):
@@ -199,48 +249,70 @@ class TestIdentificationState(unittest.TestCase):
 
     def setUp(self):
         self.effector_mock = Publisher('mock/effector', String)
-        self.move_base_mock = Publisher('mock/move_base', String)
+        self.move_base_mock = Publisher('mock/feedback_move_base', String)
         self.victim_mock = Publisher('mock/victim_probability', String)
         self.agent = Agent(strategy='normal')
+        self.agent.set_breakpoint('victim_deletion')
+        self.agent.set_breakpoint('sensor_hold')
         target = mock_msgs.create_victim_info(id=8, probability=0.4)
-        self.agent.target_victim = target
+        self.agent.target = target
 
     def test_global_state_change(self):
         """ The global state should be MODE_IDENTIFICATION. """
 
-        self.move_base_mock.publish('success:3')
-        self.effector_mock.publish('success:3')
+        self.move_base_mock.publish('success:2')
         if not rospy.is_shutdown():
-            self.victim_mock.publish('1:0.6')
-        self.agent.set_breakpoint('sensor_hold')
+            self.victim_mock.publish('5:0.6')
         final = RobotModeMsg.MODE_IDENTIFICATION
-
         self.agent.to_identification()
+        sleep(5)
+
         self.assertEqual(self.agent.state, 'sensor_hold')
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
 
-    def test_to_sensor_hold_move_base_successful(self):
+    def test_found_victim(self):
+        """ The base has moved to the victim's pose. """
+
         self.move_base_mock.publish('success:1')
-        self.effector_mock.publish('success:1')
-        self.victim_mock.publish('8:0.6')
-        self.agent.set_breakpoint('sensor_hold')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('3:0.6')
         self.agent.to_identification()
+        sleep(5)
         self.assertEqual(self.agent.state, 'sensor_hold')
 
-    def test_to_sensor_hold_move_base_aborted(self):
-        self.move_base_mock.publish('abort:1')
-        self.effector_mock.publish('success:1')
-        self.victim_mock.publish('8:0.9')
-        self.agent.set_breakpoint('sensor_hold')
-        self.agent.to_identification()
-        self.assertEqual(self.agent.state, 'sensor_hold')
+    def test_abort_with_high_probability(self):
+        """ The move_base has failed but the victim has high probability. """
 
-    def test_to_victim_deletion(self):
-        self.move_base_mock.publish('abort:1')
-        self.effector_mock.publish('success:1')
-        self.victim_mock.publish('8:0.5')
-        self.agent.set_breakpoint('victim_deletion')
+        self.agent.IDENTIFICATION_THRESHOLD = 0.6
+        self.move_base_mock.publish('abort:2')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('5:0.9')
         self.agent.to_identification()
+        sleep(15)
+
+        self.assertEqual(self.agent.state, 'sensor_hold')
+        self.assertTrue(self.agent.probable_victim.is_set())
+
+    def test_abort_with_convergence(self):
+        """ The agent is close enough to the victim to be identified. """
+
+        self.move_base_mock.publish('abort_feedback:2')
+        self.agent.IDENTIFICATION_THRESHOLD = 0.7
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('5:0.6')
+        self.agent.to_identification()
+        sleep(20)
+
+        self.assertEqual(self.agent.state, 'sensor_hold')
+        self.assertTrue(self.agent.base_converged.is_set())
+
+    def test_abort_victim(self):
+        self.move_base_mock.publish('abort:1')
+        if not rospy.is_shutdown():
+            self.victim_mock.publish('8:0.5')
+        self.agent.to_identification()
+        sleep(10)
+
         self.assertEqual(self.agent.state, 'victim_deletion')
 
 
@@ -252,7 +324,7 @@ class TestSensorHoldState(unittest.TestCase):
         self.agent.set_breakpoint('fusion_validation')
         self.agent.set_breakpoint('operator_validation')
         self.world_model = Thread(target=self.send_victim, args=(5,))
-        self.agent.target_victim = mock_msgs.create_victim_info(id=1)
+        self.agent.target = mock_msgs.create_victim_info(id=1)
 
     def send_victim(self, delay):
         """ Spawn a thread and send a potential victim instead of using a
@@ -266,62 +338,83 @@ class TestSensorHoldState(unittest.TestCase):
         self.agent.receive_world_model(model)
 
     def test_to_operator_validation(self):
-        """ The probability of the victim is higher than the
-            VERIFICATION_THRESHOLD.
-        """
-        self.agent.VERIFICATION_TIMEOUT = 7
-        self.agent.VERIFICATION_THRESHOLD = 0.5
+        """ The probability is higher than the VERIFICATION_THRESHOLD. """
+
+        self.agent.VERIFICATION_THRESHOLD = 0.6
+        victim = mock_msgs.create_victim_info(id=1, probability=0.5)
+        self.agent.target = victim
         self.world_model.start()
         self.agent.to_sensor_hold()
 
         self.assertEqual(self.agent.state, 'operator_validation')
+        self.assertTrue(self.agent.victim_verified.is_set())
 
     def test_to_fusion_validation(self):
-        """ The probability of the vicitm is lower than the
-            VERIFICATION_THRESHOLD.
-        """
+        """ The probability is lower than the VERIFICATION_THRESHOLD. """
+
         self.agent.VERIFICATION_THRESHOLD = 0.9
+        victim = mock_msgs.create_victim_info(id=1, probability=0.5)
+        self.agent.target = victim
         self.world_model.start()
         self.agent.to_sensor_hold()
 
         self.assertEqual(self.agent.state, 'fusion_validation')
+        self.assertFalse(self.agent.victim_verified.is_set())
 
     def test_global_state_change(self):
         """ The global state should be MODE_SENSOR_HOLD """
 
         final = RobotModeMsg.MODE_SENSOR_HOLD
+        self.agent.VERIFICATION_THRESHOLD = 0.6
+        victim = mock_msgs.create_victim_info(id=1, probability=0.5)
+        self.agent.target = victim
         self.world_model.start()
         self.agent.to_sensor_hold()
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
+        self.assertEqual(self.agent.state, 'operator_validation')
 
 
 class TestVictimDeletionState(unittest.TestCase):
     """ Tests for the victim deletion state. """
 
     def setUp(self):
-        self.effector_mock = Publisher('mock/effector', String)
         self.delete_victim_mock = Publisher('mock/delete_victim', String)
         self.agent = Agent(strategy='normal')
-        target = mock_msgs.create_victim_info(id=8, probability=0.65)
-        self.agent.target_victim = target
+        self.agent.set_breakpoint('exploration')
+        self.world_model = Thread(target=self.send_victim, args=(5,))
+        self.target = mock_msgs.create_victim_info(id=1, probability=0.65)
+        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+        self.agent.visited_victims = visited
+        self.agent.current_victims.append(self.target)
+        self.agent.target = self.target
+
+    def send_victim(self, delay):
+        """ Spawn a thread and send a potential victim instead of using a
+            mock Publisher which is not so predictable or easy to configure.
+        """
+        victim = [mock_msgs.create_victim_info(id=1, probability=0.7)]
+        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
+
+        model = mock_msgs.create_world_model(victim, visited)
+        sleep(delay)
+        self.agent.receive_world_model(model)
 
     def test_delete_victim_success(self):
-        self.effector_mock.publish('success:1')
-        self.delete_victim_mock.publish('success:2')
-        self.agent.set_breakpoint('exploration')
+        self.delete_victim_mock.publish('success:1')
         self.agent.to_victim_deletion()
-        self.assertEqual(self.agent.state, 'exploration')
 
-    # in this test we check that the agent correctly stays in the same
-    # state if the delete goal fails
-    def test_delete_victim_fail(self):
-        self.effector_mock.publish('success:1')
-        self.delete_victim_mock.publish('abort:1')
-        self.delete_victim_mock.publish('success:5')
-        self.agent.set_breakpoint('exploration')
-        self.agent.to_victim_deletion()
         self.assertEqual(self.agent.state, 'exploration')
+        self.assertIsNone(self.agent.target)
+        self.assertIn(self.target, self.agent.deleted_victims)
+
+    def test_delete_victim_fail(self):
+        self.delete_victim_mock.publish('abort:1')
+        self.agent.to_victim_deletion()
+
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertIsNone(self.agent.target)
+        self.assertIn(self.target, self.agent.deleted_victims)
 
 
 class TestFusionValidationState(unittest.TestCase):
@@ -329,32 +422,30 @@ class TestFusionValidationState(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-        self.fusion_validate_mock = Publisher('mock/fusion_validate', String)
-        sleep(2)
-
-    def test_to_exploration_instant_success(self):
+        self.fusion_validate = Publisher('mock/fusion_validate', String)
+        self.target = mock_msgs.create_victim_info(id=1, probability=0.65)
         self.agent.set_breakpoint('exploration')
-        self.fusion_validate_mock.publish('success:2')
-        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.agent.target = self.target
+
+    def test_valid_victim(self):
+
+        self.fusion_validate.publish('success:1')
         self.agent.gui_result.victimValid = True
         self.agent.to_fusion_validation()
-        self.assertEqual(self.agent.state, 'exploration')
 
-        # We don't care if it's valid or not transition-wise
-        self.fusion_validate_mock.publish('success:2')
-        self.agent.target_victim = mock_msgs.create_victim_info()
+        self.assertEqual(self.agent.state, 'exploration')
+        self.assertFalse(self.agent.gui_result.victimValid)
+        self.assertIsNone(self.agent.target)
+
+    def test_invalid_victim(self):
+
+        self.fusion_validate.publish('abort:1')
         self.agent.gui_result.victimValid = False
         self.agent.to_fusion_validation()
-        self.assertEqual(self.agent.state, 'exploration')
 
-    def test_to_exploration_abort_then_success(self):
-        self.agent.set_breakpoint('exploration')
-        self.fusion_validate_mock.publish('abort:1')
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.agent.gui_result.victimValid = True
-        self.fusion_validate_mock.publish('success:1')
-        self.agent.to_fusion_validation()
         self.assertEqual(self.agent.state, 'exploration')
+        self.assertFalse(self.agent.gui_result.victimValid)
+        self.assertIsNone(self.agent.target)
 
 
 class TestOperatorValidationState(unittest.TestCase):
@@ -362,20 +453,20 @@ class TestOperatorValidationState(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(strategy='normal')
-        self.validate_gui_mock = Publisher('mock/validate_gui', String)
+        self.gui = Publisher('mock/validate_gui', String)
         self.gui_result = Publisher('mock/gui_result', Bool)
         self.agent.set_breakpoint('fusion_validation')
 
     def test_to_fusion_validation_by_success(self):
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.validate_gui_mock.publish('success:2')
+        self.agent.target = mock_msgs.create_victim_info()
+        self.gui.publish('success:1')
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.state, 'fusion_validation')
 
     def test_to_fusion_validation_by_abort(self):
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.validate_gui_mock.publish('abort:2')
+        self.agent.target = mock_msgs.create_victim_info()
+        self.gui.publish('abort:1')
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.state, 'fusion_validation')
@@ -385,9 +476,9 @@ class TestOperatorValidationState(unittest.TestCase):
 
         self.agent.victims_found = 0
         self.gui_result.publish(True)
-        self.validate_gui_mock.publish('success:2')
+        self.gui.publish('success:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.8)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 1)
@@ -398,15 +489,15 @@ class TestOperatorValidationState(unittest.TestCase):
 
         self.agent.victims_found = 0
         self.gui_result.publish(True)
-        self.validate_gui_mock.publish('success:2')
+        self.gui.publish('success:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.8)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 1)
 
         msg = mock_msgs.create_victim_info(id=6, probability=0.8)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 2)
@@ -417,9 +508,9 @@ class TestOperatorValidationState(unittest.TestCase):
 
         self.agent.victims_found = 0
         self.gui_result.publish(False)
-        self.validate_gui_mock.publish('success:2')
+        self.gui.publish('success:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.2)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 0)
@@ -429,9 +520,9 @@ class TestOperatorValidationState(unittest.TestCase):
         """ Expecting the number of valid victims to remain the same """
 
         self.agent.victims_found = 0
-        self.validate_gui_mock.publish('abort:2')
+        self.gui.publish('abort:2')
         msg = mock_msgs.create_victim_info(id=5, probability=0.2)
-        self.agent.target_victim = msg
+        self.agent.target = msg
         self.agent.to_operator_validation()
 
         self.assertEqual(self.agent.victims_found, 0)

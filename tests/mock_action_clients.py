@@ -4,7 +4,7 @@
     Action client mocks.
 """
 
-from rospy import loginfo, logwarn, sleep, Subscriber, init_node, spin
+from rospy import loginfo, logwarn, sleep, Subscriber, init_node, spin, Rate
 import roslib
 roslib.load_manifest('pandora_fsm')
 from std_msgs.msg import String, Bool
@@ -16,6 +16,7 @@ from pandora_fsm import topics
 from pandora_navigation_msgs.msg import DoExplorationAction
 from pandora_end_effector_planner.msg import MoveEndEffectorAction
 from pandora_end_effector_planner.msg import MoveLinearAction
+import move_base_msgs.msg
 from move_base_msgs.msg import MoveBaseAction
 from pandora_data_fusion_msgs.msg import DeleteVictimAction
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
@@ -81,22 +82,80 @@ class MockActionServer(object):
         self.action_result.victimValid = msg.data
 
 
-if __name__ == '__main__':
+class MoveBaseServer(MockActionServer):
 
+    def __init__(self, name, topic):
+        self._name = name
+        self.action_result = None
+        self._feedback = move_base_msgs.msg.MoveBaseFeedback()
+        self._result = move_base_msgs.msg.MoveBaseResult()
+
+        self.abort_with_feedback = False
+        self._topic = topic
+        Subscriber('mock/feedback_' + name, String, self.receive_commands)
+        self._server = ActionServer(self._topic, MoveBaseAction, self.execute,
+                                    False)
+        self._server.start()
+        loginfo('>>> Starting ' + self._name + ' with feedback.')
+
+    def receive_commands(self, msg):
+        callback, timeout = msg.data.split(':')
+        self.timeout = float(timeout)
+        if callback == 'abort_feedback':
+            self.abort_with_feedback = True
+            self._server.execute_callback = getattr(self, 'execute')
+        else:
+            self.abort_with_feedback = False
+            self._server.execute_callback = getattr(self, callback)
+            logwarn('>>> ' + self._name + ': Current callback -> ' + callback)
+        sleep(1)
+
+    def execute(self, goal):
+        success = True
+        start_x = 0
+        start_y = 0
+        goal_x = goal.target_pose.pose.position.x
+        goal_y = goal.target_pose.pose.position.y
+        loginfo('Goal -> x(%d), y(%d).', goal_x, goal_y)
+        if self.abort_with_feedback:
+            sleep(self.timeout)
+            self._feedback.base_position.pose.position.x = goal_x + 0.05
+            self._feedback.base_position.pose.position.y = goal_y + 0.05
+            self._server.publish_feedback(self._feedback)
+            sleep(self.timeout)
+            self._server.set_aborted()
+            return
+        while True:
+            # Make a move.
+            if start_x < goal_x:
+                start_x += 0.5
+            if start_y < goal_y:
+                start_y += 0.5
+
+            # Send feedback
+            self._feedback.base_position.pose.position.x = start_x
+            self._feedback.base_position.pose.position.y = start_y
+            self._server.publish_feedback(self._feedback)
+
+            if start_x >= goal_x and start_y >= goal_y:
+                break
+            sleep(self.timeout)
+
+        if success:
+            loginfo('MoveBaseAction: Goal succeeded...')
+            _result = self._feedback
+            self._server.set_succeeded(_result)
+
+
+if __name__ == '__main__':
     init_node('mock_node')
-    effector = MockActionServer('effector', topics.move_end_effector_planner,
-                                MoveEndEffectorAction)
-    effector = MockActionServer('linear', topics.linear_movement,
-                                MoveLinearAction)
-    explorer = MockActionServer('explorer', topics.do_exploration,
-                                DoExplorationAction)
-    move_base = MockActionServer('move_base', topics.move_base, MoveBaseAction)
-    validate_victim_gui = MockActionServer('validate_gui',
-                                           topics.gui_validation,
-                                           ValidateVictimGUIAction)
-    delete_victim = MockActionServer('delete_victim', topics.delete_victim,
-                                     DeleteVictimAction)
-    fusion_validate = MockActionServer('fusion_validate',
-                                       topics.validate_victim,
-                                       ValidateVictimAction)
+
+    MoveBaseServer('move_base', topics.move_base)
+    MockActionServer('effector', topics.move_end_effector_planner, MoveEndEffectorAction)
+    MockActionServer('linear', topics.linear_movement, MoveLinearAction)
+    MockActionServer('explorer', topics.do_exploration, DoExplorationAction)
+    MockActionServer('validate_gui', topics.gui_validation, ValidateVictimGUIAction)
+    MockActionServer('delete_victim', topics.delete_victim, DeleteVictimAction)
+    MockActionServer('fusion_validate', topics.validate_victim, ValidateVictimAction)
+
     spin()

@@ -4,7 +4,7 @@
     Mock messages factories.
 """
 
-from random import randint, random
+from random import randint, random, uniform
 
 import rospy
 import roslib
@@ -60,8 +60,8 @@ def create_victim_info(id=None, victim_frame_id=None, sensors=None, valid=None,
     msg.id = id if id else randint(0, 100)
     msg.victimFrameId = victim_frame_id if victim_frame_id else 'kinect'
     msg.sensors = sensors if sensors else ['thermal', 'kinect']
-    msg.valid = valid if valid else True
-    msg.probability = probability if probability else random()
+    msg.valid = valid if valid else False
+    msg.probability = probability if probability else randint(0, 10) * 0.1
 
     msg.victimPose = create_pose_stamped()
 

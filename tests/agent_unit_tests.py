@@ -13,16 +13,17 @@ roslib.load_manifest('pandora_fsm')
 import rospy
 from rospy import Subscriber, Publisher, sleep
 from std_msgs.msg import String, Bool
+from geometry_msgs.msg import PoseStamped
 
-from actionlib import SimpleActionClient as Client
 from actionlib_msgs.msg import GoalStatus
 
-from pandora_fsm import Agent, TimeoutException, TimeLimiter
-
 import mock_msgs
+from pandora_fsm.utils import distance_2d, distance_3d
+from pandora_fsm import (Agent, TimeLimiter, Navigation, Control,
+                         DataFusion, GUI, LinearMotor, Effector, LinearMotor)
 
 
-class TestROSIndependentMethods(unittest.TestCase):
+class TestUtils(unittest.TestCase):
 
     def setUp(self):
         """ Initialization """
@@ -34,30 +35,29 @@ class TestROSIndependentMethods(unittest.TestCase):
         self.assertEqual(self.agent.victims_found, 0)
 
         # Make sure the action clients are instantiated.
-        self.assertIsInstance(self.agent.explorer, Client)
-        self.assertIsInstance(self.agent.base_client, Client)
-        self.assertIsInstance(self.agent.delete_victim_client, Client)
-        self.assertIsInstance(self.agent.fusion_validate_client, Client)
-        self.assertIsInstance(self.agent.gui_validate_client, Client)
-        self.assertIsInstance(self.agent.end_effector_client, Client)
-        self.assertIsInstance(self.agent.linear_client, Client)
+        self.assertIsInstance(self.agent.explorer, Navigation)
+        self.assertIsInstance(self.agent.control_base, Control)
+        self.assertIsInstance(self.agent.data_fusion, DataFusion)
+        self.assertIsInstance(self.agent.gui_client, GUI)
+        self.assertIsInstance(self.agent.effector, Effector)
+        self.assertIsInstance(self.agent.linear, LinearMotor)
 
         # Make sure the subscribers are instantiated.
-        self.assertIsInstance(self.agent.arena_sub, Subscriber)
         self.assertIsInstance(self.agent.score_sub, Subscriber)
         self.assertIsInstance(self.agent.qr_sub, Subscriber)
-        self.assertIsInstance(self.agent.area_coverage_sub, Subscriber)
         self.assertIsInstance(self.agent.world_model_sub, Subscriber)
-        self.assertIsInstance(self.agent.linear_sub, Subscriber)
 
-        # Make sure the threading.Events are initialized.
-        self.assertIsInstance(self.agent.potential_victim, threading._Event)
-        self.assertIsInstance(self.agent.promising_victim, threading._Event)
-        self.assertIsInstance(self.agent.recognized_victim, threading._Event)
-        self.assertIsInstance(self.agent.explored, threading._Event)
-        self.assertFalse(self.agent.potential_victim.is_set())
-        self.assertFalse(self.agent.promising_victim.is_set())
-        self.assertFalse(self.agent.recognized_victim.is_set())
+        # Make sure global state transition functios have been generated.
+        self.assertIsNotNone(self.agent.mode_off)
+        self.assertIsNotNone(self.agent.mode_start_autonomous)
+        self.assertIsNotNone(self.agent.mode_exploration_rescue)
+        self.assertIsNotNone(self.agent.mode_identification)
+        self.assertIsNotNone(self.agent.mode_sensor_hold)
+        self.assertIsNotNone(self.agent.mode_semi_autonomous)
+        self.assertIsNotNone(self.agent.mode_teleoperated_locomotion)
+        self.assertIsNotNone(self.agent.mode_sensor_test)
+        self.assertIsNotNone(self.agent.mode_exploration_mapping)
+        self.assertIsNotNone(self.agent.mode_terminating)
 
         # Empty variables
         self.assertEqual(self.agent.current_victims, [])
@@ -68,6 +68,30 @@ class TestROSIndependentMethods(unittest.TestCase):
         # TODO Write test with full functionality
         self.assertTrue(True)
 
+    def test_distance_2d(self):
+        a = PoseStamped()
+        b = PoseStamped()
+        a.pose.position.x = -7
+        a.pose.position.y = -4
+        b.pose.position.x = 17
+        b.pose.position.y = 6.5
+
+        self.assertAlmostEqual(distance_2d(a.pose, b.pose), 26.19637379)
+
+    def test_distance_3d(self):
+        a = PoseStamped()
+        b = PoseStamped()
+
+        a.pose.position.x = -7
+        a.pose.position.y = -4
+        a.pose.position.z = 3
+
+        b.pose.position.x = 17
+        b.pose.position.y = 6
+        b.pose.position.z = 2.5
+
+        self.assertAlmostEqual(distance_3d(a.pose, b.pose), 26.0048072)
+
 
 class TestWorldModelCallback(unittest.TestCase):
     """ Tests for the agent callbacks. """
@@ -77,16 +101,21 @@ class TestWorldModelCallback(unittest.TestCase):
         self.world_model = Publisher('mock/world_model', String)
 
     def test_receive_world_model_response(self):
+        # To assert point_of_interest
+        self.agent.state = 'exploration'
         while not rospy.is_shutdown():
-            self.world_model.publish('2')
+            self.world_model.publish('1')
             break
         sleep(3)
         self.assertNotEqual(self.agent.current_victims, [])
         self.assertNotEqual(self.agent.visited_victims, [])
-        self.assertTrue(self.agent.potential_victim.is_set())
+        self.assertTrue(self.agent.point_of_interest.is_set())
 
     def test_receive_world_model_with_target(self):
         """ Tests that the target is updated. """
+
+        # To assert point_of_interest
+        self.agent.state = 'exploration'
 
         # Create a victim and assign it to the target.
         target = mock_msgs.create_victim_info()
@@ -103,11 +132,13 @@ class TestWorldModelCallback(unittest.TestCase):
         self.agent.receive_world_model(model)
         self.assertEqual(self.agent.target_victim.id, target.id)
         self.assertEqual(self.agent.target_victim.probability, 0.8)
-        self.assertTrue(self.agent.potential_victim.is_set())
+        self.assertTrue(self.agent.point_of_interest.is_set())
 
     def test_receive_world_model_identification_threshold(self):
         """ Tests that the promising_victim event is set. """
 
+        # To assert point_of_interest
+        self.agent.state = 'exploration'
         self.agent.IDENTIFICATION_THRESHOLD = 0.5
         target = mock_msgs.create_victim_info(probability=0.7)
         self.agent.target_victim = target
@@ -131,6 +162,8 @@ class TestWorldModelCallback(unittest.TestCase):
     def test_receive_world_model_verification_threshold(self):
         """ Tests that the recognized_victim event is set. """
 
+        # To assert point_of_interest
+        self.agent.state = 'exploration'
         self.agent.VERIFICATION_THRESHOLD = 0.5
         target = mock_msgs.create_victim_info(probability=0.7)
         self.agent.target_victim = target
@@ -165,24 +198,28 @@ class TestEndEffector(unittest.TestCase):
     def test_park_end_effector(self):
 
         self.effector_mock.publish('abort:1')
-        self.agent.park_end_effector_planner()
-        self.assertEqual(self.agent.end_effector_client.get_state(),
-                         GoalStatus.ABORTED)
+
+        @TimeLimiter(timeout=5)
+        def infinite_delay():
+            self.agent.park_end_effector()
+
+        self.assertRaises(TimeoutException, infinite_delay)
 
         self.effector_mock.publish('success:1')
-        self.agent.park_end_effector_planner()
+        self.agent.park_end_effector()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_end_effector(self):
 
-        self.effector_mock.publish('abort:1')
-        self.agent.test_end_effector_planner()
-        self.assertEqual(self.agent.end_effector_client.get_state(),
-                         GoalStatus.ABORTED)
+        @TimeLimiter(timeout=5)
+        def infinite_delay():
+            self.agent.test_end_effector()
+
+        self.assertRaises(TimeoutException, infinite_delay)
 
         self.effector_mock.publish('success:1')
-        self.agent.test_end_effector_planner()
+        self.agent.test_end_effector()
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
@@ -201,12 +238,15 @@ class TestEndEffector(unittest.TestCase):
 
     def test_linear(self):
         self.linear_mock.publish('abort:1')
-        self.agent.test_linear_motor()
-        self.assertEqual(self.agent.linear_client.get_state(),
-                         GoalStatus.ABORTED)
+
+        @TimeLimiter(timeout=5)
+        def infinite_delay():
+            self.agent.test_linear()
+
+        self.assertRaises(TimeoutException, infinite_delay)
 
         self.linear_mock.publish('success:1')
-        self.agent.test_linear_motor()
+        self.agent.test_linear()
         self.assertEqual(self.agent.linear_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
@@ -253,21 +293,21 @@ class TestMoveBase(unittest.TestCase):
     def test_move_base_abort(self):
         self.move_base_mock.publish('abort:1')
         self.agent.move_base()
-        self.agent.base_client.wait_for_result()
-        self.assertEqual(self.agent.base_client.get_state(),
+        self.agent.control_base.wait_for_result()
+        self.assertEqual(self.agent.control_base.get_state(),
                          GoalStatus.ABORTED)
 
     def test_move_base_success(self):
         self.move_base_mock.publish('success:1')
         self.agent.move_base()
-        self.agent.base_client.wait_for_result()
-        self.assertEqual(self.agent.base_client.get_state(),
+        self.agent.control_base.wait_for_result()
+        self.assertEqual(self.agent.control_base.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_move_base_preempt(self):
         self.agent.move_base()
         self.agent.preempt_move_base()
-        self.assertEqual(self.agent.base_client.get_state(),
+        self.assertEqual(self.agent.control_base.get_state(),
                          GoalStatus.ABORTED)
 
 
@@ -286,74 +326,21 @@ class TestExplorer(unittest.TestCase):
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.PENDING)
         self.agent.preempt_exploration()
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.ABORTED)
-        self.assertFalse(self.agent.explored.is_set())
+        self.assertFalse(self.agent.exploration_done.is_set())
 
     def test_explorer_abort(self):
         self.explorer_mock.publish('abort:1')
         self.agent.explore()
         sleep(3)
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.ABORTED)
-        self.assertFalse(self.agent.explored.is_set())
+        self.assertFalse(self.agent.exploration_done.is_set())
 
     def test_explorer_success(self):
         self.explorer_mock.publish('success:1')
         self.agent.explore()
         sleep(3)
         self.assertEqual(self.agent.explorer.get_state(), GoalStatus.SUCCEEDED)
-        self.assertTrue(self.agent.explored.is_set())
-
-
-class TestWaitForVictim(unittest.TestCase):
-    """ Tests for the wait_for_victim_task. """
-
-    def setUp(self):
-        self.agent = Agent(strategy='normal')
-
-        # Adding a fake state transition for the test, instead of
-        # using the real FSM.
-        self.agent.machine.add_state('test_victim_found')
-        self.agent.machine.add_state('test_map_covered')
-        self.agent.machine.add_transition('victim_found', 'off',
-                                          'test_victim_found')
-        self.agent.machine.add_transition('map_covered', 'off',
-                                          'test_map_covered')
-
-    def send_victim(self, delay):
-        """ Spawn a thread and send a potential victim instead of using a
-            mock Publisher which is not so predictable or easy to configure.
-        """
-        victim = [mock_msgs.create_victim_info()]
-        visited = [mock_msgs.create_victim_info() for i in range(0, 3)]
-
-        model = mock_msgs.create_world_model(victim, visited)
-        sleep(delay)
-        self.agent.receive_world_model(model)
-
-    def set_map_covered(self, delay):
-        """ Set the event that signals the end of the explorer. """
-
-        sleep(delay)
-        self.agent.explored.set()
-
-    def test_victim_found(self):
-        self.world_model = threading.Thread(target=self.send_victim, args=(1,))
-        self.explorer = threading.Thread(target=self.set_map_covered,
-                                         args=(4,))
-        self.explorer.start()
-        self.world_model.start()
-        self.agent.wait_for_victim()
-
-        self.assertEqual(self.agent.state, 'test_victim_found')
-
-    def test_map_covered(self):
-        self.world_model = threading.Thread(target=self.send_victim, args=(4,))
-        self.explorer = threading.Thread(target=self.set_map_covered,
-                                         args=(1,))
-        self.explorer.start()
-        self.world_model.start()
-        self.agent.wait_for_victim()
-
-        self.assertEqual(self.agent.state, 'test_map_covered')
+        self.assertTrue(self.agent.exploration_done.is_set())
 
 
 class TestValidateGUI(unittest.TestCase):
@@ -399,7 +386,7 @@ class TestValidateGUI(unittest.TestCase):
         self.agent.target_victim = msg
         self.agent.wait_for_operator()
 
-        self.assertEqual(self.agent.gui_validate_client.get_state(),
+        self.assertEqual(self.agent.gui_client.get_state(),
                          GoalStatus.ABORTED)
 
 
@@ -438,7 +425,7 @@ class TestDeleteVictim(unittest.TestCase):
         self.agent.delete_victim()
 
         self.assertEqual(self.agent.state, 'test_delete_victim')
-        self.assertEqual(self.agent.delete_victim_client.get_state(),
+        self.assertEqual(self.agent.data_fusion.get_state(),
                          GoalStatus.SUCCEEDED)
 
 
