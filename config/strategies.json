@@ -1,0 +1,221 @@
+{
+  "normal": {
+    "states": [
+      {
+        "name": "off",
+        "description": "The agent is sleeping.",
+        "tasks": [],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "init",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "wake_up"
+          }
+        ]
+      },
+      {
+        "name": "init",
+        "description": "The agent starts the system.",
+        "tasks": [
+          "mode_start_autonomous",
+          "test_end_effector",
+          "park_end_effector",
+          "test_linear",
+          "booted"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "booted"
+          }
+        ]
+      },
+      {
+        "name": "exploration",
+        "description": "The agent is exploring the area.",
+        "tasks": [
+          "deny_transitions",
+          "mode_exploration_rescue",
+          "scan",
+          "explore",
+          "allow_transitions"
+        ],
+        "clean": [
+          "deny_transitions",
+          "preempt_explorer",
+          "preempt_end_effector"
+        ],
+        "transitions": [
+          {
+            "to": "identification",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "point_of_interest_found"
+          },
+          {
+            "to": "end",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "map_covered"
+          }
+        ]
+      },
+      {
+        "name": "identification",
+        "description": "Examining the candidate victim",
+        "tasks": [
+          "deny_transitions",
+          "mode_identification",
+          "approach_target",
+          "allow_transitions"
+        ],
+        "clean": ["deny_transitions"],
+        "transitions": [
+          {
+            "to": "victim_deletion",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "abort_victim"
+          },
+          {
+            "to": "sensor_hold",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "valid_victim"
+          }
+        ]
+      },
+      {
+        "name": "sensor_hold",
+        "description": "The agents takes a closer look at the victim.",
+        "tasks": [
+          "mode_sensor_hold",
+          "move_linear",
+          "wait_for_verification"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "fusion_validation",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "timeout"
+          },
+          {
+            "to": "operator_validation",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "verified"
+          }
+        ]
+      },
+      {
+        "name": "victim_deletion",
+        "description": "Data fusion deletes the victim",
+        "tasks": [
+          "preempt_end_effector",
+          "delete_victim"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "victim_deleted"
+          }
+        ]
+      },
+      {
+        "name": "fusion_validation",
+        "description": "Data fusion validates the victim",
+        "tasks": [
+          "validate_victim",
+          "reset_environment",
+          "victim_classified"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "victim_classified"
+          }
+        ]
+      },
+      {
+        "name": "operator_validation",
+        "description": "Waiting validation from the operator",
+        "tasks": [
+          "wait_for_operator",
+          "operator_responded"
+        ],
+        "clean": [
+          "update_victims"
+        ],
+        "transitions": [
+          {
+            "to": "fusion_validation",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "operator_responded"
+          }
+        ]
+      },
+      {
+        "name": "end",
+        "description": "Job done!",
+        "tasks": [
+          "mode_terminating",
+          "print_results",
+          "clean_up",
+          "sleep"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "off",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "sleep"
+          }
+        ]
+      }
+    ]
+  },
+  "exploration_mode": {
+    "states": [
+      {
+        "name": "off",
+        "description": "The agent is sleeping.",
+        "conditions": []
+      },
+      {
+        "name": "init",
+        "description": "The agent starts the system.",
+        "conditions": [],
+        "tasks": [
+          "boot"
+        ]
+      }
+    ]
+  }
+}

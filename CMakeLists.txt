@@ -3,10 +3,14 @@ project(pandora_fsm)
 
 find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
+  genmsg
+  actionlib_msgs
+  actionlib
   roslint
 )
 
 catkin_python_setup()
+
 
 generate_dynamic_reconfigure_options(
   config/params.cfg
@@ -21,12 +25,7 @@ catkin_package(
 
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
      ${PROJECT_SOURCE_DIR}
-     src/pandora_fsm/agent_cost_functions/*.py
-     src/pandora_fsm/agent_states/*.py
-     src/pandora_fsm/fsm_containers/*.py
-     src/pandora_fsm/fsm_states/*.py
-     src/pandora_fsm/robocup_agent/*.py
-     src/pandora_fsm/robocup_fsm/*.py
+     src/**/*.py
      tests/*.py
     )
 roslint_python(${${PROJECT_NAME}_LINT_PYTHON})
