@@ -1,0 +1,15 @@
+<launch>
+
+  <!--Brings up only the Agent.-->
+
+  <node name="StateServer"
+        pkg="state_manager"
+        type="state_server"
+        output="screen" />
+
+  <node name="Agent"
+        pkg="pandora_fsm"
+        type="agent_standalone.py"
+        output="screen" />
+
+</launch>
