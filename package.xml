@@ -4,9 +4,6 @@
 
   <description>pandora_fsm</description>
 
-  <maintainer email="tsirif@gmail.com">Tsirigotis Christos</maintainer>
-  <maintainer email="lykaplaymaker@gmail.com">Giannis Lykartsis</maintainer>
-  <maintainer email="jkppeppas@gmail.com">Kostas Peppas</maintainer>
   <maintainer email="siderisk@auth.gr">Sideris Konstantinos</maintainer>
 
   <license>BSD</license>
@@ -17,8 +14,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <exec_depend>rospy</exec_depend>
-  <exec_depend>smach</exec_depend>
-  <exec_depend>smach_ros</exec_depend>
+  <exec_depend>pymitter</exec_depend>
   <exec_depend>move_base_msgs</exec_depend>
   <exec_depend>pandora_data_fusion_msgs</exec_depend>
   <exec_depend>pandora_navigation_msgs</exec_depend>
@@ -40,6 +36,7 @@
   <exec_depend>roslint</exec_depend>
 
   <test_depend>rostest</test_depend>
+  <test_depend>mock</test_depend>
 
   <export>
     <rosdoc config="rosdoc.yaml" />
