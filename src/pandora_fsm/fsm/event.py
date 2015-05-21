@@ -61,9 +61,7 @@ class Event(object):
         """
         state_name = self.machine.current_state.name
         if state_name not in self.transitions:
-            raise MachineError(
-                "Can't trigger event %s from state %s!" % (self.name,
-                                                           state_name))
+            print "Cant trigger event " + self.name + " from state " + state_name
 
         # Encapsulating arguments from higher levels into an EventData object.
         event = EventData(self.machine.current_state, self, self.machine,
