@@ -286,7 +286,7 @@ class TestIdentificationState(unittest.TestCase):
         self.agent.IDENTIFICATION_THRESHOLD = 0.6
         self.move_base_mock.publish('abort:2')
         if not rospy.is_shutdown():
-            self.victim_mock.publish('5:0.9')
+            self.victim_mock.publish('8:0.9')
         self.agent.to_identification()
         sleep(15)
 
@@ -319,6 +319,9 @@ class TestIdentificationState(unittest.TestCase):
         self.agent.MOVE_BASE_TIMEOUT = 5
         if not rospy.is_shutdown():
             self.move_base_mock.publish('success:7')
+        self.agent.to_identification()
+        sleep(10)
+
         self.agent.to_identification()
         sleep(10)
 

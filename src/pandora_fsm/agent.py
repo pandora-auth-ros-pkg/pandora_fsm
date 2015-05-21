@@ -137,8 +137,6 @@ class Agent(object):
         self.BASE_THRESHOLD = 0.2
         self.MOVE_BASE_TIMEOUT = 120
 
-        self.move_base_timer = Timer(self.MOVE_BASE_TIMEOUT, self.timer_handler)
-
         # Expose client methods to class
         setattr(self, 'test_end_effector', self.effector.test)
         setattr(self, 'park_end_effector', self.effector.park)
@@ -291,7 +289,7 @@ class Agent(object):
             return
 
         logwarn('Approached potential victim.')
-        self.move_base_timer.cancel()
+        self.base_timer.cancel()
         self.state_can_change.clear()
         self.valid_victim()
 
@@ -320,7 +318,7 @@ class Agent(object):
             self.control_base.move_base(self.target.victimPose)
         else:
             self.MOVE_BASE_RETRIES = 0
-            self.move_base_timer.cancel()
+            self.base_timer.cancel()
 
             # The agent changes state.
             if self.probable_victim.is_set():
@@ -499,7 +497,8 @@ class Agent(object):
         self.effector.point_to(self.target.victimFrameId)
 
         # Start timer to cancel all goals if the move base is unresponsive.
-        self.move_base_timer.start()
+        self.base_timer = Timer(self.MOVE_BASE_TIMEOUT, self.timer_handler)
+        self.base_timer.start()
 
     def explore(self):
         self.explorer.explore(exploration_type=self.exploration_mode)
@@ -508,7 +507,7 @@ class Agent(object):
         if self.state == 'identification':
             logwarn('Move base is unresponsive or it takes too long.')
             self.control_base.cancel_all_goals()
-            self.move_base_timer.cancel()
+            self.base_timer.cancel()
             self.abort_victim()
         else:
             logerr('Timer fired outside of identification state.')
