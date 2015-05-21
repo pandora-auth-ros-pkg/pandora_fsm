@@ -52,16 +52,12 @@ class Control(object):
         target.pose.orientation.w = transformend_orientation[3]
         target.pose.position.z = 0
 
-        msg = PoseStamped()
-        msg.pose = target.pose
-        msg.header = rospy.Header()
-        goal = MoveBaseGoal(target_pose=msg)
-        self.target_pose = msg
+        goal = MoveBaseGoal(target_pose=target)
+        self.target_pose = target
         loginfo('++ Waiting for move base action server...')
         self.base_client.wait_for_server()
         loginfo('++ Sending move base goal.')
-        if self.verbose:
-            loginfo(target.pose)
+        loginfo(target.pose)
         self.base_pending.set()
         self.base_client.send_goal(goal, feedback_cb=self.base_feedback,
                                    done_cb=self.move_base_done)

@@ -87,7 +87,7 @@ class Agent(object):
         # ACTION CLIENTS.
         self.explorer = clients.Navigation(self.dispatcher)
         self.data_fusion = clients.DataFusion()
-        self.control_base = clients.Control(self.dispatcher, verbose=True)
+        self.control_base = clients.Control(self.dispatcher)
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
         self.linear = clients.LinearMotor()
