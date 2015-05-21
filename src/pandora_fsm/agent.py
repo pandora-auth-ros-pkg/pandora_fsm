@@ -505,7 +505,7 @@ class Agent(object):
         self.explorer.explore(exploration_type=self.exploration_mode)
 
     def timer_handler(self):
-        if self.agent.state == 'identification':
+        if self.state == 'identification':
             logwarn('Move base is unresponsive or it takes too long.')
             self.control_base.cancel_all_goals()
             self.move_base_timer.cancel()

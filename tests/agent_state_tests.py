@@ -315,6 +315,15 @@ class TestIdentificationState(unittest.TestCase):
 
         self.assertEqual(self.agent.state, 'victim_deletion')
 
+    def test_unresponsive_move_base(self):
+        self.agent.MOVE_BASE_TIMEOUT = 5
+        if not rospy.is_shutdown():
+            self.move_base_mock.publish('success:7')
+        self.agent.to_identification()
+        sleep(10)
+
+        self.assertEqual(self.agent.state, 'victim_deletion')
+
 
 class TestSensorHoldState(unittest.TestCase):
     """ Tests for the sensor_hold state. """
