@@ -16,6 +16,8 @@ roslib.load_manifest('pandora_fsm')
 
 from rospy import Publisher, sleep
 from std_msgs.msg import String, Bool
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
 
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent, TimeoutException, TimeLimiter
@@ -255,7 +257,20 @@ class TestIdentificationState(unittest.TestCase):
         self.agent.set_breakpoint('victim_deletion')
         self.agent.set_breakpoint('sensor_hold')
         target = mock_msgs.create_victim_info(id=8, probability=0.4)
+        self.world_model = Thread(target=self.send_updated_pose, args=(3,))
         self.agent.target = target
+
+    def send_updated_pose(self, delay):
+        pose_stamped = PoseStamped()
+        pose_stamped.pose.position.x = 20
+        pose_stamped.pose.position.y = 20
+        target = mock_msgs.create_victim_info(id=8, probability=0.4)
+        target.victimPose = pose_stamped
+        msg = WorldModelMsg()
+        msg.victims = [target]
+        msg.visitedVictims = []
+        sleep(delay)
+        self.agent.receive_world_model(msg)
 
     def test_global_state_change(self):
         """ The global state should be MODE_IDENTIFICATION. """
@@ -326,6 +341,58 @@ class TestIdentificationState(unittest.TestCase):
         sleep(10)
 
         self.assertEqual(self.agent.state, 'victim_deletion')
+
+    def test_update_move_base(self):
+        original_stamped = PoseStamped()
+        if not rospy.is_shutdown():
+            self.move_base_mock.publish('execute:10')
+        self.world_model.start()
+        self.agent.to_identification()
+        sleep(15)
+
+        x = self.agent.target.victimPose.pose.position.x
+        y = self.agent.target.victimPose.pose.position.y
+        self.assertEqual(x, 20)
+        self.assertEqual(y, 20)
+
+    def test_update_move_base_timer(self):
+        self.agent.MOVE_BASE_TIMEOUT = 5
+        original_stamped = PoseStamped()
+        if not rospy.is_shutdown():
+            self.move_base_mock.publish('execute:10')
+        self.world_model.start()
+        with patch.object(self.agent, 'approach_target') as mock:
+            self.agent.to_identification()
+            sleep(15)
+
+        x = self.agent.target.victimPose.pose.position.x
+        y = self.agent.target.victimPose.pose.position.y
+
+        # The mock should be called another time after the update of the
+        # move base goal.
+        self.assertEqual(mock.call_count, 2)
+        self.assertEqual(x, 20)
+        self.assertEqual(y, 20)
+
+    def test_no_move_base_update(self):
+        original_stamped = PoseStamped()
+        self.agent.target.victimPose.pose.position.x = 20.1
+        self.agent.target.victimPose.pose.position.y = 20
+        if not rospy.is_shutdown():
+            self.move_base_mock.publish('success:10')
+        self.world_model.start()
+        with patch.object(self.agent, 'approach_target') as mock:
+            self.agent.to_identification()
+            sleep(15)
+
+        x = self.agent.target.victimPose.pose.position.x
+        y = self.agent.target.victimPose.pose.position.y
+
+        # The mock should be called only once because the updated goal is
+        # within the acceptable limits
+        self.assertEqual(mock.call_count, 1)
+        self.assertEqual(x, 20)
+        self.assertEqual(y, 20)
 
 
 class TestSensorHoldState(unittest.TestCase):
