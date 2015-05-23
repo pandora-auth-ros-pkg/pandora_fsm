@@ -7,8 +7,8 @@ import unittest
 import roslib
 roslib.load_manifest('pandora_fsm')
 
-from pandora_fsm.machine import Machine
-from pandora_fsm.state import State
+from pandora_fsm.fsm import Machine
+from pandora_fsm.fsm import State
 
 
 class Stuff(object):
@@ -263,6 +263,17 @@ class TestTransitions(unittest.TestCase):
             None, states, initial='beginning', ordered_transitions=True)
         m.next_state()
         self.assertEquals(m.state, 'middle')
+
+    def test_silent_wrong_transition(self):
+        state = ['state_one', 'state_two']
+        m = Machine(None, state)
+        m.add_transition(trigger='advance', source='B', dest='C', before='extract_message')
+
+        m.to_state_one()
+        m.advance()
+
+        self.assertEqual(m.state, 'state_one')
+
 
 if __name__ == '__main__':
     unittest.main()

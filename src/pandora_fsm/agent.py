@@ -526,6 +526,15 @@ class Agent(object):
 
         for victim in self.current_victims:
             if victim.id == self.target.id:
+                old_pose = self.target.victimPose
+                new_pose = victim.victimPose
+                if distance_2d(old_pose.pose, new_pose.pose) > self.BASE_THRESHOLD:
+                    self.target = victim
+                    if self.state == 'identification':
+                        logwarn('Move base goal is outdated...')
+                        loginfo(new_pose.pose)
+                        self.control_base.cancel_all_goals()
+                        self.approach_target()
                 self.target = victim
 
     def choose_next_victim(self):
