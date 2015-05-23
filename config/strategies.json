@@ -98,7 +98,6 @@
         "description": "The agents takes a closer look at the victim.",
         "tasks": [
           "mode_sensor_hold",
-          "move_linear",
           "wait_for_verification"
         ],
         "clean": [],
