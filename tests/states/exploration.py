@@ -14,7 +14,8 @@ from std_msgs.msg import String
 
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent
-import mock_msgs
+
+from pandora_fsm.mocks import msgs as mock_msgs
 
 
 class TestExplorationState(unittest.TestCase):
@@ -135,5 +136,5 @@ class TestExplorationState(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    rospy.int_node('exploration_state')
+    rospy.init_node('exploration_state')
     unittest.main()

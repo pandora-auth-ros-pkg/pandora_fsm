@@ -6,7 +6,6 @@
 """
 
 import unittest
-import threading
 
 import roslib
 roslib.load_manifest('pandora_fsm')
@@ -17,10 +16,10 @@ from geometry_msgs.msg import PoseStamped
 
 from actionlib_msgs.msg import GoalStatus
 
-import mock_msgs
+from pandora_fsm.mocks import msgs as mock_msgs
 from pandora_fsm.utils import distance_2d, distance_3d
-from pandora_fsm import (Agent, TimeLimiter, Navigation, Control,
-                         DataFusion, GUI, LinearMotor, Effector, LinearMotor)
+from pandora_fsm import (Agent, TimeLimiter, TimeoutException, Navigation,
+                         Control, DataFusion, GUI, Effector, LinearMotor)
 
 
 class TestUtils(unittest.TestCase):
@@ -430,5 +429,5 @@ class TestDeleteVictim(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    rospy.init_node('test_agent_units')
+    rospy.init_node('unit_tests')
     unittest.main()

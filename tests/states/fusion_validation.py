@@ -10,7 +10,7 @@ from rospy import Publisher
 from std_msgs.msg import String
 
 from pandora_fsm import Agent
-import mock_msgs
+from pandora_fsm.mocks import msgs as mock_msgs
 
 
 class TestFusionValidationState(unittest.TestCase):

@@ -7,14 +7,9 @@
         type="state_server"
         output="screen" />
 
-  <node name="mock_publishers_subscribers"
+  <node name="mocks"
         pkg="pandora_fsm"
-        type="mock_publishers_subscribers.py"
-        output="screen" />
-
-  <node name="mock_action_clients"
-        pkg="pandora_fsm"
-        type="mock_action_clients.py"
+        type="mocks.py"
         output="screen" />
 
 </launch>

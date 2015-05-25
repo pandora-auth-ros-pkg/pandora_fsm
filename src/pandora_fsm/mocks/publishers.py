@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-    Publishers and Subscribers mocks.
+    Mock Publishers.
 """
 
 from random import randint, random
@@ -18,10 +18,11 @@ from pandora_fsm import topics
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
 
-import mock_msgs
+import msgs
 
 
 class WorldModel(object):
+    """ Mock publisher for the world_model. """
 
     def __init__(self, name):
         self._name = name
@@ -47,8 +48,8 @@ class WorldModel(object):
 
     def create_msg(self):
         msg = WorldModelMsg()
-        msg.victims = [mock_msgs.create_victim_info() for i in range(randint(1, 3))]
-        msg.visitedVictims = [mock_msgs.create_victim_info() for i in range(randint(1, 3))]
+        msg.victims = [msgs.create_victim_info() for i in range(randint(1, 3))]
+        msg.visitedVictims = [msgs.create_victim_info() for i in range(randint(1, 3))]
 
         return msg
 
@@ -61,7 +62,7 @@ class WorldModel(object):
     def publish_custom_msg(self, id=None, victim_frame_id=None, sensors=None,
                            valid=None, probability=None):
         msg = WorldModelMsg()
-        msg.victims = [mock_msgs.create_victim_info(id, victim_frame_id, sensors, valid,
+        msg.victims = [msgs.create_victim_info(id, victim_frame_id, sensors, valid,
                        probability)]
         rate = rospy.Rate(5)
         timeout_threshold = 1
@@ -79,9 +80,3 @@ class WorldModel(object):
         loginfo("finished publishing")
 
         self.flag = False
-
-if __name__ == '__main__':
-    rospy.init_node('mock_node')
-    world = WorldModel('world_model')
-
-    rospy.spin()

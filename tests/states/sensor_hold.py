@@ -11,7 +11,7 @@ from rospy import sleep
 
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent
-import mock_msgs
+from pandora_fsm.mocks import msgs as mock_msgs
 
 
 class TestSensorHoldState(unittest.TestCase):

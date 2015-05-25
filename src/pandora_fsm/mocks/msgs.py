@@ -4,16 +4,12 @@
     Mock messages factories.
 """
 
-from random import randint, random, uniform
+from random import randint, random
 
 import rospy
 import roslib
 roslib.load_manifest('pandora_fsm')
-from std_msgs.msg import String, Int32
 
-from pandora_fsm import topics
-
-# Messages
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
 

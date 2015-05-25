@@ -16,7 +16,7 @@ from pandora_data_fusion_msgs.msg import WorldModelMsg
 
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent
-import mock_msgs
+from pandora_fsm.mocks import msgs as mock_msgs
 
 
 class TestIdentificationState(unittest.TestCase):
