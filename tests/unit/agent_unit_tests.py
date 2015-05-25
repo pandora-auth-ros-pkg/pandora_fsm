@@ -19,7 +19,7 @@ from actionlib_msgs.msg import GoalStatus
 from pandora_fsm.mocks import msgs as mock_msgs
 from pandora_fsm.utils import distance_2d, distance_3d
 from pandora_fsm import (Agent, TimeLimiter, TimeoutException, Navigation,
-                         Control, DataFusion, GUI, Effector, LinearMotor)
+                         Control, DataFusion, GUI, Effector)
 
 
 class TestUtils(unittest.TestCase):
@@ -39,7 +39,6 @@ class TestUtils(unittest.TestCase):
         self.assertIsInstance(self.agent.data_fusion, DataFusion)
         self.assertIsInstance(self.agent.gui_client, GUI)
         self.assertIsInstance(self.agent.effector, Effector)
-        self.assertIsInstance(self.agent.linear, LinearMotor)
 
         # Make sure the subscribers are instantiated.
         self.assertIsInstance(self.agent.score_sub, Subscriber)
@@ -191,7 +190,6 @@ class TestEndEffector(unittest.TestCase):
 
         # Register the mock servers.
         self.effector_mock = Publisher('mock/effector', String)
-        self.linear_mock = Publisher('mock/linear', String)
         self.agent = Agent(strategy='normal')
 
     def test_park_end_effector(self):
@@ -235,20 +233,6 @@ class TestEndEffector(unittest.TestCase):
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)
 
-    def test_linear(self):
-        self.linear_mock.publish('abort:1')
-
-        @TimeLimiter(timeout=5)
-        def infinite_delay():
-            self.agent.test_linear()
-
-        self.assertRaises(TimeoutException, infinite_delay)
-
-        self.linear_mock.publish('success:1')
-        self.agent.test_linear()
-        self.assertEqual(self.agent.linear_client.get_state(),
-                         GoalStatus.SUCCEEDED)
-
     def test_point_sensors(self):
         self.agent.target_victim = mock_msgs.create_victim_info()
         self.effector_mock.publish('abort:1')
@@ -259,20 +243,6 @@ class TestEndEffector(unittest.TestCase):
 
         self.effector_mock.publish('success:1')
         self.agent.point_sensors()
-        sleep(3)
-        self.assertEqual(self.agent.end_effector_client.get_state(),
-                         GoalStatus.SUCCEEDED)
-
-    def test_move_linear(self):
-        self.agent.target_victim = mock_msgs.create_victim_info()
-        self.effector_mock.publish('abort:1')
-        self.agent.move_linear()
-        sleep(3)
-        self.assertEqual(self.agent.end_effector_client.get_state(),
-                         GoalStatus.ABORTED)
-
-        self.effector_mock.publish('success:1')
-        self.agent.move_linear()
         sleep(3)
         self.assertEqual(self.agent.end_effector_client.get_state(),
                          GoalStatus.SUCCEEDED)

@@ -17,42 +17,18 @@ class TestInitState(unittest.TestCase):
     """ Tests for the init state. """
 
     def setUp(self):
-        self.linear_mock = Publisher('mock/linear', String)
         self.effector_mock = Publisher('mock/effector', String)
         self.agent = Agent(strategy='normal')
         self.agent.set_breakpoint('exploration')
 
     def test_init_to_exploration(self):
         self.effector_mock.publish('success:1')
-        self.linear_mock.publish('success:1')
         self.agent.to_init()
         self.assertEqual(self.agent.state, 'exploration')
-
-    def test_initialization_with_linear_failure(self):
-
-        self.effector_mock.publish('success:1')
-        self.linear_mock.publish('abort:1')
-
-        # If the end effector is not responsive the init
-        # task will loop forever. Using this decorator
-        # we limit the execution time of the task.
-        # Wrap your function and test the wrapper.
-        @TimeLimiter(timeout=5)
-        def init_wrapper():
-            self.agent.to_init()
-        self.assertRaises(TimeoutException, init_wrapper)
-
-        self.linear_mock.publish('preempt:1')
-
-        @TimeLimiter(timeout=5)
-        def init_wrapper():
-            self.agent.to_init()
-        self.assertRaises(TimeoutException, init_wrapper)
 
     def test_initialization_with_effector_failure(self):
 
         self.effector_mock.publish('abort:1')
-        self.linear_mock.publish('success:1')
 
         # If the end effector is not responsive the init
         # task will loop forever. Using this decorator
@@ -72,7 +48,6 @@ class TestInitState(unittest.TestCase):
 
     def test_global_state_change(self):
         self.effector_mock.publish('success:1')
-        self.linear_mock.publish('success:1')
 
         initial_state = RobotModeMsg.MODE_OFF
         final_state = RobotModeMsg.MODE_START_AUTONOMOUS
