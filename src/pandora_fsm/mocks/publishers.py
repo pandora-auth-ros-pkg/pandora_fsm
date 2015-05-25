@@ -24,59 +24,25 @@ import msgs
 class WorldModel(object):
     """ Mock publisher for the world_model. """
 
-    def __init__(self, name):
-        self._name = name
+    def __init__(self):
         self._pub = Publisher(topics.world_model, WorldModelMsg)
-        Subscriber('mock/' + self._name, String, self.receive_commands)
-        Subscriber('mock/victim_probability', String, self.receive_probability)
-        loginfo('+ Starting ' + self._name)
 
-    def receive_commands(self, msg):
-        self.frequency = float(msg.data)
-        self._rate = rospy.Rate(self.frequency)
-        self.send()
-
-    def send(self):
-        count = 0
-        while not rospy.is_shutdown():
-            msg = self.create_msg()
-            self._pub.publish(msg)
-            count += 1
-            sleep(1)
-            if count > self.frequency:
-                break
-
-    def create_msg(self):
+    def send_random(self, duration=3, new_victims=2, old_victims=5):
         msg = WorldModelMsg()
-        msg.victims = [msgs.create_victim_info() for i in range(randint(1, 3))]
-        msg.visitedVictims = [msgs.create_victim_info() for i in range(randint(1, 3))]
+        msg.victims = [msgs.create_victim_info() for i in range(new_victims)]
+        msg.visitedVictims = [msgs.create_victim_info() for i in range(old_victims)]
 
-        return msg
+        for i in range(duration):
+            if not rospy.is_shutdown():
+                self._pub.publish(msg)
+                sleep(1)
 
-    def receive_probability(self, msg):
-        ident_temp, prob_temp = msg.data.split(':')
-        ident = int(ident_temp)
-        prob = float(prob_temp)
-        self.publish_custom_msg(id=ident, probability=prob)
+    def send_custom(self, victims, visited, duration=10):
+        msg = WorldModel()
+        msg.victims = victims
+        msg.visitedVictims = visited
 
-    def publish_custom_msg(self, id=None, victim_frame_id=None, sensors=None,
-                           valid=None, probability=None):
-        msg = WorldModelMsg()
-        msg.victims = [msgs.create_victim_info(id, victim_frame_id, sensors, valid,
-                       probability)]
-        rate = rospy.Rate(5)
-        timeout_threshold = 1
-        self._rate = rate
-        self.flag = True
-
-        # We set the threshold and the rate so that the world model is
-        # updated in time for the tests to run smoothly
-        Timer(Duration(timeout_threshold), self.publish_timeout, True)
-        while self.flag:
-            self._pub.publish(msg)
-            self._rate.sleep()
-
-    def publish_timeout(self, event):
-        loginfo("finished publishing")
-
-        self.flag = False
+        for i in range(duration):
+            if not rospy.is_shutdown():
+                self._pub.publish(msg)
+                sleep(1)
