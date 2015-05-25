@@ -47,7 +47,7 @@ class Agent(object):
     """
 
     def __init__(self, config='strategies.json', strategy='normal',
-                 name='Pandora', verbose=False):
+                 name='Pandora', testing=False, verbose=False):
         """ Initializes the agent.
 
         :param :name The name of the agent. Defaults to Pandora.
@@ -62,6 +62,7 @@ class Agent(object):
         config_dir = RosPack().get_path(PKG) + '/config/'
         self.name = name
         self.verbose = verbose
+        self.testing = testing
         self.strategy = strategy
         self.config = config_dir + config
 
@@ -90,11 +91,12 @@ class Agent(object):
         self.effector = clients.Effector()
 
         # State client
-        loginfo('Connecting to state manager.')
-        self.state_changer = StateClient()
-        self.state_changer.client_initialize()
-        loginfo('Connection established.')
-        self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
+        if not self.testing:
+            loginfo('Connecting to state manager.')
+            self.state_changer = StateClient()
+            self.state_changer.client_initialize()
+            loginfo('Connection established.')
+            self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
 
         # General information.
         self.QRs = []
