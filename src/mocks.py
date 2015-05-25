@@ -10,8 +10,8 @@ from pandora_data_fusion_msgs.msg import ValidateVictimAction
 
 from pandora_rqt_gui.msg import ValidateVictimGUIAction
 
-from pandora_navigation_msgs.msg import DoExplorationAction
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
+from pandora_exploration_msgs.msg import DoExplorationAction
+from pandora_end_effector_controller.msg import MoveEndEffectorAction
 
 
 if __name__ == '__main__':
@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     # Action Servers
     MoveBaseServer('move_base', topics.move_base)
-    MockActionServer('effector', topics.move_end_effector_planner,
+    MockActionServer('effector', topics.move_end_effector_controller,
                      MoveEndEffectorAction)
     MockActionServer('explorer', topics.do_exploration, DoExplorationAction)
     MockActionServer('validate_gui', topics.gui_validation,

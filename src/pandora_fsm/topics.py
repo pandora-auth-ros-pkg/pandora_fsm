@@ -69,4 +69,4 @@ agent_interrupt = '/agent/interrupt'
 """ Control """
 
 # Moves end effector to a point of interest.
-move_end_effector_planner = '/control/move_end_effector_planner_action'
+move_end_effector_controller = '/control/move_end_effector_controller_action'
