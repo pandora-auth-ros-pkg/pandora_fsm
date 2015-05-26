@@ -4,51 +4,47 @@
     Mock messages factories.
 """
 
-from random import randint, random, uniform
+from random import randint, random
 
 import rospy
 import roslib
 roslib.load_manifest('pandora_fsm')
-from std_msgs.msg import String, Int32
 
-from pandora_fsm import topics
-
-# Messages
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
 
 
-def create_pose():
+def create_pose(*args, **kwargs):
     msg = Pose()
-    msg.position = create_point()
-    msg.orientation = create_quaternion()
+    msg.position = create_point(*args, **kwargs)
+    msg.orientation = create_quaternion(*args, **kwargs)
 
     return msg
 
 
-def create_point():
+def create_point(x=None, y=None, z=None):
     msg = Point()
-    msg.x = random() * 10
-    msg.y = random() * 10
-    msg.z = random() * 10
+    msg.x = random() * 10 if x is None else x
+    msg.y = random() * 10 if y is None else y
+    msg.z = random() * 10 if z is None else z
 
     return msg
 
 
-def create_quaternion():
+def create_quaternion(x=None, y=None, z=None, w=None):
     msg = Quaternion()
-    msg.x = random() * 10
-    msg.y = random() * 10
-    msg.z = random() * 10
-    msg.w = random() * 10
+    msg.x = random() * 10 if x is None else x
+    msg.y = random() * 10 if y is None else y
+    msg.z = random() * 10 if z is None else z
+    msg.w = random() * 10 if w is None else w
 
     return msg
 
 
-def create_pose_stamped():
+def create_pose_stamped(*args, **kwargs):
     msg = PoseStamped()
     msg.header = rospy.Header()
-    msg.pose = create_pose()
+    msg.pose = create_pose(*args, **kwargs)
 
     return msg
 

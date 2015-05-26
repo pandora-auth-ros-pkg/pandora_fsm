@@ -1,27 +1,20 @@
 #! /usr/bin/env python
 
 """
-    Action client mocks.
+    Mock action servers.
 """
 
-from rospy import loginfo, logwarn, sleep, Subscriber, init_node, spin, Rate
+from rospy import loginfo, logwarn, sleep, Subscriber
 import roslib
 roslib.load_manifest('pandora_fsm')
 from std_msgs.msg import String, Bool
 
 from actionlib import SimpleActionServer as ActionServer
-from pandora_fsm import topics
 
 # Messages
-from pandora_navigation_msgs.msg import DoExplorationAction
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
-from pandora_end_effector_planner.msg import MoveLinearAction
 import move_base_msgs.msg
 from move_base_msgs.msg import MoveBaseAction
-from pandora_data_fusion_msgs.msg import DeleteVictimAction
-from pandora_rqt_gui.msg import ValidateVictimGUIAction
 from pandora_rqt_gui.msg import ValidateVictimGUIResult
-from pandora_data_fusion_msgs.msg import ValidateVictimAction
 
 
 class MockActionServer(object):
@@ -145,17 +138,3 @@ class MoveBaseServer(MockActionServer):
             loginfo('MoveBaseAction: Goal succeeded...')
             _result = self._feedback
             self._server.set_succeeded(_result)
-
-
-if __name__ == '__main__':
-    init_node('mock_node')
-
-    MoveBaseServer('move_base', topics.move_base)
-    MockActionServer('effector', topics.move_end_effector_planner, MoveEndEffectorAction)
-    MockActionServer('linear', topics.linear_movement, MoveLinearAction)
-    MockActionServer('explorer', topics.do_exploration, DoExplorationAction)
-    MockActionServer('validate_gui', topics.gui_validation, ValidateVictimGUIAction)
-    MockActionServer('delete_victim', topics.delete_victim, DeleteVictimAction)
-    MockActionServer('fusion_validate', topics.validate_victim, ValidateVictimAction)
-
-    spin()

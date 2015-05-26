@@ -68,11 +68,5 @@ agent_interrupt = '/agent/interrupt'
 
 """ Control """
 
-# Feedback from the linear motor.
-linear_movement_action_feedback = '/control/linear_movement_action/feedback'
-
-# Action Server for the linear motor.
-linear_movement = '/control/linear_movement_action'
-
 # Moves end effector to a point of interest.
-move_end_effector_planner = '/control/move_end_effector_planner_action'
+move_end_effector_controller = '/control/move_end_effector_controller_action'

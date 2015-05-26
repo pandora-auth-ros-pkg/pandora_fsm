@@ -26,14 +26,12 @@ from geometry_msgs.msg import PoseStamped
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
 
-from pandora_navigation_msgs.msg import DoExplorationGoal
+from pandora_exploration_msgs.msg import DoExplorationGoal
 
 from pandora_data_fusion_msgs.msg import WorldModelMsg
 from pandora_data_fusion_msgs.msg import QrNotificationMsg
 
 from pandora_rqt_gui.msg import ValidateVictimGUIResult
-
-from pandora_end_effector_planner.msg import MoveLinearFeedback
 
 import topics
 import clients
@@ -49,7 +47,7 @@ class Agent(object):
     """
 
     def __init__(self, config='strategies.json', strategy='normal',
-                 name='Pandora', verbose=False):
+                 name='Pandora', testing=False, verbose=False):
         """ Initializes the agent.
 
         :param :name The name of the agent. Defaults to Pandora.
@@ -64,6 +62,7 @@ class Agent(object):
         config_dir = RosPack().get_path(PKG) + '/config/'
         self.name = name
         self.verbose = verbose
+        self.testing = testing
         self.strategy = strategy
         self.config = config_dir + config
 
@@ -90,20 +89,19 @@ class Agent(object):
         self.control_base = clients.Control(self.dispatcher)
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
-        self.linear = clients.LinearMotor()
 
         # State client
-        loginfo('Connecting to state manager.')
-        self.state_changer = StateClient()
-        self.state_changer.client_initialize()
-        loginfo('Connection established.')
-        self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
+        if not self.testing:
+            loginfo('Connecting to state manager.')
+            self.state_changer = StateClient()
+            self.state_changer.client_initialize()
+            loginfo('Connection established.')
+            self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
 
         # General information.
         self.QRs = []
         self.score = 0
         self.current_robot_pose = PoseStamped()
-        self.linear_feedback = MoveLinearFeedback()
         self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
         self.current_pose = PoseStamped()
         self.last_pose_goal = PoseStamped()
@@ -142,7 +140,6 @@ class Agent(object):
         setattr(self, 'park_end_effector', self.effector.park)
         setattr(self, 'preempt_end_effector', self.effector.cancel_all_goals)
         setattr(self, 'preempt_explorer', self.explorer.cancel_all_goals)
-        setattr(self, 'test_linear', self.linear.test)
         setattr(self, 'scan', self.effector.scan)
 
         self.generate_global_state_transitions()
@@ -221,7 +218,6 @@ class Agent(object):
 
         self.explorer.cancel_all_goals()
         self.control_base.cancel_all_goals()
-        self.linear.cancel_all_goals()
         self.effector.cancel_all_goals()
         self.gui_client.cancel_all_goals()
 
@@ -395,11 +391,6 @@ class Agent(object):
             if self.state == 'exploration':
                 self.dispatcher.emit('poi.found')
 
-    def receive_linear_feedback(self, msg):
-        """ Receives feedback from the linear motor. """
-
-        self.linear_feedback = msg.feedback.linear_command_converged
-
     ######################################################
     #                 AGENT'S ACTIONS                    #
     ######################################################
@@ -409,11 +400,6 @@ class Agent(object):
 
         self.gui_result.victimValid = False
         self.target = None
-
-    def move_linear(self):
-        """ Moves the linear motor the target victim. """
-
-        self.linear.move(self.target.victimFrameId)
 
     def validate_victim(self):
         """ Sends information about the current target.  """

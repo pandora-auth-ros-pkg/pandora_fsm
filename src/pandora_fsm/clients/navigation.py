@@ -7,7 +7,7 @@ from geometry_msgs.msg import PoseStamped
 from actionlib import GoalStatus
 from actionlib import SimpleActionClient as Client
 
-from pandora_navigation_msgs.msg import DoExplorationAction, DoExplorationGoal
+from pandora_exploration_msgs.msg import DoExplorationAction, DoExplorationGoal
 
 from pandora_fsm import topics
 from pandora_fsm.utils import TERMINAL_STATES, ACTION_STATES
