@@ -3,7 +3,7 @@
 from rospy import init_node, spin
 
 from pandora_fsm import topics
-from pandora_fsm.mocks import MoveBaseServer, MockActionServer, WorldModel
+from pandora_fsm.mocks import MoveBaseServer, MockActionServer
 
 from pandora_data_fusion_msgs.msg import DeleteVictimAction
 from pandora_data_fusion_msgs.msg import ValidateVictimAction
@@ -27,7 +27,4 @@ if __name__ == '__main__':
     MockActionServer('delete_victim', topics.delete_victim, DeleteVictimAction)
     MockActionServer('fusion_validate', topics.validate_victim,
                      ValidateVictimAction)
-    # Publishers
-    WorldModel('world_model')
-
     spin()
