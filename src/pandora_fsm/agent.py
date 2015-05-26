@@ -26,7 +26,7 @@ from geometry_msgs.msg import PoseStamped
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
 
-from pandora_navigation_msgs.msg import DoExplorationGoal
+from pandora_exploration_msgs.msg import DoExplorationGoal
 
 from pandora_data_fusion_msgs.msg import WorldModelMsg
 from pandora_data_fusion_msgs.msg import QrNotificationMsg

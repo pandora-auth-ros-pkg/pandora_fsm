@@ -18,14 +18,14 @@
   <depend>rospy</depend>
   <depend>move_base_msgs</depend>
   <depend>pandora_data_fusion_msgs</depend>
-  <depend>pandora_navigation_msgs</depend>
+  <depend>pandora_exploration_msgs</depend>
+  <depend>pandora_rqt_gui</depend>
+  <depend>pandora_end_effector_controller</depend>
   <depend>state_manager</depend>
   <depend>state_manager_msgs</depend>
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>pandora_rqt_gui</depend>
-  <depend>pandora_end_effector_planner</depend>
 
   <depend>dynamic_reconfigure</depend>
 

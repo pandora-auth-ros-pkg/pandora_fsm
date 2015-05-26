@@ -3,8 +3,8 @@ from rospy import loginfo, sleep
 
 from actionlib import SimpleActionClient as Client
 
-from pandora_end_effector_planner.msg import MoveEndEffectorAction
-from pandora_end_effector_planner.msg import MoveEndEffectorGoal
+from pandora_end_effector_controller.msg import MoveEndEffectorAction
+from pandora_end_effector_controller.msg import MoveEndEffectorGoal
 
 from pandora_fsm import topics
 
@@ -17,7 +17,7 @@ class Effector(object):
 
     def __init__(self, verbose=False):
         self.verbose = verbose
-        self.client = Client(topics.move_end_effector_planner,
+        self.client = Client(topics.move_end_effector_controller,
                              MoveEndEffectorAction)
 
         goal = MoveEndEffectorGoal(command=MoveEndEffectorGoal.TEST)
