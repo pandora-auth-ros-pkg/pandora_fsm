@@ -16,24 +16,26 @@ from pandora_fsm import topics
 from pandora_fsm.utils import ACTION_STATES, TERMINAL_STATES
 
 
-class Control(object):
+class Navigator(object):
 
-    """ Control client to move the robot on the map. """
+    """ Navigation client that is responsible for moving the robot
+        on the map.
+    """
 
     def __init__(self, dispatcher, verbose=False):
         self.verbose = verbose
         self.dispatcher = dispatcher
-        self.base_client = Client(topics.move_base, MoveBaseAction)
+        self.client = Client(topics.move_base, MoveBaseAction)
         self.base_pending = Event()
         self.current_pose = PoseStamped()
         self.target_pose = PoseStamped()
 
     def cancel_all_goals(self):
         loginfo('++ Waiting for the move base action server...')
-        self.base_client.wait_for_server()
+        self.client.wait_for_server()
         loginfo('++ Canceling all goals on move base.')
         self.base_pending.clear()
-        self.base_client.cancel_all_goals()
+        self.client.cancel_all_goals()
         sleep(3)
 
     def move_base(self, target):
@@ -55,12 +57,12 @@ class Control(object):
         goal = MoveBaseGoal(target_pose=target)
         self.target_pose = target
         loginfo('++ Waiting for move base action server...')
-        self.base_client.wait_for_server()
+        self.client.wait_for_server()
         loginfo('++ Sending move base goal.')
         loginfo(target.pose)
         self.base_pending.set()
-        self.base_client.send_goal(goal, feedback_cb=self.base_feedback,
-                                   done_cb=self.move_base_done)
+        self.client.send_goal(goal, feedback_cb=self.base_feedback,
+                              done_cb=self.move_base_done)
 
     def move_base_done(self, status, result):
 

@@ -14,14 +14,14 @@ from geometry_msgs.msg import PoseStamped
 
 
 from pandora_fsm.utils import distance_2d, distance_3d
-from pandora_fsm import Agent, Navigation, Control, DataFusion, GUI, Effector
+from pandora_fsm import Agent, Explorer, Navigator, DataFusion, GUI, Effector
 
 
 class TestUtils(unittest.TestCase):
 
     def setUp(self):
         """ Initialization """
-        self.agent = Agent()
+        self.agent = Agent(testing=True)
 
     def test_agent_initialization(self):
 
@@ -29,8 +29,8 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(self.agent.victims_found, 0)
 
         # Make sure the action clients are instantiated.
-        self.assertIsInstance(self.agent.explorer, Navigation)
-        self.assertIsInstance(self.agent.control_base, Control)
+        self.assertIsInstance(self.agent.explorer, Explorer)
+        self.assertIsInstance(self.agent.navigator, Navigator)
         self.assertIsInstance(self.agent.data_fusion, DataFusion)
         self.assertIsInstance(self.agent.gui_client, GUI)
         self.assertIsInstance(self.agent.effector, Effector)

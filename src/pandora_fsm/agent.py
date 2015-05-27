@@ -84,9 +84,9 @@ class Agent(object):
                                           self.receive_world_model)
 
         # ACTION CLIENTS.
-        self.explorer = clients.Navigation(self.dispatcher)
+        self.explorer = clients.Explorer(self.dispatcher)
         self.data_fusion = clients.DataFusion()
-        self.control_base = clients.Control(self.dispatcher)
+        self.navigator = clients.Navigator(self.dispatcher)
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
 
@@ -217,7 +217,7 @@ class Agent(object):
         """ Kills agent and cleans the environment. """
 
         self.explorer.cancel_all_goals()
-        self.control_base.cancel_all_goals()
+        self.navigator.cancel_all_goals()
         self.effector.cancel_all_goals()
         self.gui_client.cancel_all_goals()
 
@@ -235,7 +235,7 @@ class Agent(object):
 
     def exploration_success(self):
         """ Called on 'exploration.success' event. The event is triggered from
-            the navigation client when the current goal has succeeded.
+            the exploration client when the current goal has succeeded.
             Enables the agent to move from the exploration state to end.
         """
         on_exploration = self.state == 'exploration'
@@ -248,7 +248,7 @@ class Agent(object):
 
     def exploration_retry(self):
         """ Called on 'exploration.retry' event. The event is triggered from
-            the navigation client when the current goal has failed and the
+            the exploration client when the current goal has failed and the
             agent sends again a goal.
         """
         if self.state == 'exploration':
@@ -311,7 +311,7 @@ class Agent(object):
             remain = self.MOVE_BASE_RETRY_LIMIT - self.MOVE_BASE_RETRIES
             logwarn('%d remaining before aborting the current target.', remain)
             self.MOVE_BASE_RETRIES += 1
-            self.control_base.move_base(self.target.victimPose)
+            self.navigator.move_base(self.target.victimPose)
         else:
             self.MOVE_BASE_RETRIES = 0
             self.base_timer.cancel()
@@ -477,7 +477,7 @@ class Agent(object):
         self.base_converged.clear()
 
         # Move base to the target.
-        self.control_base.move_base(self.target.victimPose)
+        self.navigator.move_base(self.target.victimPose)
 
         # Point sensors to the target.
         self.effector.point_to(self.target.victimFrameId)
@@ -492,7 +492,7 @@ class Agent(object):
     def timer_handler(self):
         if self.state == 'identification':
             logwarn('Move base is unresponsive or it takes too long.')
-            self.control_base.cancel_all_goals()
+            self.navigator.cancel_all_goals()
             self.base_timer.cancel()
             self.abort_victim()
         else:
@@ -519,7 +519,7 @@ class Agent(object):
                     if self.state == 'identification':
                         logwarn('Move base goal is outdated...')
                         loginfo(new_pose.pose)
-                        self.control_base.cancel_all_goals()
+                        self.navigator.cancel_all_goals()
                         self.approach_target()
                 self.target = victim
 

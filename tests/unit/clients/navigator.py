@@ -32,21 +32,21 @@ class TestMoveBase(unittest.TestCase):
     def test_move_base_abort(self):
         self.move_base_mock.publish('abort:1')
         self.agent.move_base()
-        self.agent.control_base.wait_for_result()
-        self.assertEqual(self.agent.control_base.get_state(),
+        self.agent.navigator.wait_for_result()
+        self.assertEqual(self.agent.navigator.get_state(),
                          GoalStatus.ABORTED)
 
     def test_move_base_success(self):
         self.move_base_mock.publish('success:1')
         self.agent.move_base()
-        self.agent.control_base.wait_for_result()
-        self.assertEqual(self.agent.control_base.get_state(),
+        self.agent.navigator.wait_for_result()
+        self.assertEqual(self.agent.navigator.get_state(),
                          GoalStatus.SUCCEEDED)
 
     def test_move_base_preempt(self):
         self.agent.move_base()
         self.agent.preempt_move_base()
-        self.assertEqual(self.agent.control_base.get_state(),
+        self.assertEqual(self.agent.navigator.get_state(),
                          GoalStatus.ABORTED)
 
 

@@ -16,7 +16,7 @@ from rospy import sleep
 
 from pandora_fsm.mocks import msgs as mock_msgs
 from pandora_fsm.mocks import WorldModel
-from pandora_fsm import Agent, Control
+from pandora_fsm import Agent, Navigator
 
 
 class WorldModelSub(unittest.TestCase):
@@ -154,7 +154,7 @@ class UpdateTarget(unittest.TestCase):
         self.agent.target = target
         self.agent.current_victims = [another, target_updated]
         approach_target = Mock(spec=self.agent.approach_target)
-        cancel_all_goals = Mock(spec=self.agent.control_base.cancel_all_goals)
+        cancel_all_goals = Mock(spec=self.agent.navigator.cancel_all_goals)
 
         self.agent.update_target_victim()
 
@@ -176,7 +176,7 @@ class UpdateTarget(unittest.TestCase):
         self.agent.target = target
         self.agent.current_victims = [another, target_updated]
         approach_target = Mock(spec=self.agent.approach_target)
-        cancel_all_goals = Mock(spec=self.agent.control_base.cancel_all_goals)
+        cancel_all_goals = Mock(spec=self.agent.navigator.cancel_all_goals)
 
         self.agent.update_target_victim()
 
@@ -202,7 +202,7 @@ class UpdateTarget(unittest.TestCase):
         self.agent.current_victims = [another, target_updated]
 
         # Mocks
-        with patch.object(Control, 'cancel_all_goals') as mock_control:
+        with patch.object(Navigator, 'cancel_all_goals') as mock_control:
             with patch.object(Agent, 'approach_target') as mock_agent:
 
                 # Change the implementation of the functions.
