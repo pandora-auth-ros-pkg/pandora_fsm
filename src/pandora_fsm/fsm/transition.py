@@ -93,5 +93,3 @@ class Transition(object):
         """
         callback_list = getattr(self, trigger)
         callback_list.append(func)
-
-
