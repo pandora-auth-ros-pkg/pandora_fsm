@@ -26,6 +26,6 @@ catkin_package(
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
      ${PROJECT_SOURCE_DIR}
      src/**/*.py
-     tests/*.py
+     tests/**/*.py
     )
 roslint_python(${${PROJECT_NAME}_LINT_PYTHON})
