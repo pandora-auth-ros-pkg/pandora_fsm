@@ -157,3 +157,29 @@ def retry_action(client=None, goal=None, timeout=0, msg=''):
                 logerr("Couldn't test %s in time...", msg)
             sleep(2)
             loginfo('Retrying...')
+
+
+class Timer(threading.Thread):
+
+    """ Custom timer that executes a callback every N seconds. """
+
+    def __init__(self, stop_flag, interval, callback, args=(), **kwargs):
+        """
+        :param stop_flag: Threading Event to control the timer externally.
+        :param interval: An interval to execute the callback.
+        :param callback: The function to execute every interval.
+        :parm kwargs: Keyword parameters for the callback.
+
+        """
+        threading.Thread.__init__(self)
+        self.stop_flag = stop_flag
+        self.interval = interval
+        self.callback = callback
+        self.kwargs = kwargs
+        self.args = args
+
+    def run(self):
+        """ Start the timer. """
+
+        while not self.stop_flag.wait(self.interval):
+            self.callback(*self.args, **self.kwargs)

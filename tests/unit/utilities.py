@@ -4,16 +4,18 @@
     Unit Tests for utility methods.
 """
 
+import threading
+import time
 import unittest
 
+from mock import patch
 import roslib
 roslib.load_manifest('pandora_fsm')
-import rospy
+
 from rospy import Subscriber
 from geometry_msgs.msg import PoseStamped
 
-
-from pandora_fsm.utils import distance_2d, distance_3d
+from pandora_fsm.utils import distance_2d, distance_3d, Timer
 from pandora_fsm import Agent, Explorer, Navigator, DataFusion, GUI, Effector
 
 
@@ -36,8 +38,6 @@ class TestUtils(unittest.TestCase):
         self.assertIsInstance(self.agent.effector, Effector)
 
         # Make sure the subscribers are instantiated.
-        self.assertIsInstance(self.agent.score_sub, Subscriber)
-        self.assertIsInstance(self.agent.qr_sub, Subscriber)
         self.assertIsInstance(self.agent.world_model_sub, Subscriber)
 
         # Make sure global state transition functios have been generated.
@@ -53,8 +53,7 @@ class TestUtils(unittest.TestCase):
         self.assertIsNotNone(self.agent.mode_terminating)
 
         # Empty variables
-        self.assertEqual(self.agent.current_victims, [])
-        self.assertEqual(self.agent.visited_victims, [])
+        self.assertEqual(self.agent.available_targets, [])
 
     @unittest.skip('Not ready yet.')
     def test_load(self):
@@ -86,6 +85,56 @@ class TestUtils(unittest.TestCase):
         self.assertAlmostEqual(distance_3d(a.pose, b.pose), 26.0048072)
 
 
-if __name__ == '__main__':
-    rospy.init_node('unit_utility')
-    unittest.main()
+class ThreadTimer(unittest.TestCase):
+
+    def setUp(self):
+        self.flag = threading.Event()
+
+    def callback(self):
+        pass
+
+    def callback_kwargs(self, arg, a=1, b=2):
+        pass
+
+    def test_simple_call(self):
+        """ The callback should be called in the simplest occasion. """
+
+        with patch.object(self, 'callback') as mock:
+            Timer(self.flag, 1, self.callback).start()
+            time.sleep(2.5)
+            self.flag.set()
+            self.assertEqual(mock.call_count, 2)
+
+    def test_no_calls(self):
+        """ The callback should not be executed if the flag is set. """
+
+        with patch.object(self, 'callback') as mock:
+            self.flag.set()
+            Timer(self.flag, 1, self.callback).start()
+            time.sleep(2)
+            self.assertEqual(mock.call_count, 0)
+
+    def test_restart(self):
+        """ The timer should start again after a stop. """
+
+        with patch.object(self, 'callback') as mock:
+            Timer(self.flag, 1, self.callback).start()
+            time.sleep(2.5)
+            self.flag.set()
+            self.assertEqual(mock.call_count, 2)
+
+            self.flag.clear()
+            Timer(self.flag, 1, self.callback).start()
+            time.sleep(2.5)
+            self.flag.set()
+            self.assertGreater(mock.call_count, 4)
+
+    def test_passing_arguments(self):
+        """ The callback should accept args and kwargs. """
+
+        with patch.object(self, 'callback_kwargs') as mock:
+            args = (3, )
+            Timer(self.flag, 1, self.callback_kwargs, args, a=2, b=7).start()
+            time.sleep(2.5)
+            self.flag.set()
+            mock.assert_called_with(3, a=2, b=7)
