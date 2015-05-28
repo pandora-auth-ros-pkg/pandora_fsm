@@ -1,5 +1,3 @@
-from rospy import logerr, loginfo, logwarn
-
 from actionlib import GoalStatus
 from actionlib import SimpleActionClient as Client
 
@@ -8,6 +6,7 @@ from pandora_data_fusion_msgs.msg import ValidateVictimAction, DeleteVictimGoal
 
 from pandora_fsm import topics
 from pandora_fsm.utils import ACTION_STATES
+from pandora_fsm.utils import logger as log
 
 
 class DataFusion(object):
@@ -28,20 +27,20 @@ class DataFusion(object):
         """
         goal = DeleteVictimGoal(victimId=victim_id)
 
-        loginfo('## Waiting for victim deletion action server...')
+        log.debug('Waiting for the DataFusion action server...')
         self.deletion.wait_for_server()
-        logwarn('## Deleting victim wth ID -> %d.', victim_id)
+        log.warning('Deleting victim wth ID -> %d.', victim_id)
         self.deletion.send_goal(goal)
-        loginfo('## Waiting on response...')
+        log.debug('Waiting for response...')
         self.deletion.wait_for_result()
 
         status = self.deletion.get_state()
         verbose_status = ACTION_STATES[status]
         if status == GoalStatus.SUCCEEDED:
-            loginfo('## Victim deletion succeded!')
+            log.info('Victim deletion succeded!')
             return True
         else:
-            logerr('## Victim deletion failed with %s.', verbose_status)
+            log.error('Victim deletion failed with %s.', verbose_status)
             return False
 
     def validate_victim(self, victim_id, valid=False):
@@ -55,17 +54,17 @@ class DataFusion(object):
         goal.victimValid = valid
         victim_status = 'valid' if valid else 'not valid'
 
-        loginfo('## Waiting for data fusion validation action server...')
+        log.debug('Waiting for the DataFusion action server...')
         self.validation.wait_for_server()
-        loginfo('## Validating victim #%d as %s.', victim_id, victim_status)
+        log.info('Validating victim #%d as %s.', victim_id, victim_status)
         self.validation.send_goal(goal)
-        loginfo('## Waiting for response...')
+        log.debug('Waiting for response...')
         self.validation.wait_for_result()
         status = self.validation.get_state()
         verbose_status = ACTION_STATES[status]
         if status == GoalStatus.SUCCEEDED:
-            loginfo('## Victim %d validated succesfully', victim_id)
+            log.info('Victim %d validated succesfully', victim_id)
             return True
         else:
-            logerr('## Validation failure with %s.', verbose_status)
+            log.error('Validation failure with %s.', verbose_status)
             return False
