@@ -73,13 +73,6 @@ class Target(object):
 
         return self.identified.is_set()
 
-    def is_empty(self):
-        """
-        Check if the object is holding valid information.
-        """
-
-        return self.is_empty
-
     def clean(self):
         """
         Reset the info.

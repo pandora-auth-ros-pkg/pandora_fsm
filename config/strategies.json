@@ -28,7 +28,7 @@
           {
             "to": "exploration",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "booted"
           }
@@ -41,7 +41,7 @@
           "mode_exploration_rescue",
           "scan",
           "explore",
-          "start_target_timer"
+          "enable_exploration_events"
         ],
         "clean": [
           "preempt_explorer",
@@ -51,14 +51,14 @@
           {
             "to": "identification",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "point_of_interest_found"
           },
           {
             "to": "end",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "map_covered"
           }
@@ -68,24 +68,23 @@
         "name": "identification",
         "description": "Examining the candidate victim",
         "tasks": [
-          "deny_transitions",
           "mode_identification",
           "approach_target",
-          "allow_transitions"
+          "enable_identification_events"
         ],
         "clean": ["deny_transitions"],
         "transitions": [
           {
             "to": "victim_deletion",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "abort_victim"
           },
           {
             "to": "sensor_hold",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "valid_victim"
           }

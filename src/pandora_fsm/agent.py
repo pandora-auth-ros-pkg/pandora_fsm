@@ -64,12 +64,6 @@ class Agent(object):
 
         # Dispatcher for event based communication.
         self.dispatcher = EventEmitter()
-        self.dispatcher.on('exploration.success', self.exploration_success)
-        self.dispatcher.on('exploration.retry', self.exploration_retry)
-        self.dispatcher.on('poi.found', self.poi_found)
-        self.dispatcher.on('move_base.success', self.move_base_success)
-        self.dispatcher.on('move_base.retry', self.move_base_retry)
-        self.dispatcher.on('move_base.feedback', self.move_base_feedback)
 
         # SUBSCRIBERS.
         self.world_model_sub = Subscriber(topics.world_model, WorldModelMsg,
@@ -101,7 +95,7 @@ class Agent(object):
 
         # Between-transition information.
         self.base_converged = threading.Event()
-        self.modify_targets = threading.Lock()
+        self.state_lock = threading.Event()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
@@ -202,6 +196,13 @@ class Agent(object):
         self.effector.cancel_all_goals()
 
         log.info('Agent is sleeping...')
+
+    def disable_events(self):
+        """
+        Disable all EventEmitter events. It should be called before the
+        main tasks of a state.
+        """
+        self.dispatcher.off_all()
 
     ######################################################
     #               DISPATCHER'S CALLBACKS               #
@@ -319,7 +320,7 @@ class Agent(object):
         if not model.victims:
             return
 
-        if self.target.is_empty():
+        if self.target.is_empty:
 
             # Set a new target from the available ones.
             new_target = self.choose_target(model.victims)
@@ -420,7 +421,16 @@ class Agent(object):
         self.base_timer.start()
 
     def explore(self):
-        self.explorer.explore(exploration_type=self.exploration_mode)
+        """
+        Send exploration goal to the explorer. A different exploration
+        strategy should be used depending on the state variables.
+        """
+        if self.target.is_empty:
+            # TODO Change the exploration mode based on time,
+            # how many targets are left etc.
+            self.explorer.explore(exploration_type=self.exploration_mode)
+        else:
+            threading.Timer(2, self.poi_found).start()
 
     def timer_handler(self):
         if self.state == 'identification':
@@ -431,13 +441,26 @@ class Agent(object):
         else:
             log.error('Timer fired outside of identification state.')
 
-    def start_target_timer(self):
-        pass
-
     def print_results(self):
         """ Prints results of the mission. """
 
         log.info('The agent is shutting down...')
+
+    def enable_exploration_events(self):
+        """
+        Enable EventEmitter events for the exploration state.
+        """
+        self.dispatcher.on('exploration.success', self.exploration_success)
+        self.dispatcher.on('exploration.retry', self.exploration_retry)
+        self.dispatcher.on('poi.found', self.poi_found)
+
+    def enable_identification_events(self):
+        """
+        Enable EventEmitter events for the identfication state.
+        """
+        self.dispatcher.on('move_base.success', self.move_base_success)
+        self.dispatcher.on('move_base.retry', self.move_base_retry)
+        self.dispatcher.on('move_base.feedback', self.move_base_feedback)
 
     ######################################################
     #                  AGENT LOGIC                       #
@@ -459,12 +482,12 @@ class Agent(object):
                         self.approach_target()
                 self.target = victim
 
-    def choose_next_victim(self):
-        """ Choose the next possible victim. """
+    def choose_target(self, targets):
+        """ Choose the next possible target. """
 
-        for victim in self.available_targets:
-            if victim not in self.deleted_victims:
-                return victim
+        for target in targets:
+            if target not in self.deleted_victims:
+                return target
 
     ######################################################
     #               GLOBAL STATE TRANSITIONS             #
