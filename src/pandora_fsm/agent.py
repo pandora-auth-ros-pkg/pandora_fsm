@@ -4,38 +4,34 @@
 PKG = 'pandora_fsm'
 
 import sys
-from threading import Timer
-from pymitter import EventEmitter
+import threading
 import inspect
-from functools import partial
-from threading import Event
 import yaml
+from functools import partial
+
+from pymitter import EventEmitter
 
 import roslib
 roslib.load_manifest(PKG)
 
 from rospy import Subscriber, sleep
-from rospy import loginfo, logerr, logwarn, logfatal
-from rospkg import RosPack
-
 from actionlib import GoalStatus
+from rospkg import RosPack
 
 from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped
 
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
-
 from pandora_exploration_msgs.msg import DoExplorationGoal
-
 from pandora_data_fusion_msgs.msg import WorldModelMsg
-from pandora_data_fusion_msgs.msg import QrNotificationMsg
-
 from pandora_rqt_gui.msg import ValidateVictimGUIResult
 
 import topics
 import clients
-from utils import ACTION_STATES, distance_2d
+from utils import ACTION_STATES, GLOBAL_STATES, distance_2d
+from utils import logger as log
+from target import Target
 from fsm import Machine
 
 
@@ -76,10 +72,6 @@ class Agent(object):
         self.dispatcher.on('move_base.feedback', self.move_base_feedback)
 
         # SUBSCRIBERS.
-        self.score_sub = Subscriber(topics.robocup_score, Int32,
-                                    self.receive_score)
-        self.qr_sub = Subscriber(topics.qr_notification, QrNotificationMsg,
-                                 self.receive_qr_notifications)
         self.world_model_sub = Subscriber(topics.world_model, WorldModelMsg,
                                           self.receive_world_model)
 
@@ -92,38 +84,24 @@ class Agent(object):
 
         # State client
         if not self.testing:
-            loginfo('Connecting to state manager.')
+            log.debug('Connecting to state manager.')
             self.state_changer = StateClient()
             self.state_changer.client_initialize()
-            loginfo('Connection established.')
+            log.debug('Connection established.')
             self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
 
         # General information.
-        self.QRs = []
-        self.score = 0
-        self.current_robot_pose = PoseStamped()
         self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
-        self.current_pose = PoseStamped()
-        self.last_pose_goal = PoseStamped()
 
         # Victim information.
-        self.victims_found = 0
-        self.aborted_victims_ = []
-        self.current_victims = []
-        self.visited_victims = []
+        self.available_targets = []
         self.deleted_victims = []
-        self.target = None
-        self.valid_victim_probability = 0
 
-        # Between-transition information.
-        self.is_timeout = False
-        self.gui_verification = False
         self.gui_result = ValidateVictimGUIResult()
 
-        self.state_can_change = Event()
-        self.base_converged = Event()
-        self.probable_victim = Event()
-        self.victim_verified = Event()
+        # Between-transition information.
+        self.base_converged = threading.Event()
+        self.modify_targets = threading.Lock()
 
         # Utility Variables
         self.IDENTIFICATION_THRESHOLD = 0.65
@@ -134,6 +112,9 @@ class Agent(object):
         self.MOVE_BASE_RETRY_LIMIT = 3
         self.BASE_THRESHOLD = 0.2
         self.MOVE_BASE_TIMEOUT = 120
+
+        self.target = Target(self.VERIFICATION_THRESHOLD,
+                             self.IDENTIFICATION_THRESHOLD)
 
         # Expose client methods to class
         setattr(self, 'test_end_effector', self.effector.test)
@@ -146,7 +127,7 @@ class Agent(object):
 
         self.load()
 
-        loginfo('Agent initialized...')
+        log.info('Agent initialized...')
 
     ######################################################
     #                   UTILITIES                        #
@@ -178,13 +159,13 @@ class Agent(object):
             with open(self.config) as file_handler:
                 data = yaml.load(file_handler)
         except IOError:
-            logfatal('Could not read configuration file.')
+            log.critical('Could not read configuration file.')
             sys.exit(1)
 
         try:
             states = data[self.strategy]['states']
         except KeyError:
-            logfatal('%s is not a valid strategy.', self.strategy)
+            log.critical('%s is not a valid strategy.', self.strategy)
             sys.exit(1)
 
         # Setting up the FSM
@@ -211,7 +192,7 @@ class Agent(object):
         # Sets up the initial state
         self.machine.set_state(self.states[0])
 
-        loginfo('FSM has been loaded.')
+        log.debug('FSM has been loaded.')
 
     def clean_up(self):
         """ Kills agent and cleans the environment. """
@@ -219,15 +200,8 @@ class Agent(object):
         self.explorer.cancel_all_goals()
         self.navigator.cancel_all_goals()
         self.effector.cancel_all_goals()
-        self.gui_client.cancel_all_goals()
 
-        loginfo('Agent is sleeping...')
-
-    def allow_transitions(self):
-        self.state_can_change.set()
-
-    def deny_transitions(self):
-        self.state_can_change.clear()
+        log.info('Agent is sleeping...')
 
     ######################################################
     #               DISPATCHER'S CALLBACKS               #
@@ -238,13 +212,11 @@ class Agent(object):
             the exploration client when the current goal has succeeded.
             Enables the agent to move from the exploration state to end.
         """
-        on_exploration = self.state == 'exploration'
-        if self.state_can_change.is_set() and on_exploration:
-            logwarn('Map covered!.')
-            self.state_can_change.clear()
+        if self.state == 'exploration':
+            log.warning('Map covered!')
             self.map_covered()
         else:
-            logwarn('Exploration success too soon.')
+            log.warning('Exploration success caught outside of exploration.')
 
     def exploration_retry(self):
         """ Called on 'exploration.retry' event. The event is triggered from
@@ -252,41 +224,36 @@ class Agent(object):
             agent sends again a goal.
         """
         if self.state == 'exploration':
-            logwarn('Retrying exploration goal.')
+            log.warning('Retrying exploration goal.')
             self.explore()
         else:
-            logwarn('Exploration failure while not on exploration state.')
+            log.warning('Exploration failure while not on exploration state.')
 
     def poi_found(self):
         """ Called on 'poi.found' event. The event is triggered when there are
             available points of interest on the received world model. Enables
             the agent to move from the exploration state to identification.
         """
-        if self.state == 'exploration' and self.state_can_change.is_set():
-            logwarn('A point of interest has been discovered.')
-            self.state_can_change.clear()
+        if self.state == 'exploration':
+            log.warning('A point of interest has been discovered.')
             self.point_of_interest_found()
         else:
-            logerr('Found POI outside of exploration.')
+            # This is a bug.
+            log.critical('Called poi_found outside of exploration')
 
     def move_base_success(self, result):
         """ The event is triggered from the move_base client when the
             current goal has succeeded.
 
-            :param :result The result of the action.
+            :param result: The result of the action.
         """
-        on_identification = self.state == 'identification'
         self.MOVE_BASE_RETRIES = 0
-        if not self.state_can_change.is_set():
-            logerr('Received move base success before lock release.')
-            return
-        elif not on_identification:
-            logerr('Received move base success outside identification.')
+        if self.state != 'identification':
+            log.error('Received move base success outside identification.')
             return
 
-        logwarn('Approached potential victim.')
+        log.warning('Approached potential victim.')
         self.base_timer.cancel()
-        self.state_can_change.clear()
         self.valid_victim()
 
     def move_base_retry(self, status):
@@ -297,19 +264,16 @@ class Agent(object):
 
             :param :status The goal status.
         """
-        on_identification = self.state == 'identification'
-        if not self.state_can_change.is_set():
-            logerr('Received move_base retry event before lock release.')
-            return
-        elif not on_identification:
-            logerr('Received move_base retry event outside identification.')
+        if self.state != 'identification':
+            log.error('Received move_base retry event outside identification.')
             return
 
         if self.MOVE_BASE_RETRIES < self.MOVE_BASE_RETRY_LIMIT:
             # The agent tries again.
-            logwarn('Retrying...%s goal', ACTION_STATES[status])
+            log.warning('Retrying...%s goal', ACTION_STATES[status])
             remain = self.MOVE_BASE_RETRY_LIMIT - self.MOVE_BASE_RETRIES
-            logwarn('%d remaining before aborting the current target.', remain)
+            log.warning('%d remaining before aborting the current target.',
+                        remain)
             self.MOVE_BASE_RETRIES += 1
             self.navigator.move_base(self.target.victimPose)
         else:
@@ -317,16 +281,16 @@ class Agent(object):
             self.base_timer.cancel()
 
             # The agent changes state.
-            if self.probable_victim.is_set():
+            if self.target.is_identified():
                 # The target is valid and the next state is hold_sensors.
-                logwarn('Victim with high probability identified.')
+                log.warning('Victim with high probability identified.')
                 self.valid_victim()
             elif self.base_converged.is_set():
-                logwarn('Base is close enough to the target.')
+                log.warning('Base is close enough to the target.')
                 self.valid_victim()
             else:
                 # The target is not valid and we delete it.
-                logwarn('Victim has been aborted.')
+                log.warning('Victim has been aborted.')
                 self.abort_victim()
 
     def move_base_feedback(self, current, goal):
@@ -341,55 +305,31 @@ class Agent(object):
         """
         base = current.base_position
         if distance_2d(goal.pose, base.pose) < self.BASE_THRESHOLD:
-            logwarn('Base converged')
+            log.warning('Base converged.')
             self.base_converged.set()
 
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
     ######################################################
 
-    def receive_score(self, msg):
-        """ Receives the score from data fusion. """
-
-        self.score = msg.data
-
-    def receive_qr_notifications(self, msg):
-        """ Receives QR notifications from data fusion. """
-
-        self.QRs.append(msg)
-
     def receive_world_model(self, model):
         """ Receives the world model from data fusion. """
 
-        self.current_victims = model.victims
-        self.visited_victims = model.visitedVictims
+        # If no targets are available there is nothing to do.
+        if not model.victims:
+            return
 
-        if self.verbose:
-            if self.current_victims:
-                loginfo('@ Available POIs: ')
-            for victim in self.current_victims:
-                loginfo('=> #%d   (%.2f)', victim.id, victim.probability)
+        if self.target.is_empty():
 
-            if self.visited_victims:
-                loginfo('@ Visited POIs: ')
-            for victim in self.visited_victims:
-                valid = 'valid' if victim.valid else 'not valid'
-                loginfo('=> #%d   (%.2f) %s', victim.id, victim.probability, valid)
-
-        if self.current_victims:
-            if self.target:
-                self.update_target_victim()
-                loginfo('@ Target: #%d, (%.2f)', self.target.id,
-                        self.target.probability)
-                if self.target.probability > self.IDENTIFICATION_THRESHOLD:
-                    self.probable_victim.set()
-                if self.target.probability > self.VERIFICATION_THRESHOLD:
-                    self.victim_verified.set()
-            else:
-                self.target = self.choose_next_victim()
-                logwarn('Target acquired => #%d.', self.target.id)
+            # Set a new target from the available ones.
+            new_target = self.choose_target(model.victims)
+            self.target.set(new_target)
             if self.state == 'exploration':
                 self.dispatcher.emit('poi.found')
+        else:
+
+            # Update the current target.
+            self.target.update(model.victims)
 
     ######################################################
     #                 AGENT'S ACTIONS                    #
@@ -408,7 +348,7 @@ class Agent(object):
             self.data_fusion.validate_victim(self.target.id,
                                              self.gui_result.victimValid)
         else:
-            logerr('Reached data fusion validation without target.')
+            log.error('Reached data fusion validation without target.')
 
     def delete_victim(self):
         """ Send deleletion request to DataFusion about the current
@@ -419,18 +359,18 @@ class Agent(object):
         self.victim_deleted()
 
     def update_victim_registry(self):
-        if self.current_victims:
-            for idx, item in enumerate(self.current_victims):
+        if self.available_targets:
+            for idx, item in enumerate(self.available_targets):
                 if item.id == self.target.id:
                     break
-            del self.current_victims[idx]
+            del self.available_targets[idx]
             self.deleted_victims.append(self.target)
             self.target = None
 
     def wait_identification(self):
         """ Examine if the robot can reach the target victim. """
 
-        loginfo('Examining suspected victim...')
+        log.info('Examining suspected victim...')
         self.base_client.wait_for_result()
         if self.base_client.get_state() == GoalStatus.SUCCEEDED:
             self.valid_victim()
@@ -444,14 +384,13 @@ class Agent(object):
     def wait_for_verification(self):
         """ Expect probability of the target victim to increase. """
 
-        loginfo("Wait for the victim's probability to increase...")
-        self.victim_verified.clear()
-        if self.victim_verified.wait(self.VERIFICATION_TIMEOUT):
-            logwarn('Victim verified.')
+        log.info("Wait for the victim's probability to increase...")
+        if self.target.wait_for_verification(self.VERIFICATION_TIMEOUT):
+            log.warning('Victim verified.')
             self.verified()
         else:
-            logwarn('Victims failed to be verified within %d secs.',
-                    self.VERIFICATION_TIMEOUT)
+            log.warning('Victims failed to be verified within %d secs.',
+                        self.VERIFICATION_TIMEOUT)
             self.gui_result.victimValid = False
             self.timeout()
 
@@ -461,18 +400,11 @@ class Agent(object):
         else:
             self.gui_result.victimValid = False
 
-    def update_victims(self):
-        """ Counts the victim if found """
-
-        loginfo('Adding another victim...')
-        if self.gui_result.victimValid:
-            self.victims_found += 1
-
     def approach_target(self):
         """ The agent will try to approach the target's location and point
             all sensors to its direction.
         """
-        loginfo('@ Approaching victim...')
+        log.info('Approaching victim...')
 
         self.base_converged.clear()
 
@@ -483,7 +415,8 @@ class Agent(object):
         self.effector.point_to(self.target.victimFrameId)
 
         # Start timer to cancel all goals if the move base is unresponsive.
-        self.base_timer = Timer(self.MOVE_BASE_TIMEOUT, self.timer_handler)
+        self.base_timer = threading.Timer(self.MOVE_BASE_TIMEOUT,
+                                          self.timer_handler)
         self.base_timer.start()
 
     def explore(self):
@@ -491,17 +424,20 @@ class Agent(object):
 
     def timer_handler(self):
         if self.state == 'identification':
-            logwarn('Move base is unresponsive or it takes too long.')
+            log.warning('Move base is unresponsive or it takes too long.')
             self.navigator.cancel_all_goals()
             self.base_timer.cancel()
             self.abort_victim()
         else:
-            logerr('Timer fired outside of identification state.')
+            log.error('Timer fired outside of identification state.')
+
+    def start_target_timer(self):
+        pass
 
     def print_results(self):
         """ Prints results of the mission. """
 
-        loginfo('The agent is shutting down...')
+        log.info('The agent is shutting down...')
 
     ######################################################
     #                  AGENT LOGIC                       #
@@ -510,15 +446,15 @@ class Agent(object):
     def update_target_victim(self):
         """ Update the current victim """
 
-        for victim in self.current_victims:
+        for victim in self.available_targets:
             if victim.id == self.target.id:
                 old_pose = self.target.victimPose
                 new_pose = victim.victimPose
                 if distance_2d(old_pose.pose, new_pose.pose) > self.BASE_THRESHOLD:
                     self.target = victim
                     if self.state == 'identification':
-                        logwarn('Move base goal is outdated...')
-                        loginfo(new_pose.pose)
+                        log.warning('Move base goal is outdated...')
+                        log.info(new_pose.pose)
                         self.navigator.cancel_all_goals()
                         self.approach_target()
                 self.target = victim
@@ -526,10 +462,7 @@ class Agent(object):
     def choose_next_victim(self):
         """ Choose the next possible victim. """
 
-        self.probable_victim.clear()
-        self.victim_verified.clear()
-
-        for victim in self.current_victims:
+        for victim in self.available_targets:
             if victim not in self.deleted_victims:
                 return victim
 
@@ -551,7 +484,7 @@ class Agent(object):
                 func = partial(self.global_state_transition, mode=value)
                 setattr(self, member.lower(), func)
 
-        loginfo('Global state transitions have been generated.')
+        log.debug('Global state transitions have been generated.')
 
     def global_state_transition(self, mode=0):
         """ Is used to generate state_transition functions.
@@ -565,7 +498,8 @@ class Agent(object):
         while True:
             success = self.state_changer.change_state_and_wait(*params)
             if success:
+                log.info('==> %s', GLOBAL_STATES[mode])
                 break
             sleep(2)
-            logerr('Failed to change the global state [%d]. Retrying...',
-                   mode)
+            log.error('Failed to change the global state [%d]. Retrying...',
+                      mode)

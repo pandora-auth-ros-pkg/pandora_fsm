@@ -38,14 +38,12 @@
         "name": "exploration",
         "description": "The agent is exploring the area.",
         "tasks": [
-          "deny_transitions",
           "mode_exploration_rescue",
           "scan",
           "explore",
-          "allow_transitions"
+          "start_target_timer"
         ],
         "clean": [
-          "deny_transitions",
           "preempt_explorer",
           "preempt_end_effector"
         ],
