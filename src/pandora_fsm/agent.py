@@ -15,11 +15,7 @@ import roslib
 roslib.load_manifest(PKG)
 
 from rospy import Subscriber, sleep
-from actionlib import GoalStatus
 from rospkg import RosPack
-
-from std_msgs.msg import Int32
-from geometry_msgs.msg import PoseStamped
 
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
@@ -29,6 +25,7 @@ from pandora_rqt_gui.msg import ValidateVictimGUIResult
 
 import topics
 import clients
+import config as conf
 from utils import ACTION_STATES, GLOBAL_STATES, distance_2d
 from utils import logger as log
 from target import Target
@@ -98,17 +95,9 @@ class Agent(object):
         self.state_lock = threading.Event()
 
         # Utility Variables
-        self.IDENTIFICATION_THRESHOLD = 0.65
-        self.VERIFICATION_THRESHOLD = 0.75
-        self.VERIFICATION_TIMEOUT = 10
-        self.STATE_CHANGE_TIMEOUT = 20
         self.MOVE_BASE_RETRIES = 0
-        self.MOVE_BASE_RETRY_LIMIT = 3
-        self.BASE_THRESHOLD = 0.2
-        self.MOVE_BASE_TIMEOUT = 120
 
-        self.target = Target(self.VERIFICATION_THRESHOLD,
-                             self.IDENTIFICATION_THRESHOLD)
+        self.target = Target(self.dispatcher)
 
         # Expose client methods to class
         setattr(self, 'test_end_effector', self.effector.test)
@@ -126,14 +115,6 @@ class Agent(object):
     ######################################################
     #                   UTILITIES                        #
     ######################################################
-
-    def restart_state(self):
-        """ It makes the agent restart_state in the current state.
-            This method should be used when something bad happened and we
-            want a second chance. Possibly when a state task fails.
-        """
-
-        getattr(self, 'to_' + self.state)()
 
     def set_breakpoint(self, state):
         """ Stops the execution of the FSM after a given state.
@@ -269,10 +250,10 @@ class Agent(object):
             log.error('Received move_base retry event outside identification.')
             return
 
-        if self.MOVE_BASE_RETRIES < self.MOVE_BASE_RETRY_LIMIT:
+        if self.MOVE_BASE_RETRIES < conf.MOVE_BASE_RETRY_LIMIT:
             # The agent tries again.
             log.warning('Retrying...%s goal', ACTION_STATES[status])
-            remain = self.MOVE_BASE_RETRY_LIMIT - self.MOVE_BASE_RETRIES
+            remain = conf.MOVE_BASE_RETRY_LIMIT - self.MOVE_BASE_RETRIES
             log.warning('%d remaining before aborting the current target.',
                         remain)
             self.MOVE_BASE_RETRIES += 1
@@ -305,9 +286,22 @@ class Agent(object):
             :param :goal The goal pose of the current action.
         """
         base = current.base_position
-        if distance_2d(goal.pose, base.pose) < self.BASE_THRESHOLD:
+        if distance_2d(goal.pose, base.pose) < conf.BASE_THRESHOLD:
             log.warning('Base converged.')
             self.base_converged.set()
+
+    def move_base_resend(self, pose):
+        """
+        Send a new MoveBase goal. The old one is outdated because the
+        current target's pose has been updated.
+
+        :param pose: The new pose to go to.
+        """
+        if self.state == 'identification':
+            log.warning('Move base goal is outdated...')
+            log.debug(pose)
+            self.navigator.cancel_all_goals()
+            self.approach_target()
 
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
@@ -325,8 +319,7 @@ class Agent(object):
             # Set a new target from the available ones.
             new_target = self.choose_target(model.victims)
             self.target.set(new_target)
-            if self.state == 'exploration':
-                self.dispatcher.emit('poi.found')
+            self.dispatcher.emit('poi.found')
         else:
 
             # Update the current target.
@@ -368,30 +361,17 @@ class Agent(object):
             self.deleted_victims.append(self.target)
             self.target = None
 
-    def wait_identification(self):
-        """ Examine if the robot can reach the target victim. """
-
-        log.info('Examining suspected victim...')
-        self.base_client.wait_for_result()
-        if self.base_client.get_state() == GoalStatus.SUCCEEDED:
-            self.valid_victim()
-        elif self.base_client.get_state() == GoalStatus.ABORTED:
-            if self.promising_victim.is_set():
-                self.promising_victim.clear()
-                self.valid_victim()
-            else:
-                self.abort_victim()
-
     def wait_for_verification(self):
         """ Expect probability of the target victim to increase. """
 
         log.info("Wait for the victim's probability to increase...")
-        if self.target.wait_for_verification(self.VERIFICATION_TIMEOUT):
+        timeout = conf.VERIFICATION_TIMEOUT
+        if self.target.wait_for_verification(timeout):
             log.warning('Victim verified.')
             self.verified()
         else:
             log.warning('Victims failed to be verified within %d secs.',
-                        self.VERIFICATION_TIMEOUT)
+                        timeout)
             self.gui_result.victimValid = False
             self.timeout()
 
@@ -416,7 +396,7 @@ class Agent(object):
         self.effector.point_to(self.target.victimFrameId)
 
         # Start timer to cancel all goals if the move base is unresponsive.
-        self.base_timer = threading.Timer(self.MOVE_BASE_TIMEOUT,
+        self.base_timer = threading.Timer(conf.MOVE_BASE_TIMEOUT,
                                           self.timer_handler)
         self.base_timer.start()
 
@@ -461,26 +441,11 @@ class Agent(object):
         self.dispatcher.on('move_base.success', self.move_base_success)
         self.dispatcher.on('move_base.retry', self.move_base_retry)
         self.dispatcher.on('move_base.feedback', self.move_base_feedback)
+        self.dispatcher.on('move_base.resend', self.move_base_resend)
 
     ######################################################
     #                  AGENT LOGIC                       #
     ######################################################
-
-    def update_target_victim(self):
-        """ Update the current victim """
-
-        for victim in self.available_targets:
-            if victim.id == self.target.id:
-                old_pose = self.target.victimPose
-                new_pose = victim.victimPose
-                if distance_2d(old_pose.pose, new_pose.pose) > self.BASE_THRESHOLD:
-                    self.target = victim
-                    if self.state == 'identification':
-                        log.warning('Move base goal is outdated...')
-                        log.info(new_pose.pose)
-                        self.navigator.cancel_all_goals()
-                        self.approach_target()
-                self.target = victim
 
     def choose_target(self, targets):
         """ Choose the next possible target. """
@@ -516,7 +481,7 @@ class Agent(object):
 
             :param :mode A global mode from RobotModeMsg.
         """
-        params = (mode, self.STATE_CHANGE_TIMEOUT)
+        params = (mode, conf.STATE_CHANGE_TIMEOUT)
 
         while True:
             success = self.state_changer.change_state_and_wait(*params)

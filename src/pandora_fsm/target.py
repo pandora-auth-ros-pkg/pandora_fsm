@@ -2,19 +2,21 @@ import threading
 
 from pandora_data_fusion_msgs.msg import VictimInfoMsg
 
+import config as conf
 from utils import logger as log
+from utils import distance_2d
 
 
 class Target(object):
 
     """ Agent's target. """
 
-    def __init__(self, verification_threshold, identification_threshold):
+    def __init__(self, dispatcher):
+        self.dispatcher = dispatcher
+
         self.info = VictimInfoMsg()
         self.verified = threading.Event()
         self.identified = threading.Event()
-        self.verification_threshold = verification_threshold
-        self.identification_threshold = identification_threshold
         self.is_empty = True
         log.debug('Target initialized.')
 
@@ -48,14 +50,31 @@ class Target(object):
         for target in targets:
             if target.id == self.info.id:
                 self.info = target
-                if self.info.probability > self.verification_threshold:
+                if self.info.probability > conf.VERIFICATION_THRESHOLD:
                     self.verified.set()
                     log.debug('Target #%d is verified with %.2f',
                               self.info.id, self.info.probability)
-                if self.info.probability > self.identification_threshold:
+                if self.info.probability > conf.IDENTIFICATION_THRESHOLD:
                     log.debug('Target #%d is identified with %.2f',
                               self.info.id, self.info.probability)
                     self.identified.set()
+                self.update_move_base_goal(target.victimPose,
+                                           self.info.victimPose)
+
+    def update_move_base_goal(self, new_pose, old_pose):
+        """
+        Updates the current MoveBase goal while the target's pose
+        is updated.
+
+        If the distance between the new and the old pose is big enough
+        the agent is informed through the dispatcher to send a new
+        MoveBase goal.
+
+        :param new_pose: The target's new pose.
+        :param old_pose: The target's current pose.
+        """
+        if distance_2d(old_pose.pose, new_pose.pose) > conf.BASE_THRESHOLD:
+            self.dispatcher.emit('move_base.resend', new_pose.pose)
 
     def is_verified(self):
         """
@@ -81,4 +100,6 @@ class Target(object):
             return
 
         self.info = VictimInfoMsg()
+        self.identified.clear()
+        self.verified.clear()
         log.debug('Target has been reseted.')
