@@ -49,7 +49,10 @@ class Target(object):
 
         for target in targets:
             if target.id == self.info.id:
+                new_pose = target.victimPose
+                old_pose = self.info.victimPose
                 self.info = target
+                log.debug('Target updated.')
                 if self.info.probability > conf.VERIFICATION_THRESHOLD:
                     self.verified.set()
                     log.debug('Target #%d is verified with %.2f',
@@ -58,8 +61,7 @@ class Target(object):
                     log.debug('Target #%d is identified with %.2f',
                               self.info.id, self.info.probability)
                     self.identified.set()
-                self.update_move_base_goal(target.victimPose,
-                                           self.info.victimPose)
+                self.update_move_base_goal(new_pose, old_pose)
 
     def update_move_base_goal(self, new_pose, old_pose):
         """
