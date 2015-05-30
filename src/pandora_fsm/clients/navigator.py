@@ -59,7 +59,7 @@ class Navigator(object):
         log.debug('Waiting for Navigation action server...')
         self.client.wait_for_server()
         log.info('Sending MoveBase goal.')
-        log.info(target.pose)
+        log.debug('\n' + str(target.pose))
         self.base_pending.set()
         self.client.send_goal(goal, feedback_cb=self.base_feedback,
                               done_cb=self.move_base_done)
