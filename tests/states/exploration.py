@@ -14,7 +14,6 @@ from std_msgs.msg import String
 
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent
-from pandora_fsm.clients import Effector
 
 from pandora_fsm.mocks import msgs as mock_msgs
 
@@ -31,6 +30,9 @@ class TestExplorationState(unittest.TestCase):
         self.explorer = Publisher('mock/explorer', String)
         self.agent.preempt_end_effector = lambda: True
         self.agent.preempt_explorer = lambda: True
+        self.events = [self.agent.exploration_success,
+                       self.agent.exploration_retry,
+                       self.agent.poi_found]
 
     def random_victims(self, times, delay):
         """ Spawn a thread and send a potential victim instead of using a
@@ -59,6 +61,7 @@ class TestExplorationState(unittest.TestCase):
             sleep(5)
             self.assertGreaterEqual(mock.call_count, 3)
             self.assertFalse(self.agent.target.is_empty)
+            self.assertEqual(self.agent.dispatcher.listeners_all(), [])
             self.assertEqual(self.agent.state, 'identification')
 
     def test_target_found_after_exploration(self):
@@ -72,6 +75,7 @@ class TestExplorationState(unittest.TestCase):
         self.agent.to_exploration()
         sleep(5)
         self.assertFalse(self.agent.target.is_empty)
+        self.assertEqual(self.agent.dispatcher.listeners_all(), [])
         self.assertEqual(self.agent.state, 'identification')
 
     def test_to_end(self):
@@ -83,6 +87,7 @@ class TestExplorationState(unittest.TestCase):
         self.agent.to_exploration()
         sleep(5)
         self.assertEqual(self.agent.state, 'end')
+        self.assertEqual(self.agent.dispatcher.listeners_all(), [])
 
     def test_long_wait_for_victim(self):
         """ The agent will wait for a victim indefinitely. """
@@ -94,6 +99,8 @@ class TestExplorationState(unittest.TestCase):
         self.agent.to_exploration()
         sleep(10)
         self.assertEqual(self.agent.state, 'exploration')
+        self.assertItemsEqual(self.agent.dispatcher.listeners_all(),
+                              self.events)
         self.assertTrue(self.agent.target.is_empty)
 
     def test_retry_on_explorer_abort(self):
@@ -102,11 +109,12 @@ class TestExplorationState(unittest.TestCase):
         if not rospy.is_shutdown():
             sleep(1)
             self.explorer.publish('abort:1')
-
         with patch.object(self.agent.explorer.dispatcher, 'emit') as mock:
             self.agent.to_exploration()
             sleep(7)
         mock.assert_called_with('exploration.retry')
+        self.assertItemsEqual(self.agent.dispatcher.listeners_all(),
+                              self.events)
         self.assertEqual(self.agent.state, 'exploration')
 
     def test_retry_on_explorer_reject(self):
@@ -120,6 +128,8 @@ class TestExplorationState(unittest.TestCase):
             self.agent.to_exploration()
             sleep(7)
         mock.assert_called_with('exploration.retry')
+        self.assertItemsEqual(self.agent.dispatcher.listeners_all(),
+                              self.events)
         self.assertEqual(self.agent.state, 'exploration')
 
     def test_global_state_change(self):
@@ -133,4 +143,5 @@ class TestExplorationState(unittest.TestCase):
         sleep(10)
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
+        self.assertEqual(self.agent.dispatcher.listeners_all(), [])
         self.assertEqual(self.agent.state, 'end')
