@@ -72,7 +72,7 @@
           "approach_target",
           "enable_identification_events"
         ],
-        "clean": ["deny_transitions"],
+        "clean": [],
         "transitions": [
           {
             "to": "victim_deletion",

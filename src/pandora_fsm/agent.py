@@ -257,7 +257,7 @@ class Agent(object):
             log.warning('%d remaining before aborting the current target.',
                         remain)
             self.MOVE_BASE_RETRIES += 1
-            self.navigator.move_base(self.target.victimPose)
+            self.navigator.move_base(self.target.info.victimPose)
         else:
             self.MOVE_BASE_RETRIES = 0
             self.base_timer.cancel()
@@ -333,13 +333,13 @@ class Agent(object):
         """ Sets the environment ready for the next exploration. """
 
         self.gui_result.victimValid = False
-        self.target = None
+        self.target.clean()
 
     def validate_victim(self):
         """ Sends information about the current target.  """
 
-        if self.target:
-            self.data_fusion.validate_victim(self.target.id,
+        if not self.target.is_empty:
+            self.data_fusion.validate_victim(self.target.info.id,
                                              self.gui_result.victimValid)
         else:
             log.error('Reached data fusion validation without target.')
@@ -348,35 +348,36 @@ class Agent(object):
         """ Send deleletion request to DataFusion about the current
             target victim.
         """
-        self.data_fusion.delete_victim(self.target.id)
+        self.data_fusion.delete_victim(self.target.info.id)
         self.update_victim_registry()
         self.victim_deleted()
 
     def update_victim_registry(self):
         if self.available_targets:
             for idx, item in enumerate(self.available_targets):
-                if item.id == self.target.id:
+                if item.id == self.target.info.id:
                     break
             del self.available_targets[idx]
             self.deleted_victims.append(self.target)
             self.target = None
 
     def wait_for_verification(self):
-        """ Expect probability of the target victim to increase. """
-
-        log.info("Wait for the victim's probability to increase...")
-        timeout = conf.VERIFICATION_TIMEOUT
-        if self.target.wait_for_verification(timeout):
+        """
+        Check if the probability of the target exceeds the verification
+        threshold.
+        """
+        log.info("Starting victim verification...")
+        if self.target.verified.wait(conf.VERIFICATION_TIMEOUT):
             log.warning('Victim verified.')
             self.verified()
         else:
             log.warning('Victims failed to be verified within %d secs.',
-                        timeout)
+                        conf.VERIFICATION_TIMEOUT)
             self.gui_result.victimValid = False
             self.timeout()
 
     def wait_for_operator(self):
-        if self.gui_client.send_request(self.target):
+        if self.gui_client.send_request(self.target.info):
             self.gui_result = self.gui_client.result()
         else:
             self.gui_result.victimValid = False
@@ -390,10 +391,10 @@ class Agent(object):
         self.base_converged.clear()
 
         # Move base to the target.
-        self.navigator.move_base(self.target.victimPose)
+        self.navigator.move_base(self.target.info.victimPose)
 
         # Point sensors to the target.
-        self.effector.point_to(self.target.victimFrameId)
+        self.effector.point_to(self.target.info.victimFrameId)
 
         # Start timer to cancel all goals if the move base is unresponsive.
         self.base_timer = threading.Timer(conf.MOVE_BASE_TIMEOUT,
