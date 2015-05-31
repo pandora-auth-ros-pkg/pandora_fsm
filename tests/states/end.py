@@ -14,6 +14,7 @@ class TestEndState(unittest.TestCase):
     """ Tests for the end state. """
 
     def setUp(self):
+        rospy.init_node('state_end_test')
         self.agent = Agent(strategy='normal')
 
     def test_global_state_change(self):
@@ -22,7 +23,3 @@ class TestEndState(unittest.TestCase):
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
         self.assertEqual(self.agent.state, 'off')
-
-if __name__ == '__main__':
-    rospy.init_node('end_state')
-    unittest.main()

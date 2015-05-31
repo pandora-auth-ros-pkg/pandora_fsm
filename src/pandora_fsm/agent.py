@@ -342,7 +342,7 @@ class Agent(object):
             self.data_fusion.validate_victim(self.target.info.id,
                                              self.gui_result.victimValid)
         else:
-            log.error('Reached data fusion validation without target.')
+            log.critical('Reached data fusion validation without target.')
 
     def delete_victim(self):
         """ Send deleletion request to DataFusion about the current
@@ -358,8 +358,7 @@ class Agent(object):
                 if item.id == self.target.info.id:
                     break
             del self.available_targets[idx]
-            self.deleted_victims.append(self.target)
-            self.target = None
+            self.deleted_victims.append(self.target.info)
 
     def wait_for_verification(self):
         """

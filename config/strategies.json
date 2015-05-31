@@ -120,7 +120,8 @@
         "description": "Data fusion deletes the victim",
         "tasks": [
           "preempt_end_effector",
-          "delete_victim"
+          "delete_victim",
+          "reset_environment"
         ],
         "clean": [],
         "transitions": [
@@ -159,9 +160,7 @@
           "wait_for_operator",
           "operator_responded"
         ],
-        "clean": [
-          "update_victims"
-        ],
+        "clean": [],
         "transitions": [
           {
             "to": "fusion_validation",

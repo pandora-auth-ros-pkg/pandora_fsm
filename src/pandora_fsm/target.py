@@ -104,4 +104,5 @@ class Target(object):
         self.info = VictimInfoMsg()
         self.identified.clear()
         self.verified.clear()
+        self.is_empty = True
         log.debug('Target has been reseted.')

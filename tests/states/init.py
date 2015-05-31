@@ -17,6 +17,7 @@ class TestInitState(unittest.TestCase):
     """ Tests for the init state. """
 
     def setUp(self):
+        rospy.init_node('state_init_test')
         self.effector_mock = Publisher('mock/effector', String)
         self.agent = Agent(strategy='normal')
         self.agent.set_breakpoint('exploration')
@@ -58,7 +59,3 @@ class TestInitState(unittest.TestCase):
 
         self.assertEqual(self.agent.state_changer.get_current_state(),
                          final_state)
-
-if __name__ == '__main__':
-    rospy.init_node('init_state')
-    unittest.main()
