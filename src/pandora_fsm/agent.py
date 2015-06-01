@@ -92,7 +92,7 @@ class Agent(object):
 
         # Between-transition information.
         self.base_converged = threading.Event()
-        self.state_lock = threading.Event()
+        self.poi_found_lock = threading.Lock()
 
         # Utility Variables
         self.MOVE_BASE_RETRIES = 0
@@ -216,12 +216,19 @@ class Agent(object):
             available points of interest on the received world model. Enables
             the agent to move from the exploration state to identification.
         """
-        if self.state == 'exploration':
-            log.warning('A point of interest has been discovered.')
-            self.point_of_interest_found()
-        else:
+        if self.state != 'exploration':
+
             # This is a bug.
-            log.critical('Called poi_found outside of exploration')
+            log.warning('Called poi_found outside of exploration.')
+            return
+
+        # Ensure that poi found is not called twice with the same target.
+        self.poi_found_lock.acquire(False)
+        log.warning('A point of interest has been discovered.')
+        log.info('Pursuing target #%d.', self.target.info.id)
+        self.poi_found_lock.release()
+
+        self.point_of_interest_found()
 
     def move_base_success(self, result):
         """ The event is triggered from the move_base client when the
@@ -319,11 +326,11 @@ class Agent(object):
             # Set a new target from the available ones.
             new_target = self.choose_target(model.victims)
             self.target.set(new_target)
-            self.dispatcher.emit('poi.found')
         else:
 
             # Update the current target.
             self.target.update(model.victims)
+        self.dispatcher.emit('poi.found')
 
     ######################################################
     #                 AGENT'S ACTIONS                    #
@@ -405,12 +412,9 @@ class Agent(object):
         Send exploration goal to the explorer. A different exploration
         strategy should be used depending on the state variables.
         """
-        if self.target.is_empty:
-            # TODO Change the exploration mode based on time,
-            # how many targets are left etc.
-            self.explorer.explore(exploration_type=self.exploration_mode)
-        else:
-            threading.Timer(2, self.poi_found).start()
+        # TODO Change the exploration mode based on time,
+        # how many targets are left etc.
+        self.explorer.explore(exploration_type=self.exploration_mode)
 
     def timer_handler(self):
         if self.state == 'identification':

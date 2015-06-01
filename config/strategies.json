@@ -44,6 +44,7 @@
           "enable_exploration_events"
         ],
         "clean": [
+          "disable_events",
           "preempt_explorer",
           "preempt_end_effector"
         ],

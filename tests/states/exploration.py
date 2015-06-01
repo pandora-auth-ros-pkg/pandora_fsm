@@ -16,6 +16,7 @@ from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent
 
 from pandora_fsm.mocks import msgs as mock_msgs
+from pandora_fsm.utils import logger
 
 
 class TestExplorationState(unittest.TestCase):
@@ -45,24 +46,6 @@ class TestExplorationState(unittest.TestCase):
         for i in range(times):
             sleep(delay)
             self.agent.receive_world_model(model)
-
-    def test_target_found_before_exploration(self):
-        """ A target has been discovered before going to exploration. """
-
-        # Long goals that will not affect the test.
-        self.agent.disable_events()
-        if not rospy.is_shutdown():
-            sleep(1)
-            self.explorer.publish('success:20')
-        Thread(target=self.random_victims, args=(5, 1,)).start()
-        sleep(2)
-        with patch.object(self.agent, 'receive_world_model') as mock:
-            self.agent.to_exploration()
-            sleep(5)
-            self.assertGreaterEqual(mock.call_count, 3)
-            self.assertFalse(self.agent.target.is_empty)
-            self.assertEqual(self.agent.dispatcher.listeners_all(), [])
-            self.assertEqual(self.agent.state, 'identification')
 
     def test_target_found_after_exploration(self):
         """ A target has been discovered after exploration. """
@@ -131,6 +114,22 @@ class TestExplorationState(unittest.TestCase):
         self.assertItemsEqual(self.agent.dispatcher.listeners_all(),
                               self.events)
         self.assertEqual(self.agent.state, 'exploration')
+
+    def test_poi_found_once(self):
+        """ Poi_found should be called only once. """
+
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:20')
+        Thread(target=self.random_victims, args=(15, 0.1, )).start()
+        with patch.object(logger, 'warning') as mock:
+            self.agent.to_exploration()
+            sleep(5)
+
+            # Only one thread should acquire the lock.
+            mock.assert_called_with('A point of interest has been discovered.')
+            self.assertEqual(mock.call_count, 1)
+            self.assertEqual(self.agent.state, 'identification')
 
     def test_global_state_change(self):
         """ The global state should be MODE_EXPLORATION_RESCUE """
