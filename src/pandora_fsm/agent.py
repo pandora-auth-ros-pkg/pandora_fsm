@@ -327,6 +327,15 @@ class Agent(object):
             new_target = self.choose_target(model.victims)
             self.target.set(new_target)
         else:
+            # Check for invalid target acquisition.
+            idx = self.target.info.id
+            for target in model.victims:
+                if idx == target.id:
+                    break
+            else:
+                log.error('A non-existent target #%d has been acquired.', idx)
+                self.target.clean()
+                return
 
             # Update the current target.
             self.target.update(model.victims)
