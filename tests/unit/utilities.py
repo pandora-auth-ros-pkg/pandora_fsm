@@ -28,7 +28,6 @@ class TestUtils(unittest.TestCase):
     def test_agent_initialization(self):
 
         self.assertEqual(self.agent.state, 'off')
-        self.assertEqual(self.agent.victims_found, 0)
 
         # Make sure the action clients are instantiated.
         self.assertIsInstance(self.agent.explorer, Explorer)

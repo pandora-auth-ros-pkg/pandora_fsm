@@ -40,7 +40,7 @@ class TestIdentificationState(unittest.TestCase):
         pose_stamped = PoseStamped()
         pose_stamped.pose.position.x = 20
         pose_stamped.pose.position.y = 20
-        target = mock_msgs.create_victim_info(id=1, probability=0.4)
+        target = mock_msgs.create_victim_info(id=1, probability=0.5)
         target.victimPose = pose_stamped
         msg = WorldModelMsg()
         msg.victims = [target]
@@ -132,11 +132,11 @@ class TestIdentificationState(unittest.TestCase):
         self.assertEqual(y, 20)
 
     def test_update_move_base_timer(self):
-        conf.MOVE_BASE_TIMEOUT = 20
+        conf.MOVE_BASE_TIMEOUT = 25
         if not rospy.is_shutdown():
             self.move_base_mock.publish('execute:10')
-        Thread(target=self.send_updated_pose, args=(1, )).start()
-        with patch.object(self.agent.dispatcher, 'emit') as mock:
+        with patch.object(self.agent.target.dispatcher, 'emit') as mock:
+            Thread(target=self.send_updated_pose, args=(5, )).start()
             self.agent.to_identification()
             sleep(10)
 
@@ -146,7 +146,7 @@ class TestIdentificationState(unittest.TestCase):
             pose = Pose()
             pose.position.x = 20
             pose.position.y = 20
-            mock.assert_called_with('move_base.resend', pose)
+            mock.assert_any_call('move_base.resend', pose)
             self.assertEqual(x, 20)
             self.assertEqual(y, 20)
 
