@@ -1,5 +1,5 @@
 from functools import partial
-from rospy import loginfo, sleep
+from time import sleep
 
 from actionlib import SimpleActionClient as Client
 
@@ -9,6 +9,7 @@ from pandora_end_effector_controller.msg import MoveEndEffectorGoal
 from pandora_fsm import topics
 
 from pandora_fsm.utils import retry_action
+from pandora_fsm.utils import logger as log
 
 
 class Effector(object):
@@ -30,9 +31,9 @@ class Effector(object):
         setattr(self, 'park', func)
 
     def cancel_all_goals(self):
-        loginfo('** Waiting for the end effector action server...')
+        log.debug('Waiting for the EndEffector action server...')
         self.client.wait_for_server()
-        loginfo('** Canceling all goals on end effector.')
+        log.info('Canceling all goals on EndEffector.')
         self.client.cancel_all_goals()
         sleep(3)
 
@@ -47,9 +48,9 @@ class Effector(object):
         goal.command = MoveEndEffectorGoal.TRACK
         goal.point_of_interest = target
         goal.center_point = center
-        loginfo('** Waiting for end effector action server.')
+        log.debug('Waiting for the EndEffector action server.')
         self.client.wait_for_server()
-        loginfo('** Sending TRACK goal.')
+        log.info('Sending TRACK goal.')
         self.client.send_goal(goal)
 
     def scan(self):
@@ -57,7 +58,7 @@ class Effector(object):
 
         goal = MoveEndEffectorGoal()
         goal.command = MoveEndEffectorGoal.SCAN
-        loginfo('** Waiting for end effector action server.')
+        log.debug('Waiting for the EndEffector action server.')
         self.client.wait_for_server()
-        loginfo('** Sending SCAN goal.')
+        log.info('Sending SCAN goal.')
         self.client.send_goal(goal)

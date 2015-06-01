@@ -1,7 +1,6 @@
 from math import pi
 from threading import Event
-import rospy
-from rospy import logerr, loginfo, sleep
+from time import sleep
 
 from geometry_msgs.msg import PoseStamped
 
@@ -14,26 +13,29 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 from pandora_fsm import topics
 from pandora_fsm.utils import ACTION_STATES, TERMINAL_STATES
+from pandora_fsm.utils import logger as log
 
 
-class Control(object):
+class Navigator(object):
 
-    """ Control client to move the robot on the map. """
+    """ Navigation client that is responsible for moving the robot
+        on the map.
+    """
 
     def __init__(self, dispatcher, verbose=False):
         self.verbose = verbose
         self.dispatcher = dispatcher
-        self.base_client = Client(topics.move_base, MoveBaseAction)
+        self.client = Client(topics.move_base, MoveBaseAction)
         self.base_pending = Event()
         self.current_pose = PoseStamped()
         self.target_pose = PoseStamped()
 
     def cancel_all_goals(self):
-        loginfo('++ Waiting for the move base action server...')
-        self.base_client.wait_for_server()
-        loginfo('++ Canceling all goals on move base.')
+        log.debug('Waiting for the Navigation action server...')
+        self.client.wait_for_server()
+        log.info('Canceling all goals on Navigation.')
         self.base_pending.clear()
-        self.base_client.cancel_all_goals()
+        self.client.cancel_all_goals()
         sleep(3)
 
     def move_base(self, target):
@@ -54,33 +56,33 @@ class Control(object):
 
         goal = MoveBaseGoal(target_pose=target)
         self.target_pose = target
-        loginfo('++ Waiting for move base action server...')
-        self.base_client.wait_for_server()
-        loginfo('++ Sending move base goal.')
-        loginfo(target.pose)
+        log.debug('Waiting for Navigation action server...')
+        self.client.wait_for_server()
+        log.info('Sending MoveBase goal.')
+        log.debug('\n' + str(target.pose))
         self.base_pending.set()
-        self.base_client.send_goal(goal, feedback_cb=self.base_feedback,
-                                   done_cb=self.move_base_done)
+        self.client.send_goal(goal, feedback_cb=self.base_feedback,
+                              done_cb=self.move_base_done)
 
     def move_base_done(self, status, result):
 
         if self.base_pending.is_set():
             if status == GoalStatus.SUCCEEDED:
-                loginfo('++ Base has reached its destination.')
+                log.info('Base has reached its destination.')
                 self.base_pending.clear()
                 self.dispatcher.emit('move_base.success', result)
             elif status in TERMINAL_STATES.keys():
                 verbose_status = TERMINAL_STATES[status]
-                logerr('++ Base has failed to move with %s.', verbose_status)
+                log.error('Base has failed to move with %s.', verbose_status)
                 self.base_pending.clear()
                 self.dispatcher.emit('move_base.retry', status)
 
         if self.verbose:
-            loginfo('++ Move base goal status: %s', ACTION_STATES[status])
+            log.info('MoveBase goal status: %s', ACTION_STATES[status])
 
     def base_feedback(self, pose):
         self.current_pose = pose
         self.dispatcher.emit('move_base.feedback', pose, self.target_pose)
         if self.verbose:
-            loginfo('++ Current pose updated.')
-            loginfo(self.current_pose)
+            log.debug('Current pose updated.')
+            log.debug(self.current_pose)

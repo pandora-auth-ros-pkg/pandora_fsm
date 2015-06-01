@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-from catkin_pkg.python_setup import generate_distutils_setup
+from catkin_pkg.python_setup import generate_distutils_setup as catkin_setup
 
-d = generate_distutils_setup(
-   packages=['pandora_fsm'],
-   package_dir={'': 'src'}
-)
+dist = catkin_setup(packages=['pandora_fsm'],
+                    package_dir={'': 'src'}
+                    )
 
-setup(**d)
+setup(**dist)

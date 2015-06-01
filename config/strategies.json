@@ -28,7 +28,7 @@
           {
             "to": "exploration",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "booted"
           }
@@ -38,14 +38,13 @@
         "name": "exploration",
         "description": "The agent is exploring the area.",
         "tasks": [
-          "deny_transitions",
           "mode_exploration_rescue",
           "scan",
           "explore",
-          "allow_transitions"
+          "enable_exploration_events"
         ],
         "clean": [
-          "deny_transitions",
+          "disable_events",
           "preempt_explorer",
           "preempt_end_effector"
         ],
@@ -53,14 +52,14 @@
           {
             "to": "identification",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "point_of_interest_found"
           },
           {
             "to": "end",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "map_covered"
           }
@@ -70,24 +69,23 @@
         "name": "identification",
         "description": "Examining the candidate victim",
         "tasks": [
-          "deny_transitions",
           "mode_identification",
           "approach_target",
-          "allow_transitions"
+          "enable_identification_events"
         ],
-        "clean": ["deny_transitions"],
+        "clean": [],
         "transitions": [
           {
             "to": "victim_deletion",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "abort_victim"
           },
           {
             "to": "sensor_hold",
             "conditions": [],
-            "before": [],
+            "before": ["disable_events"],
             "after": [],
             "trigger": "valid_victim"
           }
@@ -123,7 +121,8 @@
         "description": "Data fusion deletes the victim",
         "tasks": [
           "preempt_end_effector",
-          "delete_victim"
+          "delete_victim",
+          "reset_environment"
         ],
         "clean": [],
         "transitions": [
@@ -162,9 +161,7 @@
           "wait_for_operator",
           "operator_responded"
         ],
-        "clean": [
-          "update_victims"
-        ],
+        "clean": [],
         "transitions": [
           {
             "to": "fusion_validation",

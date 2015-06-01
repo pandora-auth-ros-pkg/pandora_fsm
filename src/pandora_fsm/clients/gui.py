@@ -1,4 +1,4 @@
-from rospy import loginfo, sleep, logerr
+from time import sleep
 
 from actionlib import SimpleActionClient as Client
 from actionlib import GoalStatus
@@ -7,6 +7,7 @@ from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
 
 from pandora_fsm import topics
 from pandora_fsm.utils import ACTION_STATES
+from pandora_fsm.utils import logger as log
 
 
 class GUI(object):
@@ -19,9 +20,9 @@ class GUI(object):
         self.client = Client(topics.gui_validation, ValidateVictimGUIAction)
 
     def cancel_all_goals(self):
-        loginfo('$$ Waiting for the GUI action server...')
+        log.debug('Waiting for the GUI action server...')
         self.client.wait_for_server()
-        loginfo('$$ Canceling all goals on GUI.')
+        log.info('Canceling all goals on GUI.')
         self.client.cancel_all_goals()
         sleep(3)
 
@@ -36,23 +37,23 @@ class GUI(object):
         goal.probability = target.probability
         goal.sensorIDsFound = target.sensors
 
-        loginfo('^^ Waiting for the GUI action server.')
+        log.debug('Waiting for the GUI action server.')
         self.client.wait_for_server()
-        loginfo('^^ Sending validation request.')
+        log.info('Sending validation request.')
         if self.verbose:
-            loginfo(target)
+            log.debug(target)
         self.client.send_goal(goal)
-        loginfo('^^ Waiting for response.')
+        log.info('Waiting for response.')
         self.client.wait_for_result()
 
         status = self.client.get_state()
         verbose_status = ACTION_STATES[status]
         if status == GoalStatus.SUCCEEDED:
-            loginfo('^^ Validation request succeded!')
+            log.info('Validation request succeded!')
             self.gui_result = self.client.get_result()
             return True
         else:
-            logerr('^^ Validation request failed with %s.', verbose_status)
+            log.error('Validation request failed with %s.', verbose_status)
             return False
 
     def result(self):

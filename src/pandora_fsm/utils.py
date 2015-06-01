@@ -4,8 +4,10 @@ import numpy
 import signal
 import threading
 import time
+import logging
+from colorlog import ColoredFormatter
 
-from rospy import logerr, loginfo, Duration, sleep
+from rospy import Duration, sleep
 
 FAILURE_STATES = {2: 'PREEMPTED',
                   4: 'ABORTED',
@@ -29,6 +31,18 @@ TERMINAL_STATES = {2: 'PREEMPTED',
                    4: 'ABORTED',
                    5: 'REJECTED',
                    8: 'RECALLED'}
+
+GLOBAL_STATES = {0: 'OFF',
+                 1: 'START_AUTONOMOUS',
+                 2: 'EXPLORATION_RESCUE',
+                 3: 'IDENTIFICATION',
+                 4: 'SENSOR_HOLD',
+                 5: 'SEMI_AUTONOMOUS',
+                 6: 'TELEOPERATED_LOCOMOTION',
+                 7: 'SENSOR_TEST',
+                 8: 'EXPLORATION_MAPPING',
+                 9: 'TERMINATING'
+                 }
 
 
 def listify(obj):
@@ -140,7 +154,7 @@ def retry_action(client=None, goal=None, timeout=0, msg=''):
         :param :msg A text for debugging.
         """
         timeout = Duration(timeout)
-        loginfo(msg)
+        log.info(msg)
         while True:
             client.wait_for_server()
             client.send_goal(goal)
@@ -152,8 +166,60 @@ def retry_action(client=None, goal=None, timeout=0, msg=''):
                     break
                 else:
                     verbose_err = FAILURE_STATES[goal_state]
-                    logerr('%s responded with %s', msg, verbose_err)
+                    log.error('%s responded with %s', msg, verbose_err)
             else:
-                logerr("Couldn't test %s in time...", msg)
+                log.error("Couldn't test %s in time...", msg)
             sleep(2)
-            loginfo('Retrying...')
+            log.info('Retrying...')
+
+
+class Timer(threading.Thread):
+
+    """ Custom timer that executes a callback every N seconds. """
+
+    def __init__(self, stop_flag, interval, callback, args=(), **kwargs):
+        """
+        :param stop_flag: Threading Event to control the timer externally.
+        :param interval: An interval to execute the callback.
+        :param callback: The function to execute every interval.
+        :parm kwargs: Keyword parameters for the callback.
+
+        """
+        threading.Thread.__init__(self)
+        self.stop_flag = stop_flag
+        self.interval = interval
+        self.callback = callback
+        self.kwargs = kwargs
+        self.args = args
+
+    def run(self):
+        """ Start the timer. """
+
+        while not self.stop_flag.wait(self.interval):
+            self.callback(*self.args, **self.kwargs)
+
+
+def setup_logger():
+    """ Return a logger with a default ColoredFormatter. """
+
+    formatter = ColoredFormatter(
+        "%(log_color)s%(asctime)s%(levelname)-8s %(message)s",
+        datefmt='%H:%M:%S ',
+        reset=True,
+        log_colors={
+            'DEBUG':    'blue',
+            'INFO':     'green',
+            'WARNING':  'bold_yellow',
+            'ERROR':    'bold_red',
+            'CRITICAL': 'bold_red',
+        }
+    )
+    logger = logging.getLogger('logger')
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+    return logger
+
+logger = setup_logger()
