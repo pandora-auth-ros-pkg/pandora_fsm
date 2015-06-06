@@ -8,7 +8,7 @@ from pandora_fsm.mocks import MoveBaseServer, MockActionServer
 from pandora_data_fusion_msgs.msg import DeleteVictimAction
 from pandora_data_fusion_msgs.msg import ValidateVictimAction
 
-from pandora_rqt_gui.msg import ValidateVictimGUIAction
+from pandora_gui_msgs.msg import ValidateVictimGUIAction
 
 from pandora_exploration_msgs.msg import DoExplorationAction
 from pandora_end_effector_controller.msg import MoveEndEffectorAction

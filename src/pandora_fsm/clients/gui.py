@@ -3,7 +3,7 @@ from time import sleep
 from actionlib import SimpleActionClient as Client
 from actionlib import GoalStatus
 
-from pandora_rqt_gui.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
+from pandora_gui_msgs.msg import ValidateVictimGUIAction, ValidateVictimGUIGoal
 
 from pandora_fsm import topics
 from pandora_fsm.utils import ACTION_STATES
