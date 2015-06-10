@@ -63,7 +63,7 @@ class DataFusion(object):
         status = self.validation.get_state()
         verbose_status = ACTION_STATES[status]
         if status == GoalStatus.SUCCEEDED:
-            log.info('Victim %d validated succesfully', victim_id)
+            log.info('Victim %d validated successfully.', victim_id)
             return True
         else:
             log.error('Validation failure with %s.', verbose_status)
