@@ -1,6 +1,6 @@
 <package format="2">
   <name>pandora_fsm</name>
-  <version>0.3.3</version>
+  <version>0.3.4</version>
 
   <description>pandora_fsm</description>
 
@@ -19,7 +19,7 @@
   <depend>move_base_msgs</depend>
   <depend>pandora_data_fusion_msgs</depend>
   <depend>pandora_exploration_msgs</depend>
-  <depend>pandora_rqt_gui</depend>
+  <depend>pandora_gui_msgs</depend>
   <depend>pandora_end_effector_controller</depend>
   <depend>state_manager</depend>
   <depend>state_manager_msgs</depend>

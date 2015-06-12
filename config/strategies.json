@@ -176,7 +176,7 @@
         "name": "end",
         "description": "Job done!",
         "tasks": [
-          "mode_terminating",
+          "mode_off",
           "print_results",
           "clean_up",
           "sleep"

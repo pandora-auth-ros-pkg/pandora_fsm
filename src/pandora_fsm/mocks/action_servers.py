@@ -14,7 +14,7 @@ from actionlib import SimpleActionServer as ActionServer
 # Messages
 import move_base_msgs.msg
 from move_base_msgs.msg import MoveBaseAction
-from pandora_rqt_gui.msg import ValidateVictimGUIResult
+from pandora_gui_msgs.msg import ValidateVictimGUIResult
 
 
 class MockActionServer(object):
