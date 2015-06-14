@@ -93,10 +93,12 @@ class TestIdentificationState(unittest.TestCase):
     def test_identification_with_convergence(self):
         """ The agent is close enough to the victim to be identified. """
 
-        self.move_base_mock.publish('abort_feedback:2')
+        if not rospy.is_shutdown():
+            self.move_base_mock.publish('abort_feedback:2')
+            sleep(1)
         Thread(target=self.send_identified_victim, args=(3, 0.5)).start()
         self.agent.to_identification()
-        sleep(20)
+        sleep(30)
 
         self.assertEqual(self.agent.state, 'sensor_hold')
         self.assertTrue(self.agent.base_converged.is_set())

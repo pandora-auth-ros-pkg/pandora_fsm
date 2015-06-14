@@ -16,8 +16,9 @@ from pandora_fsm.utils import TERMINAL_STATES, ACTION_STATES
 
 class Explorer(object):
 
-    """ Explorer client for the Agent. A wrapper API for easy
-        communication and error handling for the exploration module.
+    """
+    Explorer client for the Agent. A wrapper API for easy communication
+    and error handling for the exploration module.
     """
 
     def __init__(self, dispatcher, verbose=False):
@@ -25,7 +26,7 @@ class Explorer(object):
         self.client = Client(topics.do_exploration, DoExplorationAction)
         self.verbose = verbose
         self.exploration_pending = Event()
-        self.base_position = PoseStamped()
+        self.pose_stamped = PoseStamped()
 
     def explore(self, exploration_type=DoExplorationGoal.TYPE_NORMAL):
 
@@ -45,11 +46,11 @@ class Explorer(object):
         self.client.cancel_all_goals()
         sleep(3)
 
-    def exploration_feedback(self, pose):
-        self.base_position = PoseStamped()
+    def exploration_feedback(self, pose_stamped):
+        self.pose_stamped = pose_stamped
         if self.verbose:
             log.debug('Received feedback from Explorer:')
-            log.info(self.base_position)
+            log.info(self.pose_stamped)
 
     def exploration_done(self, status, result):
 

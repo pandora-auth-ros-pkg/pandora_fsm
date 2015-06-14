@@ -139,3 +139,52 @@ class WorldModelSub(unittest.TestCase):
         self.assertFalse(self.agent.target.is_empty)
         self.assertTrue(self.agent.target.is_identified())
         self.assertTrue(self.agent.target.is_verified())
+
+
+class ChooseTarget(unittest.TestCase):
+
+    """ Test choose_target function. """
+
+    def setUp(self):
+        self.agent = Agent(testing=True)
+        self.agent.current_pose = mock_msgs.create_pose(x=0, y=0)
+
+    def test_empty_targets(self):
+        """ Should throw an error and return None. """
+
+        targets = []
+        next_target = self.agent.choose_target(targets)
+
+        self.assertIsNone(next_target)
+
+    def test_with_one_target(self):
+        """ Should return the one target. """
+
+        target = mock_msgs.create_victim_info()
+        next_target = self.agent.choose_target([target])
+
+        self.assertEqual(target, next_target)
+
+    def test_equal_distance_targets(self):
+        """ Should return the first target. """
+
+        target1 = mock_msgs.create_victim_info(id=1)
+        target1.victimPose = mock_msgs.create_pose_stamped(x=1, y=1)
+        target2 = mock_msgs.create_victim_info(id=2)
+        target2.victimPose = mock_msgs.create_pose_stamped(x=1, y=1)
+
+        next_target = self.agent.choose_target([target1, target2])
+        self.assertEqual(next_target, target1)
+
+    def test_with_normal_targets(self):
+        """ Should return the nearest target. """
+
+        target1 = mock_msgs.create_victim_info(id=1)
+        target1.victimPose = mock_msgs.create_pose_stamped(x=1, y=1)
+        target2 = mock_msgs.create_victim_info(id=2)
+        target2.victimPose = mock_msgs.create_pose_stamped(x=2, y=2)
+        target3 = mock_msgs.create_victim_info(id=3)
+        target3.victimPose = mock_msgs.create_pose_stamped(x=3, y=3)
+
+        next_target = self.agent.choose_target([target1, target2, target3])
+        self.assertEqual(next_target, target1)

@@ -16,6 +16,7 @@ roslib.load_manifest(PKG)
 
 from rospy import Subscriber, sleep
 from rospkg import RosPack
+from geometry_msgs.msg import Pose
 
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
@@ -82,6 +83,7 @@ class Agent(object):
             self.state_changer.change_state_and_wait(RobotModeMsg.MODE_OFF)
 
         # General information.
+        self.current_pose = Pose()
         self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
 
         # Victim information.
@@ -283,17 +285,19 @@ class Agent(object):
                 self.abort_victim()
 
     def move_base_feedback(self, current, goal):
-        """ The event is triggered from the move_base client when the
-            action server sends feedback with the current pose. Given
-            the goal and the current pose the agent checks if it is
-            close enough to the point of interest. This will work if the
-            move_base server takes too long to succeed.
-
-            :param :current The current pose received from the action client.
-            :param :goal The goal pose of the current action.
         """
-        base = current.base_position
-        if distance_2d(goal.pose, base.pose) < conf.BASE_THRESHOLD:
+        The event is triggered from the move_base client when the
+        action server sends feedback with the current pose. Given
+        the goal and the current pose the agent checks if it is
+        close enough to the point of interest. This will work if the
+        move_base server takes too long to succeed.
+
+        :param :current The current PoseStamped received from the action
+                        client.
+        :param :goal The PoseStamped goal of the current action.
+        """
+        self.current_pose = current.base_position.pose
+        if distance_2d(goal.pose, self.current_pose) < conf.BASE_THRESHOLD:
             log.warning('Base converged.')
             self.base_converged.set()
 
@@ -461,11 +465,28 @@ class Agent(object):
     ######################################################
 
     def choose_target(self, targets):
-        """ Choose the next possible target. """
+        """ Choose the neareset possible target. """
 
+        # Should never be called with empty targets.
+        if not targets:
+            log.error('choose_target was called with no targets.')
+            return None
+
+        closest_target = targets[0]
+        min_distance = 1000
+
+        if len(targets) == 1:
+            return closest_target
+
+        self.current_pose = self.explorer.pose_stamped.pose
         for target in targets:
-            if target not in self.deleted_victims:
-                return target
+            target_pose = target.victimPose.pose
+            target_distance = distance_2d(target_pose, self.current_pose)
+            if target_distance < min_distance:
+                min_distance = target_distance
+                closest_target = target
+
+        return closest_target
 
     ######################################################
     #               GLOBAL STATE TRANSITIONS             #
