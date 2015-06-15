@@ -1,43 +1,43 @@
 
 install:
-  export ROS_DISTRO=hydro
-  export CI_SOURCE_PATH=$(pwd)
-  export REPOSITORY_NAME=${PWD##*/}
-  sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu precise main" > /etc/apt/sources.list.d/ros-latest.list'
-  wget http://packages.ros.org/ros.key -O - | sudo apt-key add -
-  sudo apt-get update -qq
-  sudo apt-get install -qq -y python-catkin-pkg python-rosdep python-wstool ros-$ROS_DISTRO-catkin ros-$ROS_DISTRO-ros python-pip
-  sudo pip install pandoradep
-  sudo rosdep init
-  rosdep update
+  - export ROS_DISTRO=hydro
+  - export CI_SOURCE_PATH=$(pwd)
+  - export REPOSITORY_NAME=${PWD##*/}
+  - sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu precise main" > /etc/apt/sources.list.d/ros-latest.list'
+  - wget http://packages.ros.org/ros.key -O - | sudo apt-key add -
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq -y python-catkin-pkg python-rosdep python-wstool ros-$ROS_DISTRO-catkin ros-$ROS_DISTRO-ros python-pip
+  - sudo pip install pandoradep
+  - sudo rosdep init
+  - rosdep update
 
   # Create workspace
-  mkdir -p $BUILD_HOME/catkin_ws/src
-  cd $BUILD_HOME/catkin_ws/src
-  wstool init .
+  - mkdir -p $BUILD_HOME/catkin_ws/src
+  - cd $BUILD_HOME/catkin_ws/src
+  - wstool init .
 
   # Find and download non-debian dependencies
-  pandoradep scan $CI_SOURCE_PATH > deps.rosinstall
-  wstool merge deps.rosinstall
-  wstool update
+  - pandoradep scan $CI_SOURCE_PATH > deps.rosinstall
+  - wstool merge deps.rosinstall
+  - wstool update
 
   # Delete the .rosinstall version of this repo and use
   # the one of the branch we are testing.
-  rm -rf $REPOSITORY_NAME
+  - rm -rf $REPOSITORY_NAME
 
   # Link the repo we are testing to the new workspace
-  ln -s $CI_SOURCE_PATH .
-  cd ..
+  - ln -s $CI_SOURCE_PATH .
+  - cd ..
 
   # Install debian dependencies
-  rosdep install --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
-  source /opt/ros/$ROS_DISTRO/setup.bash
+  - rosdep install --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
+  - source /opt/ros/$ROS_DISTRO/setup.bash
 
 script:
   # All commands must exit with code 0 on success.
   # Anything else is considered failure.
-  catkin_make --only-pkg-with-deps $REPOSITORY_NAME
-  source devel/setup.bash
-  catkin_make roslint_pandora_fsm
-  catkin_make run_tests_pandora_fsm
-  catkin_test_results build
+  - catkin_make --only-pkg-with-deps $REPOSITORY_NAME
+  - source devel/setup.bash
+  - catkin_make roslint_pandora_fsm
+  - catkin_make run_tests_pandora_fsm
+  - catkin_test_results build
