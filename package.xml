@@ -30,7 +30,7 @@
   <depend>dynamic_reconfigure</depend>
 
   <test_depend>rostest</test_depend>
-  <test_depend>unittest</test_depend>
+  <test_depend>rosunit</test_depend>
 
   <export>
     <rosdoc config="rosdoc.yaml" />
