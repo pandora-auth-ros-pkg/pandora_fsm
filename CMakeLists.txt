@@ -29,3 +29,9 @@ FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
      tests/**/*.py
     )
 roslint_python(${${PROJECT_NAME}_LINT_PYTHON})
+
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_nosetests(tests/unit/world_model.py)
+  catkin_add_nosetests(tests/unit/utilities.py)
+  catkin_add_nosetests(tests/unit/fsm_framework.py)
+endif()
