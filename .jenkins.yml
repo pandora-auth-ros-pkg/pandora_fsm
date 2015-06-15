@@ -13,19 +13,18 @@ install:
 
   # Create workspace
   - mkdir -p $BUILD_HOME/catkin_ws/src
-  - cd $BUILD_HOME/catkin_ws/src
-  - wstool init .
+  - cp -r $BUILD_HOME/$REPOSITORY_NAME $BUILD_HOME/catkin_ws/src
 
   # Find and download non-debian dependencies
-  - pandoradep fetch $CI_SOURCE_PATH
+  - cd $BUILD_HOME/catkin_ws/src
+  - pandoradep fetch
+
+  # Install python dependencies.
+  - sudo pip install -r $REPOSITORY_NAME/requirements.txt
+
+  - wstool init .
   - wstool update
 
-  # Delete the .rosinstall version of this repo and use
-  # the one of the branch we are testing.
-  - rm -rf $REPOSITORY_NAME
-
-  # Link the repo we are testing to the new workspace
-  - ln -s $CI_SOURCE_PATH .
   - cd ..
 
   # Install debian dependencies
