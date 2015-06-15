@@ -1,4 +1,5 @@
-pandora_fsm
+pandora_fsm [![Build Status](http://jenkins.pandora.ee.auth.gr/buildStatus/icon?job=test_pandora_fsm/hydro-devel)](http://jenkins.pandora.ee.auth.gr/job/test_pandora_fsm/branch/hydro-devel/)
+
 ===========
 
-FSM implementation using SMACH for pandora UGV
+FSM implementation for pandora UGV.
