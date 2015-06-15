@@ -95,6 +95,8 @@
         "name": "sensor_hold",
         "description": "The agents takes a closer look at the victim.",
         "tasks": [
+          "preempt_end_effector",
+          "slowly_track_target",
           "mode_sensor_hold",
           "wait_for_verification"
         ],

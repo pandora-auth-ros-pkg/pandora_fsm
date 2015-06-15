@@ -40,8 +40,8 @@ class Effector(object):
     def point_to(self, target, center='kinect_frame'):
         """ Points end effector to a target.
 
-        :param :target The vicitim frame ID
-        :param :center Defaults to kinect_frame
+        :param target: The vicitim frame ID.
+        :param center: The center of the frame the we will use.
         """
 
         goal = MoveEndEffectorGoal()
@@ -52,6 +52,26 @@ class Effector(object):
         self.client.wait_for_server()
         log.info('Sending TRACK goal.')
         self.client.send_goal(goal)
+
+    def slowly_point_to(self, target, center='kinect_frame'):
+        """
+        Points end effector to a target, slow enough so the image
+        is staying still.
+
+        :param target: The victim frame ID.
+        :param center: The center of the frame the we will use.
+        """
+
+        goal = MoveEndEffectorGoal()
+        goal.command = MoveEndEffectorGoal.LAX_TRACK
+        goal.point_of_interest = target
+        goal.center_point = center
+        log.debug('Waiting for the EndEffector action server.')
+        self.client.wait_for_server()
+        log.info('Sending LAX TRACK goal.')
+        self.client.send_goal(goal)
+
+        sleep(5)
 
     def scan(self):
         """ The end effector starts scanning. """

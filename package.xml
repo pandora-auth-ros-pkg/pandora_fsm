@@ -1,6 +1,6 @@
 <package format="2">
   <name>pandora_fsm</name>
-  <version>0.3.5</version>
+  <version>0.3.6</version>
 
   <description>pandora_fsm</description>
 
@@ -29,8 +29,8 @@
 
   <depend>dynamic_reconfigure</depend>
 
-
   <test_depend>rostest</test_depend>
+  <test_depend>unittest</test_depend>
 
   <export>
     <rosdoc config="rosdoc.yaml" />

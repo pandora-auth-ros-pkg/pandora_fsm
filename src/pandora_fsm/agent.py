@@ -420,6 +420,14 @@ class Agent(object):
                                           self.timer_handler)
         self.base_timer.start()
 
+    def slowly_track_target(self):
+        """
+        The end effector slowly tracks the current target so the
+        captured image is staying as still as possible.
+        """
+        # Point sensors to the target.
+        self.effector.slowly_point_to(self.target.info.victimFrameId)
+
     def explore(self):
         """
         Send exploration goal to the explorer. A different exploration
