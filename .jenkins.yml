@@ -17,8 +17,7 @@ install:
   - wstool init .
 
   # Find and download non-debian dependencies
-  - pandoradep scan $CI_SOURCE_PATH > deps.rosinstall
-  - wstool merge deps.rosinstall
+  - pandoradep fetch $CI_SOURCE_PATH
   - wstool update
 
   # Delete the .rosinstall version of this repo and use
