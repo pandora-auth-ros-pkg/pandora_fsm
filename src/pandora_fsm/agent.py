@@ -393,7 +393,7 @@ class Agent(object):
             log.warning('Victim verified.')
             self.verified()
         else:
-            log.warning('Victims failed to be verified within %d secs.',
+            log.warning('Victim failed to be verified within %d secs.',
                         conf.VERIFICATION_TIMEOUT)
             self.gui_result.victimValid = False
             self.timeout()
@@ -442,7 +442,7 @@ class Agent(object):
 
     def check_for_targets(self):
         """
-        Check for available targets and choose one know. Don't wait
+        Check for available targets and choose one now. Don't wait
         until the next update of the world model.
         """
         log.debug("Checking for available targets...")
