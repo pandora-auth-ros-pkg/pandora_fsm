@@ -144,3 +144,61 @@ class TestExplorationState(unittest.TestCase):
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
         self.assertEqual(self.agent.dispatcher.listeners_all(), [])
         self.assertEqual(self.agent.state, 'end')
+
+    def test_with_target_on_enter(self):
+        """ A target has been acquired before exploration. """
+
+        target = mock_msgs.create_victim_info()
+        self.agent.available_targets = [target]
+        self.agent.target.set(target)
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:20')
+        self.agent.to_exploration()
+        sleep(5)
+
+        self.assertEqual(self.agent.state, 'identification')
+
+    def test_with_available_targets(self):
+        """ There are available targets before exploration. """
+
+        target = mock_msgs.create_victim_info()
+        self.agent.available_targets = [target]
+
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:20')
+
+        self.agent.to_exploration()
+        sleep(10)
+
+        self.assertEqual(self.agent.state, 'identification')
+        self.assertFalse(self.agent.target.is_empty)
+
+    def test_with_wrong_target(self):
+        """ The target is not in the available_targets. """
+
+        target = mock_msgs.create_victim_info()
+        self.agent.target.set(target)
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:20')
+        self.agent.to_exploration()
+        sleep(5)
+
+        self.assertEqual(self.agent.state, 'exploration')
+
+    def test_wrong_target_with_available_victims(self):
+        """ Choose a target after the wrong one. """
+
+        target = mock_msgs.create_victim_info()
+        target2 = mock_msgs.create_victim_info()
+        self.agent.available_targets = [target2]
+        self.agent.target.set(target)
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.explorer.publish('success:20')
+        self.agent.to_exploration()
+        sleep(5)
+
+        self.assertEqual(self.agent.state, 'identification')

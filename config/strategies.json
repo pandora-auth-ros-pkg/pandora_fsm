@@ -41,7 +41,8 @@
           "mode_exploration_rescue",
           "scan",
           "explore",
-          "enable_exploration_events"
+          "enable_exploration_events",
+          "check_for_targets"
         ],
         "clean": [
           "disable_events",
