@@ -325,6 +325,9 @@ class Agent(object):
         if not model.victims:
             return
 
+        # Remember the available targets.
+        self.available_targets = model.victims
+
         if self.target.is_empty:
 
             # Set a new target from the available ones.
@@ -436,6 +439,33 @@ class Agent(object):
         # TODO Change the exploration mode based on time,
         # how many targets are left etc.
         self.explorer.explore(exploration_type=self.exploration_mode)
+
+    def check_for_targets(self):
+        """
+        Check for available targets and choose one know. Don't wait
+        until the next update of the world model.
+        """
+        log.debug("Checking for available targets...")
+        if self.target.is_empty:
+            if self.available_targets != []:
+                new_target = self.choose_target(self.available_targets)
+                self.target.set(new_target)
+                self.dispatcher.emit('poi.found')
+            else:
+                log.debug('World model is empty. Searching for targets...')
+        else:
+            if self.target.info in self.available_targets:
+                self.dispatcher.emit('poi.found')
+            else:
+                target_id = self.target.info.id
+                log.error('Acquired non existent target #%s' % (target_id))
+                self.target.clean()
+                if self.available_targets != []:
+                    new_target = self.choose_target(self.available_targets)
+                    self.target.set(new_target)
+                    self.dispatcher.emit('poi.found')
+                else:
+                    log.debug('World model is empty. Searching for targets...')
 
     def timer_handler(self):
         if self.state == 'identification':
