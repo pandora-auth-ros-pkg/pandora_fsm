@@ -1,12 +1,12 @@
-from actionlib import GoalStatus
 from actionlib import SimpleActionClient as Client
+from actionlib import GoalStatus
 
-from pandora_data_fusion_msgs.msg import DeleteVictimAction, ValidateVictimGoal
-from pandora_data_fusion_msgs.msg import ValidateVictimAction, DeleteVictimGoal
-
+from pandora_data_fusion_msgs.msg import (ChooseVictimAction, ChooseVictimGoal,
+                                          ValidateVictimAction,
+                                          ValidateVictimGoal)
 from pandora_fsm import topics
-from pandora_fsm.utils import ACTION_STATES
 from pandora_fsm.utils import logger as log
+from pandora_fsm.utils import ACTION_STATES
 
 
 class DataFusion(object):
@@ -17,15 +17,16 @@ class DataFusion(object):
 
     def __init__(self, verbose=False):
         self.verbose = verbose
-        self.deletion = Client(topics.delete_victim, DeleteVictimAction)
+        self.deletion = Client(topics.delete_victim, ChooseVictimAction)
         self.validation = Client(topics.validate_victim, ValidateVictimAction)
 
     def delete_victim(self, victim_id):
-        """ Deletes a victim for the data fusion registry.
+        """
+        Delete a victim from the data fusion registry.
 
         :param :victim_id The ID of the victim to be deleted.
         """
-        goal = DeleteVictimGoal(victimId=victim_id)
+        goal = ChooseVictimGoal(victimId=victim_id)
 
         log.debug('Waiting for the DataFusion action server...')
         self.deletion.wait_for_server()
@@ -43,16 +44,20 @@ class DataFusion(object):
             log.error('Victim deletion failed with %s.', verbose_status)
             return False
 
-    def validate_victim(self, victim_id, valid=False):
-        """ Updates the data fusion registry with valid or not victims.
+    def validate_victim(self, victim_id, valid=False, verified=False):
+        """
+        Update the data fusion registry with valid or not victims.
 
-        :param :victim_id The number of the victim's ID.
+        :param :victim_id The victim's ID.
         :param :valid True if it was validated from the operator.
+        :param :verified True if got into the sensor hold state.
         """
         goal = ValidateVictimGoal()
         goal.victimId = victim_id
         goal.victimValid = valid
-        victim_status = 'valid' if valid else 'not valid'
+        goal.victimVerified = verified
+
+        victim_status = self.classify_target(valid, verified)
 
         log.debug('Waiting for the DataFusion action server...')
         self.validation.wait_for_server()
@@ -68,3 +73,20 @@ class DataFusion(object):
         else:
             log.error('Validation failure with %s.', verbose_status)
             return False
+
+    def classify_target(self, valid=False, verified=False):
+        """
+        Characterize the target as true negative, false negative,
+        false positive or true positive.
+
+        :param valid: Response from the operator.
+        :param valid: Robot's prediction.
+        """
+        if not valid and not verified:
+            return 'TRUE NEGATIVE'
+        elif valid and verified:
+            return 'TRUE POSITIVE'
+        elif not valid and verified:
+            return 'FALSE POSITIVE'
+        elif valid and not verified:
+            return 'FALSE NEGATIVE'

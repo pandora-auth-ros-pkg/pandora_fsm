@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
 import unittest
+from time import sleep
 
-import rospy
 import roslib
-roslib.load_manifest('pandora_fsm')
+import rospy
+
+from pandora_fsm import Agent
+from pandora_fsm.mocks import msgs as mock_msgs
 
 from rospy import Publisher
 from std_msgs.msg import String
 
-from pandora_fsm import Agent
-from pandora_fsm.mocks import msgs as mock_msgs
+roslib.load_manifest('pandora_fsm')
 
 
 class TestVictimDeletionState(unittest.TestCase):
@@ -27,7 +29,9 @@ class TestVictimDeletionState(unittest.TestCase):
         self.agent.available_targets = [target]
         self.agent.target.set(target)
 
-        self.delete_victim_mock.publish('success:1')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.delete_victim_mock.publish('success:1')
         self.agent.to_victim_deletion()
 
         self.assertEqual(self.agent.state, 'exploration')
@@ -39,7 +43,9 @@ class TestVictimDeletionState(unittest.TestCase):
         self.agent.available_targets = [target]
         self.agent.target.set(target)
 
-        self.delete_victim_mock.publish('abort:1')
+        if not rospy.is_shutdown():
+            sleep(1)
+            self.delete_victim_mock.publish('abort:1')
         self.agent.to_victim_deletion()
 
         self.assertEqual(self.agent.state, 'exploration')

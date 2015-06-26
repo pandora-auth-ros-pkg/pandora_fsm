@@ -363,7 +363,9 @@ class Agent(object):
 
         if not self.target.is_empty:
             self.data_fusion.validate_victim(self.target.info.id,
-                                             self.gui_result.victimValid)
+                                             valid=self.gui_result.victimValid,
+                                             verified=self.target.is_verified()
+                                             )
         else:
             log.critical('Reached data fusion validation without target.')
 
