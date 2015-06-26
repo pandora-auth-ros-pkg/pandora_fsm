@@ -370,8 +370,9 @@ class Agent(object):
             log.critical('Reached data fusion validation without target.')
 
     def delete_victim(self):
-        """ Send deleletion request to DataFusion about the current
-            target victim.
+        """
+        Send deletion request to DataFusion about the current
+        target victim.
         """
         self.data_fusion.delete_victim(self.target.info.id)
         self.update_victim_registry()
