@@ -12,6 +12,9 @@ delete_victim = '/data_fusion/delete_victim'
 # Action to validate a victim.
 validate_victim = '/data_fusion/validate_victim'
 
+# Action to notify data fusion about the current target.
+choose_target = '/data_fusion/target_victim'
+
 # Publishing QR notificatios from the data fusion's registry.
 qr_notification = '/data_fusion/qr_notification'
 

@@ -358,6 +358,11 @@ class Agent(object):
         self.gui_result.victimValid = False
         self.target.clean()
 
+    def notify_data_fusion(self):
+        """ Notify data fusion about the current target. """
+
+        self.data_fusion.announce_target(self.target.info.id)
+
     def validate_victim(self):
         """ Sends information about the current target.  """
 

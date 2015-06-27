@@ -11,14 +11,16 @@ from pandora_fsm.utils import ACTION_STATES
 
 class DataFusion(object):
 
-    """ Data fusion client. Updates the data fusion registry after
-        identification or validation from the operator.
+    """
+    Data fusion client. Updates the data fusion registry after
+    identification or validation from the operator.
     """
 
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.deletion = Client(topics.delete_victim, ChooseVictimAction)
         self.validation = Client(topics.validate_victim, ValidateVictimAction)
+        self.selection = Client(topics.choose_target, ChooseVictimAction)
 
     def delete_victim(self, victim_id):
         """
@@ -73,6 +75,19 @@ class DataFusion(object):
         else:
             log.error('Validation failure with %s.', verbose_status)
             return False
+
+    def announce_target(self, victim_id):
+        """
+        Notify data fusion about the current target.
+
+        :param victim_id: The id of the current target/victim.
+        """
+        goal = ChooseVictimGoal(victimId=victim_id)
+
+        log.debug('Waiting for the DataFusion action server...')
+        self.selection.wait_for_server()
+        log.info('Sending current target #%d', victim_id)
+        self.selection.send_goal(goal)
 
     def classify_target(self, valid=False, verified=False):
         """
