@@ -21,7 +21,7 @@ from pandora_data_fusion_msgs.msg import WorldModel, VictimInfo
 import msgs
 
 
-class WorldModel(object):
+class WorldModelPub(object):
     """ Mock publisher for the world_model. """
 
     def __init__(self):

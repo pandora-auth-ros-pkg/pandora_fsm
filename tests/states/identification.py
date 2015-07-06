@@ -12,7 +12,7 @@ roslib.load_manifest('pandora_fsm')
 from rospy import Publisher, sleep
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Pose
-from pandora_data_fusion_msgs.msg import WorldModelMsg
+from pandora_data_fusion_msgs.msg import WorldModel
 
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_fsm import Agent
@@ -42,7 +42,7 @@ class TestIdentificationState(unittest.TestCase):
         pose_stamped.pose.position.y = 20
         target = mock_msgs.create_victim_info(id=1, probability=0.5)
         target.victimPose = pose_stamped
-        msg = WorldModelMsg()
+        msg = WorldModel()
         msg.victims = [target]
         msg.visitedVictims = []
         sleep(delay)
@@ -50,7 +50,7 @@ class TestIdentificationState(unittest.TestCase):
 
     def send_identified_victim(self, delay, probability):
         target = mock_msgs.create_victim_info(id=1, probability=probability)
-        msg = WorldModelMsg()
+        msg = WorldModel()
         msg.victims = [target]
         msg.visitedVictims = []
         sleep(delay)
