@@ -21,7 +21,7 @@ from geometry_msgs.msg import Pose
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_exploration_msgs.msg import DoExplorationGoal
-from pandora_data_fusion_msgs.msg import WorldModelMsg
+from pandora_data_fusion_msgs.msg import WorldModel
 from pandora_gui_msgs.msg import ValidateVictimGUIResult
 
 import topics
@@ -64,7 +64,7 @@ class Agent(object):
         self.dispatcher = EventEmitter()
 
         # SUBSCRIBERS.
-        self.world_model_sub = Subscriber(topics.world_model, WorldModelMsg,
+        self.world_model_sub = Subscriber(topics.world_model, WorldModel,
                                           self.receive_world_model)
 
         # ACTION CLIENTS.
@@ -84,7 +84,7 @@ class Agent(object):
 
         # General information.
         self.current_pose = Pose()
-        self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
+        self.exploration_mode = DoExplorationGoal.TYPE_DEEP
 
         # Victim information.
         self.available_targets = []
@@ -358,18 +358,26 @@ class Agent(object):
         self.gui_result.victimValid = False
         self.target.clean()
 
+    def notify_data_fusion(self):
+        """ Notify data fusion about the current target. """
+
+        self.data_fusion.announce_target(self.target.info.id)
+
     def validate_victim(self):
         """ Sends information about the current target.  """
 
         if not self.target.is_empty:
             self.data_fusion.validate_victim(self.target.info.id,
-                                             self.gui_result.victimValid)
+                                             valid=self.gui_result.victimValid,
+                                             verified=self.target.is_verified()
+                                             )
         else:
             log.critical('Reached data fusion validation without target.')
 
     def delete_victim(self):
-        """ Send deleletion request to DataFusion about the current
-            target victim.
+        """
+        Send deletion request to DataFusion about the current
+        target victim.
         """
         self.data_fusion.delete_victim(self.target.info.id)
         self.update_victim_registry()

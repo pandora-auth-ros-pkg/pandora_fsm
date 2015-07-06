@@ -16,19 +16,19 @@ from pandora_fsm import topics
 
 # Messages
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
+from pandora_data_fusion_msgs.msg import WorldModel, VictimInfo
 
 import msgs
 
 
-class WorldModel(object):
+class WorldModelPub(object):
     """ Mock publisher for the world_model. """
 
     def __init__(self):
-        self._pub = Publisher(topics.world_model, WorldModelMsg)
+        self._pub = Publisher(topics.world_model, WorldModel)
 
     def send_random(self, duration=3, new_victims=2, old_victims=5):
-        msg = WorldModelMsg()
+        msg = WorldModel()
         msg.victims = [msgs.create_victim_info() for i in range(new_victims)]
         msg.visitedVictims = [msgs.create_victim_info() for i in range(old_victims)]
 

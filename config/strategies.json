@@ -71,6 +71,7 @@
         "description": "Examining the candidate victim",
         "tasks": [
           "mode_identification",
+          "notify_data_fusion",
           "approach_target",
           "enable_identification_events"
         ],

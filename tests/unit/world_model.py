@@ -14,7 +14,7 @@ roslib.load_manifest('pandora_fsm')
 from time import sleep
 
 from pandora_fsm.mocks import msgs as mock_msgs
-from pandora_fsm.mocks import WorldModel
+from pandora_fsm.mocks import WorldModelPub
 import pandora_fsm.config as conf
 from pandora_fsm import Agent
 
@@ -29,7 +29,7 @@ class WorldModelSub(unittest.TestCase):
 
     def setUp(self):
         self.agent = Agent(testing=True)
-        self.world_model = WorldModel()
+        self.world_model = WorldModelPub()
 
     @unittest.skip('ROS dependent')
     def test_connection(self):

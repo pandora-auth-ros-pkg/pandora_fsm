@@ -1,6 +1,6 @@
 import threading
 
-from pandora_data_fusion_msgs.msg import VictimInfoMsg
+from pandora_data_fusion_msgs.msg import VictimInfo
 
 import config as conf
 from utils import logger as log
@@ -14,7 +14,7 @@ class Target(object):
     def __init__(self, dispatcher):
         self.dispatcher = dispatcher
 
-        self.info = VictimInfoMsg()
+        self.info = VictimInfo()
         self.verified = threading.Event()
         self.identified = threading.Event()
         self.is_empty = True
@@ -24,9 +24,9 @@ class Target(object):
         """
         Set a new point of interest.
 
-        :param info: A VictimInfoMsg instance to mark as the point of interest.
+        :param info: A VictimInfo instance to mark as the point of interest.
         """
-        if isinstance(info, VictimInfoMsg):
+        if isinstance(info, VictimInfo):
             self.info = info
 
             # Reset the target's state.
@@ -101,7 +101,7 @@ class Target(object):
         if self.is_empty:
             return
 
-        self.info = VictimInfoMsg()
+        self.info = VictimInfo()
         self.identified.clear()
         self.verified.clear()
         self.is_empty = True
