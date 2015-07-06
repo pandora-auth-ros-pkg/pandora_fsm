@@ -21,7 +21,7 @@ from geometry_msgs.msg import Pose
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
 from pandora_exploration_msgs.msg import DoExplorationGoal
-from pandora_data_fusion_msgs.msg import WorldModelMsg
+from pandora_data_fusion_msgs.msg import WorldModel
 from pandora_gui_msgs.msg import ValidateVictimGUIResult
 
 import topics
@@ -64,7 +64,7 @@ class Agent(object):
         self.dispatcher = EventEmitter()
 
         # SUBSCRIBERS.
-        self.world_model_sub = Subscriber(topics.world_model, WorldModelMsg,
+        self.world_model_sub = Subscriber(topics.world_model, WorldModel,
                                           self.receive_world_model)
 
         # ACTION CLIENTS.

@@ -11,7 +11,7 @@ import roslib
 roslib.load_manifest('pandora_fsm')
 
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from pandora_data_fusion_msgs.msg import WorldModelMsg, VictimInfoMsg
+from pandora_data_fusion_msgs.msg import WorldModel, VictimInfo
 
 
 def create_pose(*args, **kwargs):
@@ -51,7 +51,7 @@ def create_pose_stamped(*args, **kwargs):
 
 def create_victim_info(id=None, victim_frame_id=None, sensors=None, valid=None,
                        probability=None):
-    msg = VictimInfoMsg()
+    msg = VictimInfo()
 
     msg.id = id if id else randint(0, 100)
     msg.victimFrameId = victim_frame_id if victim_frame_id else 'kinect'
@@ -65,7 +65,7 @@ def create_victim_info(id=None, victim_frame_id=None, sensors=None, valid=None,
 
 
 def create_world_model(victims=[], visitedVictims=[]):
-    msg = WorldModelMsg()
+    msg = WorldModel()
     msg.victims = victims
     msg.visitedVictims = visitedVictims
 
