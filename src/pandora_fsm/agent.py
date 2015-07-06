@@ -84,7 +84,7 @@ class Agent(object):
 
         # General information.
         self.current_pose = Pose()
-        self.exploration_mode = DoExplorationGoal.TYPE_NORMAL
+        self.exploration_mode = DoExplorationGoal.TYPE_DEEP
 
         # Victim information.
         self.available_targets = []
