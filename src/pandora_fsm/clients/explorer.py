@@ -28,7 +28,7 @@ class Explorer(object):
         self.exploration_pending = Event()
         self.pose_stamped = PoseStamped()
 
-    def explore(self, exploration_type=DoExplorationGoal.TYPE_NORMAL):
+    def explore(self, exploration_type=DoExplorationGoal.TYPE_DEEP):
 
         goal = DoExplorationGoal(exploration_type=exploration_type)
         log.debug('Waiting for the Explorer action server...')
