@@ -198,19 +198,86 @@
       }
     ]
   },
-  "exploration_mode": {
+  "mapping": {
     "states": [
       {
         "name": "off",
         "description": "The agent is sleeping.",
-        "conditions": []
+        "conditions": [],
+        "tasks": [],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "init",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "wake_up"
+          }
+        ]
       },
       {
         "name": "init",
         "description": "The agent starts the system.",
         "conditions": [],
         "tasks": [
-          "boot"
+          "mode_start_autonomous",
+          "booted"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "booted"
+          }
+        ]
+      },
+      {
+        "name": "exploration",
+        "description": "The agent explores the arena",
+        "conditions": [],
+        "tasks": [
+          "mode_exploration_mapping",
+          "scan",
+          "explore",
+          "enable_exploration_events"
+        ],
+        "clean": [
+          "preempt_explorer",
+          "preempt_end_effector"
+        ],
+        "transitions": [
+          {
+            "to": "end",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "map_covered"
+          }
+        ]
+      },
+      {
+        "name": "end",
+        "description": "The mission has finished!",
+        "conditions": [],
+        "tasks": [
+          "mode_off",
+          "print_results",
+          "clean_up",
+          "sleep"
+        ],
+        "clean": [],
+        "transitions": [
+          {
+            "to": "off",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "sleep"
+          }
         ]
       }
     ]

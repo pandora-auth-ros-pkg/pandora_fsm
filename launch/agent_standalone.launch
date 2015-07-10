@@ -1,10 +1,13 @@
 <launch>
 
-  <!--Brings up only the Agent.-->
+  <arg name="strategy" default="normal" />
 
+
+  <!--Brings up only the Agent.-->
   <node name="Agent"
         pkg="pandora_fsm"
         type="agent_standalone.py"
+        args="$(arg strategy)"
         output="screen" />
 
 </launch>
