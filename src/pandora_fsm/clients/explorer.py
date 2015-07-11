@@ -47,7 +47,7 @@ class Explorer(object):
         sleep(3)
 
     def exploration_feedback(self, pose_stamped):
-        self.pose_stamped = pose_stamped
+        self.pose_stamped = pose_stamped.base_position
         if self.verbose:
             log.debug('Received feedback from Explorer:')
             log.info(self.pose_stamped)
