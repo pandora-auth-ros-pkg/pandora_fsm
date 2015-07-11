@@ -384,12 +384,16 @@ class Agent(object):
         self.victim_deleted()
 
     def update_victim_registry(self):
+        log.debug("Update local world model. \n Before:")
+        log.debug(self.available_targets)
         if self.available_targets:
             for idx, item in enumerate(self.available_targets):
                 if item.id == self.target.info.id:
                     break
             del self.available_targets[idx]
             self.deleted_victims.append(self.target.info)
+        log.debug("Update local world model. \n After:")
+        log.debug(self.available_targets)
 
     def wait_for_verification(self):
         """

@@ -21,6 +21,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.agent = Agent(strategy='normal')
         self.fusion_validate = Publisher('mock/fusion_validate', String)
         self.target = mock_msgs.create_victim_info(id=1, probability=0.65)
+        self.agent.available_targets.append(self.target)
         self.agent.target.set(self.target)
         self.agent.set_breakpoint('exploration')
 
