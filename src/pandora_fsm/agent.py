@@ -446,11 +446,18 @@ class Agent(object):
     def explore(self):
         """
         Send exploration goal to the explorer. A different exploration
-        strategy should be used depending on the state variables.
+        strategy is used depending on the global state.
         """
-        # TODO Change the exploration mode based on time,
-        # how many targets are left etc.
-        self.explorer.explore(exploration_type=self.exploration_mode)
+        global_state = self.state_changer.get_current_state()
+        coverage = DoExplorationGoal.TYPE_DEEP
+        fast = DoExplorationGoal.TYPE_FAST
+
+        if global_state == RobotModeMsg.MODE_EXPLORATION_RESCUE:
+            log.info("** COVERAGE EXPLORATION **")
+            self.explorer.explore(exploration_type=coverage)
+        else:
+            log.info("** FAST EXPLORATION **")
+            self.explorer.explore(exploration_type=fast)
 
     def check_for_targets(self):
         """
