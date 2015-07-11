@@ -67,7 +67,8 @@ class TestIdentificationState(unittest.TestCase):
         self.assertItemsEqual(self.agent.dispatcher.listeners_all(),
                               self.events)
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_identification_with_move_base(self):
         """ The base has moved to the victim's pose. """
@@ -78,7 +79,8 @@ class TestIdentificationState(unittest.TestCase):
         self.assertEqual(self.agent.state, 'sensor_hold')
         self.assertEqual(self.agent.dispatcher.listeners_all(), [])
         self.assertFalse(self.agent.target.is_verified())
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_identification_with_high_probability(self):
         """ The move_base has failed but the victim has high probability. """
@@ -91,7 +93,8 @@ class TestIdentificationState(unittest.TestCase):
         self.assertEqual(self.agent.state, 'sensor_hold')
         self.assertEqual(self.agent.dispatcher.listeners_all(), [])
         self.assertTrue(self.agent.target.is_identified())
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_identification_with_convergence(self):
         """ The agent is close enough to the victim to be identified. """
@@ -105,7 +108,8 @@ class TestIdentificationState(unittest.TestCase):
 
         self.assertEqual(self.agent.state, 'sensor_hold')
         self.assertTrue(self.agent.base_converged.is_set())
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_abort_victim(self):
         self.move_base_mock.publish('abort:1')
@@ -115,7 +119,8 @@ class TestIdentificationState(unittest.TestCase):
 
         self.assertEqual(self.agent.state, 'victim_deletion')
         self.assertFalse(self.agent.target.is_identified())
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_unresponsive_move_base(self):
         conf.MOVE_BASE_TIMEOUT = 5
@@ -125,7 +130,8 @@ class TestIdentificationState(unittest.TestCase):
         sleep(10)
 
         self.assertEqual(self.agent.state, 'victim_deletion')
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_update_move_base(self):
         if not rospy.is_shutdown():
@@ -138,6 +144,8 @@ class TestIdentificationState(unittest.TestCase):
         y = self.agent.target.info.victimPose.pose.position.y
         self.assertEqual(x, 20)
         self.assertEqual(y, 20)
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_update_move_base_timer(self):
         conf.MOVE_BASE_TIMEOUT = 25
@@ -157,7 +165,8 @@ class TestIdentificationState(unittest.TestCase):
             self.assertEqual(x, 20)
             self.assertEqual(y, 20)
             mock.assert_any_call('move_base.resend', pose)
-            self.assertIsNot(self.agent.available_targets, [])
+            self.assertTrue(type(self.agent.available_targets), list)
+            self.assertGreater(len(self.agent.available_targets), 1)
 
     def test_no_move_base_update(self):
         self.agent.target.info.victimPose.pose.position.x = 20.1
@@ -177,4 +186,5 @@ class TestIdentificationState(unittest.TestCase):
         self.assertEqual(mock.call_count, 1)
         self.assertEqual(x, 20)
         self.assertEqual(y, 20)
-        self.assertIsNot(self.agent.available_targets, [])
+        self.assertTrue(type(self.agent.available_targets), list)
+        self.assertGreater(len(self.agent.available_targets), 1)
