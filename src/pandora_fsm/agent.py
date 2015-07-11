@@ -459,6 +459,7 @@ class Agent(object):
                 self.dispatcher.emit('poi.found')
             else:
                 log.debug('World model is empty. Searching for targets...')
+                self.explore()
         else:
             if self.target.info in self.available_targets:
                 self.dispatcher.emit('poi.found')
@@ -472,6 +473,7 @@ class Agent(object):
                     self.dispatcher.emit('poi.found')
                 else:
                     log.debug('World model is empty. Searching for targets...')
+                    self.explore()
 
     def timer_handler(self):
         if self.state == 'identification':
