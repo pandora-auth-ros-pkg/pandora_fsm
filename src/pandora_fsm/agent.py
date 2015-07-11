@@ -75,7 +75,8 @@ class Agent(object):
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
 
-        self.transform_listener = tf.TransformListener()
+        if not self.testing:
+            self.transform_listener = tf.TransformListener()
 
         # State client
         if not self.testing:

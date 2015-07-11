@@ -20,14 +20,14 @@ if __name__ == '__main__':
     init_node('mock_node')
 
     # Action Servers
-    # MoveBaseServer('move_base', topics.move_base)
+    MoveBaseServer('move_base', topics.move_base)
 
-    # DataFusionServer('choose_target', topics.choose_target, ChooseVictimAction, ChooseVictimResult)
-    # DataFusionServer('delete_victim', topics.delete_victim, ChooseVictimAction, ChooseVictimResult)
-    # DataFusionServer('fusion_validate', topics.validate_victim, ValidateVictimAction, ValidateVictimResult)
+    DataFusionServer('choose_target', topics.choose_target, ChooseVictimAction, ChooseVictimResult)
+    DataFusionServer('delete_victim', topics.delete_victim, ChooseVictimAction, ChooseVictimResult)
+    DataFusionServer('fusion_validate', topics.validate_victim, ValidateVictimAction, ValidateVictimResult)
 
     MockActionServer('effector', topics.move_end_effector_controller, MoveEndEffectorAction)
-    # MockActionServer('explorer', topics.do_exploration, DoExplorationAction)
+    MockActionServer('explorer', topics.do_exploration, DoExplorationAction)
     MockActionServer('validate_gui', topics.gui_validation, ValidateVictimGUIAction)
 
     spin()
