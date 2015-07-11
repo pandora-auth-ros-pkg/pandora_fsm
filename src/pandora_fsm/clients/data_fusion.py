@@ -38,13 +38,15 @@ class DataFusion(object):
         self.deletion.wait_for_result()
 
         status = self.deletion.get_state()
+        result = self.deletion.get_result()
         verbose_status = ACTION_STATES[status]
+
         if status == GoalStatus.SUCCEEDED:
             log.info('Victim deletion succeded!')
-            return True
         else:
             log.error('Victim deletion failed with %s.', verbose_status)
-            return False
+
+        return result.worldModel
 
     def validate_victim(self, victim_id, valid=False, verified=False):
         """
@@ -67,14 +69,17 @@ class DataFusion(object):
         self.validation.send_goal(goal)
         log.debug('Waiting for response...')
         self.validation.wait_for_result()
+
         status = self.validation.get_state()
+        result = self.validation.get_result()
         verbose_status = ACTION_STATES[status]
+
         if status == GoalStatus.SUCCEEDED:
             log.info('Victim %d validated successfully.', victim_id)
-            return True
         else:
             log.error('Validation failure with %s.', verbose_status)
-            return False
+
+        return result.worldModel
 
     def announce_target(self, victim_id):
         """
@@ -88,6 +93,19 @@ class DataFusion(object):
         self.selection.wait_for_server()
         log.info('Sending current target #%d', victim_id)
         self.selection.send_goal(goal)
+        log.debug('Waiting for response...')
+        self.selection.wait_for_result()
+
+        status = self.selection.get_state()
+        result = self.selection.get_result()
+        verbose_status = ACTION_STATES[status]
+
+        if status == GoalStatus.SUCCEEDED:
+            log.info('Victim #%d, selected as the current target', victim_id)
+        else:
+            log.error('Victim selection failed with %s.', verbose_status)
+
+        return result.worldModel
 
     def classify_target(self, valid=False, verified=False):
         """

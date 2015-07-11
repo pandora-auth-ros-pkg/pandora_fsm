@@ -144,7 +144,6 @@
         "description": "Data fusion validates the victim",
         "tasks": [
           "validate_victim",
-          "update_victim_registry",
           "reset_environment",
           "victim_classified"
         ],

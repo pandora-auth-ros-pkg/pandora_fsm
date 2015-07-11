@@ -88,7 +88,6 @@ class Agent(object):
 
         # Victim information.
         self.available_targets = []
-        self.deleted_victims = []
 
         self.gui_result = ValidateVictimGUIResult()
 
@@ -361,39 +360,24 @@ class Agent(object):
     def notify_data_fusion(self):
         """ Notify data fusion about the current target. """
 
-        self.data_fusion.announce_target(self.target.info.id)
+        self.available_targets = self.data_fusion.announce_target(self.target.info.id)
 
     def validate_victim(self):
         """ Sends information about the current target.  """
 
         if not self.target.is_empty:
-            self.data_fusion.validate_victim(self.target.info.id,
-                                             valid=self.gui_result.victimValid,
-                                             verified=self.target.is_verified()
-                                             )
+            self.available_targets = self.data_fusion.validate_victim(self.target.info.id,
+                                                                      valid=self.gui_result.victimValid,
+                                                                      verified=self.target.is_verified())
         else:
             log.critical('Reached data fusion validation without target.')
 
     def delete_victim(self):
         """
-        Send deletion request to DataFusion about the current
-        target victim.
+        Send deletion request to DataFusion about the current target victim.
         """
-        self.data_fusion.delete_victim(self.target.info.id)
-        self.update_victim_registry()
+        self.available_targets = self.data_fusion.delete_victim(self.target.info.id)
         self.victim_deleted()
-
-    def update_victim_registry(self):
-        log.debug("Update local world model. \n Before:")
-        log.debug(self.available_targets)
-        if self.available_targets:
-            for idx, item in enumerate(self.available_targets):
-                if item.id == self.target.info.id:
-                    break
-            del self.available_targets[idx]
-            self.deleted_victims.append(self.target.info)
-        log.debug("Update local world model. \n After:")
-        log.debug(self.available_targets)
 
     def wait_for_verification(self):
         """

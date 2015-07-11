@@ -36,7 +36,7 @@ class TestVictimDeletionState(unittest.TestCase):
 
         self.assertEqual(self.agent.state, 'exploration')
         self.assertTrue(self.agent.target.is_empty)
-        self.assertIn(target, self.agent.deleted_victims)
+        self.assertIsNot(self.agent.available_targets, [])
 
     def test_delete_victim_fail(self):
         target = mock_msgs.create_victim_info(id=1, probability=0.7)
@@ -50,4 +50,4 @@ class TestVictimDeletionState(unittest.TestCase):
 
         self.assertEqual(self.agent.state, 'exploration')
         self.assertTrue(self.agent.target.is_empty)
-        self.assertIn(target, self.agent.deleted_victims)
+        self.assertIsNot(self.agent.available_targets, [])
