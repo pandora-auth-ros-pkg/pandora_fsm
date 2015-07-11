@@ -14,8 +14,9 @@ from pymitter import EventEmitter
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, sleep
+from rospy import Subscriber, sleep, Time
 from rospkg import RosPack
+import tf
 from geometry_msgs.msg import Pose
 
 from state_manager.state_client import StateClient
@@ -73,6 +74,8 @@ class Agent(object):
         self.navigator = clients.Navigator(self.dispatcher)
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
+
+        self.transform_listener = tf.TransformListener()
 
         # State client
         if not self.testing:
@@ -519,8 +522,19 @@ class Agent(object):
         if len(targets) == 1:
             return closest_target
 
-        self.current_pose = self.explorer.pose_stamped.pose
+        # self.current_pose = self.explorer.pose_stamped.pose
         for target in targets:
+            try:
+                (trans, rot) = self.transform_listener.lookupTransform(target.victimPose.header.frame_id,
+                                                        '/base_footprint',
+                                                        Time(0))
+            except:
+                log.error("Transform listener failed to acquire transformation")
+                return closest_target
+            self.current_pose = Pose()
+            self.current_pose.position.x = trans[0]
+            self.current_pose.position.y = trans[1]
+            self.current_pose.position.z = trans[2]
             target_pose = target.victimPose.pose
             target_distance = distance_2d(target_pose, self.current_pose)
             if target_distance < min_distance:
