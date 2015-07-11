@@ -46,7 +46,7 @@ class DataFusion(object):
         else:
             log.error('Victim deletion failed with %s.', verbose_status)
 
-        return result.worldModel
+        return result.worldModel.victims
 
     def validate_victim(self, victim_id, valid=False, verified=False):
         """
@@ -79,7 +79,7 @@ class DataFusion(object):
         else:
             log.error('Validation failure with %s.', verbose_status)
 
-        return result.worldModel
+        return result.worldModel.victims
 
     def announce_target(self, victim_id):
         """
@@ -105,7 +105,7 @@ class DataFusion(object):
         else:
             log.error('Victim selection failed with %s.', verbose_status)
 
-        return result.worldModel
+        return result.worldModel.victims
 
     def classify_target(self, valid=False, verified=False):
         """
