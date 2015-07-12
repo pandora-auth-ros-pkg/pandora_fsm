@@ -35,8 +35,7 @@ class Explorer(object):
         self.client.wait_for_server()
         log.info('Sending new exploration goal.')
         self.exploration_pending.set()
-        self.client.send_goal(goal, feedback_cb=self.exploration_feedback,
-                              done_cb=self.exploration_done)
+        self.client.send_goal(goal, done_cb=self.exploration_done)
 
     def cancel_all_goals(self):
         log.debug('Waiting for the Explorer action server...')
@@ -45,12 +44,6 @@ class Explorer(object):
         self.exploration_pending.clear()
         self.client.cancel_all_goals()
         sleep(3)
-
-    def exploration_feedback(self, pose_stamped):
-        self.pose_stamped = pose_stamped.base_position
-        if self.verbose:
-            log.debug('Received feedback from Explorer:')
-            log.info(self.pose_stamped)
 
     def exploration_done(self, status, result):
 
