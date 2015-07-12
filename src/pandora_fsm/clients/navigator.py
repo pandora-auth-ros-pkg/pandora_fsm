@@ -59,7 +59,7 @@ class Navigator(object):
         log.debug('Waiting for Navigation action server...')
         self.client.wait_for_server()
         log.info('Sending MoveBase goal.')
-        log.debug('\n' + str(target.pose))
+        log.debug('\n' + str(target))
         self.base_pending.set()
         self.client.send_goal(goal, feedback_cb=self.base_feedback,
                               done_cb=self.move_base_done)
@@ -81,7 +81,7 @@ class Navigator(object):
             log.info('MoveBase goal status: %s', ACTION_STATES[status])
 
     def base_feedback(self, pose):
-        self.current_pose = pose
+        self.current_pose = pose.base_position
         self.dispatcher.emit('move_base.feedback', pose, self.target_pose)
         if self.verbose:
             log.debug('Current pose updated.')

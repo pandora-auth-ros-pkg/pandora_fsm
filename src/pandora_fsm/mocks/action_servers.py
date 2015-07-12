@@ -12,8 +12,13 @@ from std_msgs.msg import String, Bool
 from actionlib import SimpleActionServer as ActionServer
 
 # Messages
+from .msgs import create_victim_info, create_world_model
 import move_base_msgs.msg
 from move_base_msgs.msg import MoveBaseAction
+from pandora_data_fusion_msgs.msg import (ChooseVictimAction,
+                                          ChooseVictimResult,
+                                          ValidateVictimAction,
+                                          ValidateVictimResult)
 from pandora_gui_msgs.msg import ValidateVictimGUIResult
 
 
@@ -73,6 +78,46 @@ class MockActionServer(object):
         self.action_result = ValidateVictimGUIResult()
         logwarn('>>> The gui response will be: ' + str(msg.data))
         self.action_result.victimValid = msg.data
+
+
+class DataFusionServer(object):
+
+    def __init__(self, name, topic, action_type, result_type):
+        self.name = name
+        self.result = result_type()
+        self.topic = topic
+        self.action_type = action_type
+        self.timeout = 5
+        Subscriber('mock/' + name, String, self.receive_commands)
+        self.server = ActionServer(self.topic, self.action_type, self.success,
+                                   False)
+        self.server.start()
+        loginfo('>>> Starting ' + self.name)
+
+    def receive_commands(self, msg):
+
+        callback, timeout = msg.data.split(':')
+        self.timeout = float(timeout)
+        self.server.execute_callback = getattr(self, callback)
+        logwarn('>>> ' + self.name + ': Current callback -> ' + callback)
+        sleep(1)
+
+    def create_random_world_model(self):
+        victims = [create_victim_info(i + 1) for i in range(2)]
+        visited = [create_victim_info(i + 1) for i in range(4)]
+        self.result.worldModel = create_world_model(victims, visited)
+
+    def success(self, goal):
+        self.create_random_world_model()
+        logwarn('>>> ' + self.name + ': This goal will succeed.')
+        sleep(self.timeout)
+        self.server.set_succeeded(result=self.result)
+
+    def abort(self, goal):
+        self.create_random_world_model()
+        logwarn('>>> ' + self.name + ': This goal will be aborted.')
+        sleep(self.timeout)
+        self.server.set_aborted(result=self.result)
 
 
 class MoveBaseServer(MockActionServer):
