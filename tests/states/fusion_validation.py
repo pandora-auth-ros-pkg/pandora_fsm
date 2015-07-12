@@ -21,7 +21,6 @@ class TestFusionValidationState(unittest.TestCase):
         self.agent = Agent(strategy='normal')
         self.fusion_validate = Publisher('mock/fusion_validate', String)
         self.target = mock_msgs.create_victim_info(id=1, probability=0.65)
-        self.agent.available_targets.append(self.target)
         self.agent.target.set(self.target)
         self.agent.set_breakpoint('exploration')
 
@@ -38,6 +37,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.assertFalse(self.agent.gui_result.victimValid)
         self.assertTrue(self.agent.target.is_empty)
         self.assertFalse(self.agent.target.is_verified())
+        self.assertNotIn(self.agent.available_targets, [])
 
     def test_false_positive(self):
 
@@ -52,6 +52,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.assertFalse(self.agent.gui_result.victimValid)
         self.assertTrue(self.agent.target.is_empty)
         self.assertFalse(self.agent.target.is_verified())
+        self.assertNotIn(self.agent.available_targets, [])
 
     def test_true_negative(self):
 
@@ -65,6 +66,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.assertFalse(self.agent.gui_result.victimValid)
         self.assertTrue(self.agent.target.is_empty)
         self.assertFalse(self.agent.target.is_verified())
+        self.assertNotIn(self.agent.available_targets, [])
 
     def test_false_negative(self):
 
@@ -78,6 +80,7 @@ class TestFusionValidationState(unittest.TestCase):
         self.assertFalse(self.agent.gui_result.victimValid)
         self.assertTrue(self.agent.target.is_empty)
         self.assertFalse(self.agent.target.is_verified())
+        self.assertNotIn(self.agent.available_targets, [])
 
     def test_invalid_victim(self):
 
@@ -90,3 +93,4 @@ class TestFusionValidationState(unittest.TestCase):
         self.assertEqual(self.agent.state, 'exploration')
         self.assertFalse(self.agent.gui_result.victimValid)
         self.assertTrue(self.agent.target.is_empty)
+        self.assertNotIn(self.agent.available_targets, [])

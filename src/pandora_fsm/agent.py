@@ -14,8 +14,9 @@ from pymitter import EventEmitter
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, sleep
+from rospy import Subscriber, sleep, Time
 from rospkg import RosPack
+import tf
 from geometry_msgs.msg import Pose
 
 from state_manager.state_client import StateClient
@@ -74,6 +75,9 @@ class Agent(object):
         self.gui_client = clients.GUI()
         self.effector = clients.Effector()
 
+        if not self.testing:
+            self.transform_listener = tf.TransformListener()
+
         # State client
         if not self.testing:
             log.debug('Connecting to state manager.')
@@ -88,7 +92,6 @@ class Agent(object):
 
         # Victim information.
         self.available_targets = []
-        self.deleted_victims = []
 
         self.gui_result = ValidateVictimGUIResult()
 
@@ -361,39 +364,24 @@ class Agent(object):
     def notify_data_fusion(self):
         """ Notify data fusion about the current target. """
 
-        self.data_fusion.announce_target(self.target.info.id)
+        self.available_targets = self.data_fusion.announce_target(self.target.info.id)
 
     def validate_victim(self):
         """ Sends information about the current target.  """
 
         if not self.target.is_empty:
-            self.data_fusion.validate_victim(self.target.info.id,
-                                             valid=self.gui_result.victimValid,
-                                             verified=self.target.is_verified()
-                                             )
+            self.available_targets = self.data_fusion.validate_victim(self.target.info.id,
+                                                                      valid=self.gui_result.victimValid,
+                                                                      verified=self.target.is_verified())
         else:
             log.critical('Reached data fusion validation without target.')
 
     def delete_victim(self):
         """
-        Send deletion request to DataFusion about the current
-        target victim.
+        Send deletion request to DataFusion about the current target victim.
         """
-        self.data_fusion.delete_victim(self.target.info.id)
-        self.update_victim_registry()
+        self.available_targets = self.data_fusion.delete_victim(self.target.info.id)
         self.victim_deleted()
-
-    def update_victim_registry(self):
-        log.debug("Update local world model. \n Before:")
-        log.debug(self.available_targets)
-        if self.available_targets:
-            for idx, item in enumerate(self.available_targets):
-                if item.id == self.target.info.id:
-                    break
-            del self.available_targets[idx]
-            self.deleted_victims.append(self.target.info)
-        log.debug("Update local world model. \n After:")
-        log.debug(self.available_targets)
 
     def wait_for_verification(self):
         """
@@ -446,11 +434,18 @@ class Agent(object):
     def explore(self):
         """
         Send exploration goal to the explorer. A different exploration
-        strategy should be used depending on the state variables.
+        strategy is used depending on the global state.
         """
-        # TODO Change the exploration mode based on time,
-        # how many targets are left etc.
-        self.explorer.explore(exploration_type=self.exploration_mode)
+        global_state = self.state_changer.get_current_state()
+        coverage = DoExplorationGoal.TYPE_DEEP
+        fast = DoExplorationGoal.TYPE_FAST
+
+        if global_state == RobotModeMsg.MODE_EXPLORATION_RESCUE:
+            log.info("** COVERAGE EXPLORATION **")
+            self.explorer.explore(exploration_type=coverage)
+        else:
+            log.info("** FAST EXPLORATION **")
+            self.explorer.explore(exploration_type=fast)
 
     def check_for_targets(self):
         """
@@ -465,6 +460,7 @@ class Agent(object):
                 self.dispatcher.emit('poi.found')
             else:
                 log.debug('World model is empty. Searching for targets...')
+                self.explore()
         else:
             if self.target.info in self.available_targets:
                 self.dispatcher.emit('poi.found')
@@ -478,6 +474,7 @@ class Agent(object):
                     self.dispatcher.emit('poi.found')
                 else:
                     log.debug('World model is empty. Searching for targets...')
+                    self.explore()
 
     def timer_handler(self):
         if self.state == 'identification':
@@ -528,8 +525,19 @@ class Agent(object):
         if len(targets) == 1:
             return closest_target
 
-        self.current_pose = self.explorer.pose_stamped.pose
+        # self.current_pose = self.explorer.pose_stamped.pose
         for target in targets:
+            try:
+                (trans, rot) = self.transform_listener.lookupTransform(target.victimPose.header.frame_id,
+                                                        '/base_footprint',
+                                                        Time(0))
+            except:
+                log.error("Transform listener failed to acquire transformation")
+                return closest_target
+            self.current_pose = Pose()
+            self.current_pose.position.x = trans[0]
+            self.current_pose.position.y = trans[1]
+            self.current_pose.position.z = trans[2]
             target_pose = target.victimPose.pose
             target_distance = distance_2d(target_pose, self.current_pose)
             if target_distance < min_distance:
