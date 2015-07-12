@@ -529,8 +529,8 @@ class Agent(object):
         for target in targets:
             try:
                 (trans, rot) = self.transform_listener.lookupTransform(target.victimPose.header.frame_id,
-                                                        '/base_footprint',
-                                                        Time(0))
+                                                                       '/base_footprint',
+                                                                       Time(0))
             except:
                 log.error("Transform listener failed to acquire transformation")
                 return closest_target
