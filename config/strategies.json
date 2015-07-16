@@ -21,6 +21,7 @@
         "description": "The agent starts the system.",
         "tasks": [
           "mode_start_autonomous",
+          "wait_for_map",
           "booted"
         ],
         "clean": [],

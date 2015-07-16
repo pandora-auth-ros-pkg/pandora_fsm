@@ -131,6 +131,9 @@ class Agent(object):
         # Removing the implementation of the given state.
         self.machine.get_state(state).empty()
 
+    def wait_for_map(self):
+        sleep(5.0)
+
     def load(self):
         """ Loads the configuration file and sets up the FSM accordingly. """
 
