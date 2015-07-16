@@ -179,7 +179,7 @@
         "name": "end",
         "description": "Job done!",
         "tasks": [
-          "mode_off",
+          "mode_teleoperated_locomotion",
           "print_results",
           "clean_up",
           "sleep"

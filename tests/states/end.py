@@ -18,7 +18,7 @@ class TestEndState(unittest.TestCase):
         self.agent = Agent(strategy='normal')
 
     def test_global_state_change(self):
-        final = RobotModeMsg.MODE_OFF
+        final = RobotModeMsg.MODE_TELEOPERATED_LOCOMOTION
         self.agent.to_end()
 
         self.assertEqual(self.agent.state_changer.get_current_state(), final)
