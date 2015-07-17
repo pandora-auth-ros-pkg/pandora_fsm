@@ -39,6 +39,8 @@ robot_reset = '/gui/robot_reset'
 # Used to restart the robot.
 robot_restart = '/gui/robot_restart'
 
+# Close the agent's process
+destroy_agent = '/gui/destroy_agent'
 
 """ Navigation """
 

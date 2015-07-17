@@ -4,6 +4,8 @@
 PKG = 'pandora_fsm'
 
 import sys
+import psutil
+import os
 import threading
 import inspect
 import yaml
@@ -14,10 +16,11 @@ from pymitter import EventEmitter
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, sleep, Time
+from rospy import Subscriber, sleep, Time, Service
 from rospkg import RosPack
 import tf
 from geometry_msgs.msg import Pose
+from std_srvs.srv import Empty
 
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
@@ -67,6 +70,7 @@ class Agent(object):
         # SUBSCRIBERS.
         self.world_model_sub = Subscriber(topics.world_model, WorldModel,
                                           self.receive_world_model)
+        Service('/gui/kill_agent', Empty, self.destroy_agent)
 
         # ACTION CLIENTS.
         self.explorer = clients.Explorer(self.dispatcher)
@@ -323,6 +327,22 @@ class Agent(object):
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
     ######################################################
+
+    def destroy_agent(self, stop):
+        """ Kill the agent's process and stop all running goals. """
+
+        # Change to MODE_OFF
+        self.mode_off()
+
+        # Cancel all goals
+        self.clean_up()
+
+        # Kill the process
+        pid = os.getpid()
+        p = psutil.Process(pid)
+
+        log.warning("Shutting down.")
+        p.terminate()
 
     def receive_world_model(self, model):
         """ Receives the world model from data fusion. """
