@@ -4,6 +4,8 @@
 PKG = 'pandora_fsm'
 
 import sys
+import psutil
+import os
 import threading
 import inspect
 import yaml
@@ -14,10 +16,11 @@ from pymitter import EventEmitter
 import roslib
 roslib.load_manifest(PKG)
 
-from rospy import Subscriber, sleep, Time
+from rospy import Subscriber, sleep, Time, Service
 from rospkg import RosPack
 import tf
 from geometry_msgs.msg import Pose
+from std_srvs.srv import Empty
 
 from state_manager.state_client import StateClient
 from state_manager_msgs.msg import RobotModeMsg
@@ -76,6 +79,7 @@ class Agent(object):
         self.effector = clients.Effector()
 
         if not self.testing:
+            Service('/gui/kill_agent', Empty, self.destroy_agent)
             self.transform_listener = tf.TransformListener()
 
         # State client
@@ -130,6 +134,9 @@ class Agent(object):
         """
         # Removing the implementation of the given state.
         self.machine.get_state(state).empty()
+
+    def wait_for_map(self):
+        sleep(5.0)
 
     def load(self):
         """ Loads the configuration file and sets up the FSM accordingly. """
@@ -320,6 +327,22 @@ class Agent(object):
     ######################################################
     #               SUBSCRIBER'S CALLBACKS               #
     ######################################################
+
+    def destroy_agent(self, stop):
+        """ Kill the agent's process and stop all running goals. """
+
+        # Change to teleoperation
+        self.mode_teleoperated_locomotion()
+
+        # Cancel all goals
+        self.clean_up()
+
+        # Kill the process
+        pid = os.getpid()
+        p = psutil.Process(pid)
+
+        log.warning("Shutting down.")
+        p.terminate()
 
     def receive_world_model(self, model):
         """ Receives the world model from data fusion. """

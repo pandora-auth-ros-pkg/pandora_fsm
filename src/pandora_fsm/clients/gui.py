@@ -32,6 +32,7 @@ class GUI(object):
         :param :target A target to be validated.
         """
         goal = ValidateVictimGUIGoal()
+        goal.victimId = target.id
         goal.victimFoundx = target.victimPose.pose.position.x
         goal.victimFoundy = target.victimPose.pose.position.y
         goal.probability = target.probability
