@@ -70,7 +70,6 @@ class Agent(object):
         # SUBSCRIBERS.
         self.world_model_sub = Subscriber(topics.world_model, WorldModel,
                                           self.receive_world_model)
-        Service('/gui/kill_agent', Empty, self.destroy_agent)
 
         # ACTION CLIENTS.
         self.explorer = clients.Explorer(self.dispatcher)
@@ -80,6 +79,7 @@ class Agent(object):
         self.effector = clients.Effector()
 
         if not self.testing:
+            Service('/gui/kill_agent', Empty, self.destroy_agent)
             self.transform_listener = tf.TransformListener()
 
         # State client
