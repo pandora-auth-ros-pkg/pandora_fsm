@@ -331,8 +331,8 @@ class Agent(object):
     def destroy_agent(self, stop):
         """ Kill the agent's process and stop all running goals. """
 
-        # Change to MODE_OFF
-        self.mode_off()
+        # Change to teleoperation
+        self.mode_teleoperated_locomotion()
 
         # Cancel all goals
         self.clean_up()
