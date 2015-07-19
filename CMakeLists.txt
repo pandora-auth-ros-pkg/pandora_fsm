@@ -23,6 +23,18 @@ catkin_package(
     dynamic_reconfigure
 )
 
+add_executable(victim_validator src/victim_validator.cpp)
+target_link_libraries(
+    victim_validator
+    ${catkin_LIBRARIES}
+)
+
+add_dependencies(
+    victim_validator
+    ${catkin_EXPORTED_TARGETS}
+    ${pandora_gui_msgs_EXPORTED_TARGETS}
+)
+
 FILE(GLOB_RECURSE ${PROJECT_NAME}_LINT_PYTHON
      ${PROJECT_SOURCE_DIR}
      src/**/*.py
