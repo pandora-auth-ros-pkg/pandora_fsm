@@ -37,7 +37,7 @@ class Effector(object):
         self.client.cancel_all_goals()
         sleep(3)
 
-    def point_to(self, target, center='/pi_camera_frame'):
+    def point_to(self, target, center='/picam_frame'):
         """ Points end effector to a target.
 
         :param target: The vicitim frame ID.
@@ -53,7 +53,7 @@ class Effector(object):
         log.info('Sending TRACK goal.')
         self.client.send_goal(goal)
 
-    def slowly_point_to(self, target, center='/pi_camera_frame'):
+    def slowly_point_to(self, target, center='/picam_frame'):
         """
         Points end effector to a target, slow enough so the image
         is staying still.
