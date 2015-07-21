@@ -4,6 +4,9 @@ from actionlib import GoalStatus
 from pandora_data_fusion_msgs.msg import (ChooseVictimAction, ChooseVictimGoal,
                                           ValidateVictimAction,
                                           ValidateVictimGoal)
+from pandora_data_fusion_msgs.msg import VisitQRActionGoal, VisitQRAction
+from pandora_data_fusion_msgs.srv import GetWorldModel
+from rospy import wait_for_service, ServiceProxy, ServiceException
 from pandora_fsm import topics
 from pandora_fsm.utils import logger as log
 from pandora_fsm.utils import ACTION_STATES
@@ -21,6 +24,27 @@ class DataFusion(object):
         self.deletion = Client(topics.delete_victim, ChooseVictimAction)
         self.validation = Client(topics.validate_victim, ValidateVictimAction)
         self.selection = Client(topics.choose_target, ChooseVictimAction)
+        self.visit = Client(topics.visit_qr, VisitQRAction)
+
+    def visit_qr(self, qr_id):
+        msg = VisitQRActionGoal()
+        msg.goal.qrId = qr_id
+
+        log.debug('Waiting for the DataFusion action server...')
+        self.visit.wait_for_server()
+        log.warning('Deleting QR wth ID -> %d.', qr_id)
+        self.visit.send_goal(msg.goal)
+
+    def get_qrs(self):
+
+        log.info("Waiting for service %s." % topics.get_world_model)
+        wait_for_service(topics.get_world_model)
+        try:
+            res = ServiceProxy(topics.get_world_model, GetWorldModel)()
+            return res.worldModel.qrs
+        except ServiceProxy as e:
+            log.error(str(e))
+            return None
 
     def delete_victim(self, victim_id):
         """

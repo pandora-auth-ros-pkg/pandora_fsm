@@ -40,7 +40,7 @@ class Effector(object):
     def point_to(self, target, center='/picam_frame'):
         """ Points end effector to a target.
 
-        :param target: The vicitim frame ID.
+        :param target: The victim frame ID.
         :param center: The center of the frame the we will use.
         """
 

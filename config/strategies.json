@@ -221,6 +221,7 @@
         "conditions": [],
         "tasks": [
           "mode_start_autonomous",
+          "sleep_for_slam",
           "booted"
         ],
         "clean": [],
@@ -287,7 +288,7 @@
         "description":  "",
         "conditions": [],
         "tasks": [
-          "mode_teleoperated_locomotion",
+          "find_more_qrs",
           "clean_up"
         ],
         "clean": [],
