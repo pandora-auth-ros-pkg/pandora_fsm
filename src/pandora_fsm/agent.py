@@ -206,7 +206,7 @@ class Agent(object):
             the exploration client when the current goal has succeeded.
             Enables the agent to move from the exploration state to end.
         """
-        if self.state == 'exploration':
+        if self.state == 'exploration' or self.state == 'coverage_exploration':
             log.warning('Map covered!')
             self.map_covered()
         else:
@@ -384,6 +384,58 @@ class Agent(object):
         self.gui_result.victimValid = False
         self.target.clean()
 
+    def find_more_qrs(self):
+
+        while True:
+            sleep(2)
+            qrs = self.data_fusion.get_qrs()
+
+            if not qrs:
+                break
+
+            qr = self.get_closest_qr(qrs)
+            log.info("Examining QR with id: %s", qr.id)
+
+            self.effector.point_to(qr.qrFrameId)
+            self.navigator.move_base(qr.qrPose)
+            self.navigator.client.wait_for_result()
+
+            log.info("Visiting QR with id: %s", qr.id)
+            self.data_fusion.visit_qr(qr.id)
+        log.info("All QRs are visited.")
+
+    def get_closest_qr(self, qrs):
+        print qrs
+        closet_qr = qrs[0]
+        min_distance = 1000
+
+        if len(qrs) == 1:
+            return closet_qr
+
+        # self.current_pose = self.explorer.pose_stamped.pose
+        for qr in qrs:
+            try:
+                (trans, rot) = self.transform_listener.lookupTransform(qr.frame_id,
+                                                                       '/base_footprint',
+                                                                       Time(3))
+            except:
+                log.error("Transform listener failed to acquire transformation")
+                return closet_qr
+            current_pose = Pose()
+            current_pose.position.x = trans[0]
+            current_pose.position.y = trans[1]
+            current_pose.position.z = trans[2]
+            target_pose = qr.qrPose.pose
+            target_distance = distance_2d(target_pose, current_pose)
+            if target_distance < min_distance:
+                min_distance = target_distance
+                closet_qr = qr
+
+        return closet_qr
+
+    def sleep_for_slam(self):
+        sleep(5)
+
     def notify_data_fusion(self):
         """ Notify data fusion about the current target. """
 
@@ -470,6 +522,18 @@ class Agent(object):
             log.info("** FAST EXPLORATION **")
             self.explorer.explore(exploration_type=fast)
 
+    def explore_fast(self):
+        fast = DoExplorationGoal.TYPE_FAST
+
+        log.info("** FAST EXPLORATION **")
+        self.explorer.explore(exploration_type=fast)
+
+    def explore_with_coverage(self):
+        coverage = DoExplorationGoal.TYPE_DEEP
+
+        log.info("** COVERAGE EXPLORATION **")
+        self.explorer.explore(exploration_type=coverage)
+
     def check_for_targets(self):
         """
         Check for available targets and choose one now. Don't wait
@@ -553,7 +617,7 @@ class Agent(object):
             try:
                 (trans, rot) = self.transform_listener.lookupTransform(target.victimPose.header.frame_id,
                                                                        '/base_footprint',
-                                                                       Time(0))
+                                                                       Time(2))
             except:
                 log.error("Transform listener failed to acquire transformation")
                 return closest_target

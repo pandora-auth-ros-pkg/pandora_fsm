@@ -12,6 +12,12 @@ delete_victim = '/data_fusion/delete_victim'
 # Action to validate a victim.
 validate_victim = '/data_fusion/validate_victim'
 
+# Mark QRs as visited.
+visit_qr = '/data_fusion/visit_qr'
+
+# Service for the world model.
+get_world_model = '/data_fusion/get_world_model'
+
 # Action to notify data fusion about the current target.
 choose_target = '/data_fusion/target_victim'
 
