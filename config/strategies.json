@@ -182,8 +182,7 @@
         "tasks": [
           "mode_teleoperated_locomotion",
           "print_results",
-          "clean_up",
-          "sleep"
+          "clean_up"
         ],
         "clean": [],
         "transitions": [
@@ -242,7 +241,31 @@
         "tasks": [
           "mode_exploration_mapping",
           "scan",
-          "explore",
+          "explore_fast",
+          "enable_exploration_events"
+        ],
+        "clean": [
+          "preempt_explorer",
+          "preempt_end_effector"
+        ],
+        "transitions": [
+          {
+            "to": "coverage_exploration",
+            "conditions": [],
+            "before": [],
+            "after": [],
+            "trigger": "map_covered"
+          }
+        ]
+      },
+      {
+        "name": "coverage_exploration",
+        "description": "The mission has finished!",
+        "conditions": [],
+        "tasks": [
+          "mode_exploration_mapping",
+          "scan",
+          "explore_with_coverage",
           "enable_exploration_events"
         ],
         "clean": [
@@ -261,13 +284,11 @@
       },
       {
         "name": "end",
-        "description": "The mission has finished!",
+        "description":  "",
         "conditions": [],
         "tasks": [
-          "mode_off",
-          "print_results",
-          "clean_up",
-          "sleep"
+          "mode_teleoperated_locomotion",
+          "clean_up"
         ],
         "clean": [],
         "transitions": [

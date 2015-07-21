@@ -206,7 +206,7 @@ class Agent(object):
             the exploration client when the current goal has succeeded.
             Enables the agent to move from the exploration state to end.
         """
-        if self.state == 'exploration':
+        if self.state == 'exploration' or self.state == 'coverage_exploration':
             log.warning('Map covered!')
             self.map_covered()
         else:
@@ -469,6 +469,18 @@ class Agent(object):
         else:
             log.info("** FAST EXPLORATION **")
             self.explorer.explore(exploration_type=fast)
+
+    def explore_fast(self):
+        fast = DoExplorationGoal.TYPE_FAST
+
+        log.info("** FAST EXPLORATION **")
+        self.explorer.explore(exploration_type=fast)
+
+    def explore_with_coverage(self):
+        coverage = DoExplorationGoal.TYPE_DEEP
+
+        log.info("** COVERAGE EXPLORATION **")
+        self.explorer.explore(exploration_type=coverage)
 
     def check_for_targets(self):
         """
