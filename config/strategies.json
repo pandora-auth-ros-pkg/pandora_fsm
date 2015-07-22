@@ -227,7 +227,7 @@
         "clean": [],
         "transitions": [
           {
-            "to": "exploration",
+            "to": "coverage_exploration",
             "conditions": [],
             "before": [],
             "after": [],
