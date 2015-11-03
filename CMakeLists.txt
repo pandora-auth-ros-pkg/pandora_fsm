@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   actionlib
   roslint
+  pandora_gui_msgs
 )
 
 catkin_python_setup()
